@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+!.env.example
+
+__pycache__
+*.pyc
+*.pyo
+*.sqlite3
+
+django/.env
+django/.venv
+django/staticfiles
+django/media

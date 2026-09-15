@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-butacacero_db}
+      POSTGRES_USER: ${POSTGRES_USER:-butacacero}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpassword}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-butacacero} -d ${POSTGRES_DB:-butacacero_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/django/Dockerfile
+    restart: unless-stopped
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-butacacero}:${POSTGRES_PASSWORD:-devpassword}@db:5432/${POSTGRES_DB:-butacacero_db}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-dev-only-change-me}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+    ports:
+      - "${DJANGO_PORT:-8000}:8000"
+    volumes:
+      - ./django:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
