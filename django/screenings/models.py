@@ -20,3 +20,13 @@ class Funcion(models.Model):
 
     def __str__(self):
         return f"{self.pelicula.titulo} - {self.sala.nombre} - {self.fecha_horario:%d/%m/%Y %H:%M}"
+
+
+    @classmethod
+    def funciones_publicadas(cls):
+        peliculas_publicadas = cls.objects.filter(publicada = True)
+
+        if peliculas_publicadas:
+            return peliculas_publicadas
+
+        return "No hay peliculas en este momento."
