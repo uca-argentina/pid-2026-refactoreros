@@ -3,13 +3,13 @@ services:
     image: postgres:16
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-butacacero_db}
-      POSTGRES_USER: ${POSTGRES_USER:-butacacero}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpassword}
+      POSTGRES_DB: "${POSTGRES_DB:?POSTGRES_DB is required. Copy .env.example to .env and set a database name.}"
+      POSTGRES_USER: "${POSTGRES_USER:?POSTGRES_USER is required. Copy .env.example to .env and set a database user.}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required. Copy .env.example to .env and set a database password.}"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-butacacero} -d ${POSTGRES_DB:-butacacero_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:?POSTGRES_USER is required.} -d ${POSTGRES_DB:?POSTGRES_DB is required.}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -21,12 +21,12 @@ services:
     restart: unless-stopped
     command: python manage.py runserver 0.0.0.0:8000
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-butacacero}:${POSTGRES_PASSWORD:-devpassword}@db:5432/${POSTGRES_DB:-butacacero_db}
-      DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-dev-only-change-me}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      DATABASE_URL: "postgres://${POSTGRES_USER:?POSTGRES_USER is required.}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required.}@db:5432/${POSTGRES_DB:?POSTGRES_DB is required.}"
+      DJANGO_DEBUG: "${DJANGO_DEBUG:?DJANGO_DEBUG is required. Use True for local development or False for production.}"
+      DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required. Set a unique secret key in .env.}"
+      DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS:?DJANGO_ALLOWED_HOSTS is required. Example: localhost,127.0.0.1}"
     ports:
-      - "${DJANGO_PORT:-8000}:8000"
+      - "${DJANGO_PORT:?DJANGO_PORT is required. Example: 8000}:8000"
     volumes:
       - ./django:/app
     depends_on:
