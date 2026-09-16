@@ -43,17 +43,13 @@
         </div>
 
         <nav class="auth-tabs" aria-label="Acceso">
-          <a href="{% url 'login' %}" class="{% if active_tab == 'login' %}is-active{% endif %}">Iniciar sesion</a>
+          <a href="{% url 'login' %}" class="{% if active_tab == 'login' %}is-active{% endif %}">Iniciar sesión</a>
           <a href="{% url 'signup' %}" class="{% if active_tab == 'signup' %}is-active{% endif %}">Crear cuenta</a>
         </nav>
 
         {% if active_tab == 'login' %}
           <form class="auth-form" method="post" action="{% url 'login' %}">
             {% csrf_token %}
-            <div class="form-heading">
-              <h2>Iniciar sesion</h2>
-            </div>
-
             {% if login_form.non_field_errors %}
               <div class="form-errors">{{ login_form.non_field_errors }}</div>
             {% endif %}
@@ -65,7 +61,7 @@
             </label>
 
             <label>
-              <span>Contrasena</span>
+              <span>Contraseña</span>
               {{ login_form.password }}
               {{ login_form.password.errors }}
             </label>
@@ -74,10 +70,6 @@
           </form>
         {% else %}
           <form class="auth-form" method="post" action="{% url 'signup' %}" data-signup-form novalidate>
-            {% csrf_token %}
-            <div class="form-heading">
-              <h2>Crear cuenta</h2>
-            </div>
 
             {% if signup_form.non_field_errors %}
               <div class="form-errors">{{ signup_form.non_field_errors }}</div>
@@ -105,14 +97,14 @@
             </label>
 
             <label>
-              <span>Contrasena</span>
+              <span>Contraseña</span>
               {{ signup_form.password1 }}
               <small data-error-for="id_password1"></small>
               {{ signup_form.password1.errors }}
             </label>
 
             <label>
-              <span>Repetir contrasena</span>
+              <span>Repetir contraseña</span>
               {{ signup_form.password2 }}
               <small data-error-for="id_password2"></small>
               {{ signup_form.password2.errors }}
