@@ -7,6 +7,8 @@ from django.shortcuts import redirect, render
 from cinema.models import ConfiguracionCine
 from users.forms import ClienteSignupForm
 from users.models import Cliente
+from screenings.models import Funcion
+from movies.models import Pelicula
 
 
 def _auth_context(request, active_tab, login_form=None, signup_form=None):
@@ -80,4 +82,16 @@ def home_view(request):
         {
             "cinema": ConfiguracionCine.actual(),
         },
+    )
+
+#@login_requiered
+def listing_view(request):
+    return render(
+        request,
+        "frontend/listing.html",
+        {
+            "cinema": ConfiguracionCine.actual(),
+            "funciones": Funcion.funciones_publicadas()
+
+        }
     )
