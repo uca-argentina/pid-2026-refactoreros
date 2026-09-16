@@ -44,11 +44,21 @@ class UsuarioChangeForm(EmailUnicoMixin, UserChangeForm):
 class ClienteSignupForm(EmailUnicoMixin, forms.Form):
     nombre = forms.CharField(
         label="Nombre",
-        max_length=150,
+        max_length=75,
         widget=forms.TextInput(
             attrs={
-                "autocomplete": "name",
+                "autocomplete": "given-name",
                 "placeholder": "Nombre",
+            }
+        ),
+    )
+    apellido = forms.CharField(
+        label="Apellido",
+        max_length=75,
+        widget=forms.TextInput(
+            attrs={
+                "autocomplete": "family-name",
+                "placeholder": "Apellido",
             }
         ),
     )
@@ -86,9 +96,16 @@ class ClienteSignupForm(EmailUnicoMixin, forms.Form):
             raise forms.ValidationError("El nombre debe tener al menos 2 caracteres.")
         return nombre
 
+    def clean_apellido(self):
+        apellido = self.cleaned_data["apellido"].strip()
+        if len(apellido) < 2:
+            raise forms.ValidationError("El apellido debe tener al menos 2 caracteres.")
+        return apellido
+
     def clean(self):
         cleaned_data = super().clean()
         nombre = cleaned_data.get("nombre")
+        apellido = cleaned_data.get("apellido")
         email = cleaned_data.get("email")
         password1 = cleaned_data.get("password1")
         password2 = cleaned_data.get("password2")
@@ -98,7 +115,12 @@ class ClienteSignupForm(EmailUnicoMixin, forms.Form):
             return cleaned_data
 
         if password1:
-            usuario = User(username=email or "", email=email or "", first_name=nombre or "")
+            usuario = User(
+                username=email or "",
+                email=email or "",
+                first_name=nombre or "",
+                last_name=apellido or "",
+            )
             try:
                 validate_password(password1, usuario)
             except forms.ValidationError as error:
@@ -108,6 +130,7 @@ class ClienteSignupForm(EmailUnicoMixin, forms.Form):
 
     def save(self):
         nombre = self.cleaned_data["nombre"]
+        apellido = self.cleaned_data["apellido"]
         email = self.cleaned_data["email"]
         password = self.cleaned_data["password1"]
         return User.objects.create_user(
@@ -115,4 +138,5 @@ class ClienteSignupForm(EmailUnicoMixin, forms.Form):
             email=email,
             password=password,
             first_name=nombre,
+            last_name=apellido,
         )

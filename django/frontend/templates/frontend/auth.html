@@ -50,11 +50,6 @@
         {% if active_tab == 'login' %}
           <form class="auth-form" method="post" action="{% url 'login' %}">
             {% csrf_token %}
-            <div class="form-heading">
-              <h2>Iniciar sesión</h2>
-              <p>Ingresa con tu cuenta.</p>
-            </div>
-
             {% if login_form.non_field_errors %}
               <div class="form-errors">{{ login_form.non_field_errors }}</div>
             {% endif %}
@@ -75,10 +70,6 @@
           </form>
         {% else %}
           <form class="auth-form" method="post" action="{% url 'signup' %}" data-signup-form novalidate>
-            {% csrf_token %}
-            <div class="form-heading">
-              <h2>Crear cuenta</h2>
-            </div>
 
             {% if signup_form.non_field_errors %}
               <div class="form-errors">{{ signup_form.non_field_errors }}</div>
@@ -89,6 +80,13 @@
               {{ signup_form.nombre }}
               <small data-error-for="id_nombre"></small>
               {{ signup_form.nombre.errors }}
+            </label>
+
+            <label>
+              <span>Apellido</span>
+              {{ signup_form.apellido }}
+              <small data-error-for="id_apellido"></small>
+              {{ signup_form.apellido.errors }}
             </label>
 
             <label>

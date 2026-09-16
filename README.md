@@ -24,6 +24,12 @@ La app queda en:
 http://localhost:8000
 ```
 
+Si se cambia el `.env` con Docker ya levantado, recrear el contenedor web:
+
+```powershell
+docker compose up -d --force-recreate web
+```
+
 ## URLs utiles
 
 ```text
