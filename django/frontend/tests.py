@@ -10,6 +10,7 @@ class SignupFrontendTests(TestCase):
             "/signup/",
             data={
                 "nombre": "Ana",
+                "apellido": "Gomez",
                 "email": "ana@mail.com",
                 "password1": "PasswordSegura123",
                 "password2": "PasswordSegura123",

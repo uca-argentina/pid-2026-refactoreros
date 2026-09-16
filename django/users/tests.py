@@ -138,6 +138,7 @@ class SignupClienteFormTests(TestCase):
         form = ClienteSignupForm(
             data={
                 "nombre": "Ana",
+                "apellido": "Gomez",
                 "email": "ANA@mail.com",
                 "password1": "PasswordSegura123",
                 "password2": "PasswordSegura123",
@@ -151,12 +152,14 @@ class SignupClienteFormTests(TestCase):
         self.assertEqual(usuario.username, "ana@mail.com")
         self.assertEqual(usuario.email, "ana@mail.com")
         self.assertEqual(usuario.first_name, "Ana")
+        self.assertEqual(usuario.last_name, "Gomez")
         self.assertTrue(usuario.check_password("PasswordSegura123"))
 
     def test_signup_form_valida_password_con_reglas_de_django(self):
         form = ClienteSignupForm(
             data={
                 "nombre": "Ana",
+                "apellido": "Gomez",
                 "email": "ana@mail.com",
                 "password1": "12345678",
                 "password2": "12345678",

@@ -43,7 +43,7 @@
         </div>
 
         <nav class="auth-tabs" aria-label="Acceso">
-          <a href="{% url 'login' %}" class="{% if active_tab == 'login' %}is-active{% endif %}">Iniciar sesión</a>
+          <a href="{% url 'login' %}" class="{% if active_tab == 'login' %}is-active{% endif %}">Iniciar sesion</a>
           <a href="{% url 'signup' %}" class="{% if active_tab == 'signup' %}is-active{% endif %}">Crear cuenta</a>
         </nav>
 
@@ -51,8 +51,7 @@
           <form class="auth-form" method="post" action="{% url 'login' %}">
             {% csrf_token %}
             <div class="form-heading">
-              <h2>Iniciar sesión</h2>
-              <p>Ingresa con tu cuenta.</p>
+              <h2>Iniciar sesion</h2>
             </div>
 
             {% if login_form.non_field_errors %}
@@ -66,7 +65,7 @@
             </label>
 
             <label>
-              <span>Contraseña</span>
+              <span>Contrasena</span>
               {{ login_form.password }}
               {{ login_form.password.errors }}
             </label>
@@ -92,6 +91,13 @@
             </label>
 
             <label>
+              <span>Apellido</span>
+              {{ signup_form.apellido }}
+              <small data-error-for="id_apellido"></small>
+              {{ signup_form.apellido.errors }}
+            </label>
+
+            <label>
               <span>Email</span>
               {{ signup_form.email }}
               <small data-error-for="id_email"></small>
@@ -99,14 +105,14 @@
             </label>
 
             <label>
-              <span>Contraseña</span>
+              <span>Contrasena</span>
               {{ signup_form.password1 }}
               <small data-error-for="id_password1"></small>
               {{ signup_form.password1.errors }}
             </label>
 
             <label>
-              <span>Repetir contraseña</span>
+              <span>Repetir contrasena</span>
               {{ signup_form.password2 }}
               <small data-error-for="id_password2"></small>
               {{ signup_form.password2.errors }}
