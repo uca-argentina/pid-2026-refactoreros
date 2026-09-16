@@ -68,26 +68,29 @@
 
             <button type="submit">Entrar</button>
           </form>
-        {% else %}
-          <form class="auth-form" method="post" action="{% url 'signup' %}" data-signup-form novalidate>
 
+        {% elif active_tab == 'signup' %}
+          <form class="auth-form" method="post" action="{% url 'signup' %}" data-signup-form novalidate>
+            {% csrf_token %}
             {% if signup_form.non_field_errors %}
               <div class="form-errors">{{ signup_form.non_field_errors }}</div>
             {% endif %}
 
-            <label>
-              <span>Nombre</span>
-              {{ signup_form.nombre }}
-              <small data-error-for="id_nombre"></small>
-              {{ signup_form.nombre.errors }}
-            </label>
+            <div class="form-row">
+              <label>
+                <span>Nombre</span>
+                {{ signup_form.nombre }}
+                <small data-error-for="id_nombre"></small>
+                {{ signup_form.nombre.errors }}
+              </label>
 
-            <label>
-              <span>Apellido</span>
-              {{ signup_form.apellido }}
-              <small data-error-for="id_apellido"></small>
-              {{ signup_form.apellido.errors }}
-            </label>
+              <label>
+                <span>Apellido</span>
+                {{ signup_form.apellido }}
+                <small data-error-for="id_apellido"></small>
+                {{ signup_form.apellido.errors }}
+              </label>
+            </div>
 
             <label>
               <span>Email</span>

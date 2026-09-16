@@ -188,6 +188,12 @@ body {
   gap: 7px;
 }
 
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
 .auth-form label > span {
   font-size: 13px;
   font-weight: 700;
@@ -271,6 +277,10 @@ body {
 
   .form-panel {
     padding: 32px 24px 40px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
   }
 }
 

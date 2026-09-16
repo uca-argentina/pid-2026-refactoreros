@@ -72,20 +72,20 @@ class ClienteSignupForm(EmailUnicoMixin, forms.Form):
         ),
     )
     password1 = forms.CharField(
-        label="Contrasena",
+        label="Contraseña",
         widget=forms.PasswordInput(
             attrs={
                 "autocomplete": "new-password",
-                "placeholder": "Contrasena",
+                "placeholder": "Contraseña",
             }
         ),
     )
     password2 = forms.CharField(
-        label="Repetir contrasena",
+        label="Repetir contraseña",
         widget=forms.PasswordInput(
             attrs={
                 "autocomplete": "new-password",
-                "placeholder": "Repetir contrasena",
+                "placeholder": "Repetir contraseña",
             }
         ),
     )
@@ -111,7 +111,7 @@ class ClienteSignupForm(EmailUnicoMixin, forms.Form):
         password2 = cleaned_data.get("password2")
 
         if password1 and password2 and password1 != password2:
-            self.add_error("password2", "Las contrasenas no coinciden.")
+            self.add_error("password2", "Las contraseñas no coinciden.")
             return cleaned_data
 
         if password1:

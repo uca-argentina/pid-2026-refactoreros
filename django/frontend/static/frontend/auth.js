@@ -18,6 +18,8 @@ if (signupForm) {
     password1: document.getElementById("id_password1"),
     password2: document.getElementById("id_password2"),
   };
+  const touchedFields = new Set();
+  let submitted = false;
 
   const setError = (field, message) => {
     const target = document.querySelector(`[data-error-for="${field.id}"]`);
@@ -34,6 +36,14 @@ if (signupForm) {
 
   const normalize = (value) => value.trim().toLowerCase();
 
+  const shouldShowError = (field) => submitted || touchedFields.has(field);
+
+  const showError = (field, message) => {
+    if (shouldShowError(field)) {
+      setError(field, message);
+    }
+  };
+
   const validate = () => {
     let isValid = true;
     const nombre = normalize(fields.nombre.value);
@@ -49,42 +59,42 @@ if (signupForm) {
     setError(fields.password2, "");
 
     if (nombre.length < 2) {
-      setError(fields.nombre, "El nombre debe tener al menos 2 caracteres.");
+      showError(fields.nombre, "El nombre debe tener al menos 2 caracteres.");
       isValid = false;
     }
 
     if (apellido.length < 2) {
-      setError(fields.apellido, "El apellido debe tener al menos 2 caracteres.");
+      showError(fields.apellido, "El apellido debe tener al menos 2 caracteres.");
       isValid = false;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError(fields.email, "Ingresa un email valido.");
+      showError(fields.email, "Ingresá un email válido.");
       isValid = false;
     }
 
     if (password.length < 8) {
-      setError(fields.password1, "La contrasena debe tener al menos 8 caracteres.");
+      showError(fields.password1, "La contraseña debe tener al menos 8 caracteres.");
       isValid = false;
     } else if (/^\d+$/.test(password)) {
-      setError(fields.password1, "La contrasena no puede ser solo numerica.");
+      showError(fields.password1, "La contraseña no puede ser solo numérica.");
       isValid = false;
     } else if (commonPasswords.has(normalize(password))) {
-      setError(fields.password1, "La contrasena es demasiado comun.");
+      showError(fields.password1, "La contraseña es demasiado común.");
       isValid = false;
     } else if (nombre && normalize(password).includes(nombre)) {
-      setError(fields.password1, "La contrasena no debe parecerse al nombre.");
+      showError(fields.password1, "La contraseña no debe parecerse al nombre.");
       isValid = false;
     } else if (apellido && normalize(password).includes(apellido)) {
-      setError(fields.password1, "La contrasena no debe parecerse al apellido.");
+      showError(fields.password1, "La contraseña no debe parecerse al apellido.");
       isValid = false;
     } else if (email && normalize(password).includes(email.split("@")[0])) {
-      setError(fields.password1, "La contrasena no debe parecerse al email.");
+      showError(fields.password1, "La contraseña no debe parecerse al email.");
       isValid = false;
     }
 
     if (passwordConfirm && password !== passwordConfirm) {
-      setError(fields.password2, "Las contrasenas no coinciden.");
+      showError(fields.password2, "Las contraseñas no coinciden.");
       isValid = false;
     }
 
@@ -96,9 +106,15 @@ if (signupForm) {
       clearServerErrors(field);
       validate();
     });
+
+    field.addEventListener("blur", () => {
+      touchedFields.add(field);
+      validate();
+    });
   });
 
   signupForm.addEventListener("submit", (event) => {
+    submitted = true;
     if (!validate()) {
       event.preventDefault();
     }
