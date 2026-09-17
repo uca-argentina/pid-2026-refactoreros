@@ -46,6 +46,9 @@
   <main>
     <h1>{{ cinema.nombre }}</h1>
     <p>Home inicial. Todavía no hay contenido cargado.</p>
+    {% if manager_role %}
+      <p><a href="{% url 'manager:home' %}">Ir a gestion</a></p>
+    {% endif %}
     <a href="{% url 'logout' %}">Cerrar sesión</a>
   </main>
 </body>

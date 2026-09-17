@@ -1,0 +1,50 @@
+{% extends "manager/base.html" %}
+
+{% block content %}
+  <section class="page-heading page-heading-row">
+    <div>
+      <h1>Funciones</h1>
+    </div>
+    {% if create_url_name %}<a class="primary-link" href="{% url create_url_name %}">Nueva funcion</a>{% endif %}
+  </section>
+
+  {% include "manager/_list_controls.html" %}
+
+  <section class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Película</th>
+          <th>Sala</th>
+          <th>Fecha</th>
+          <th>Publicada</th>
+          <th>Precio</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for funcion in object_list %}
+          <tr>
+            <td>{{ funcion.pelicula.titulo }}</td>
+            <td>{{ funcion.sala.nombre }}</td>
+            <td>{{ funcion.fecha_horario|date:"d/m/Y H:i" }}</td>
+            <td>{% if funcion.publicada %}Si{% else %}No{% endif %}</td>
+            <td>{{ funcion.precio_entrada }}</td>
+            <td class="table-actions">
+              <a href="{% url 'manager:funciones_update' funcion.pk %}">Editar</a>
+              <form method="post" action="{% url 'manager:funciones_toggle' funcion.pk %}">
+                {% csrf_token %}
+                <button type="submit">{% if funcion.publicada %}Ocultar{% else %}Publicar{% endif %}</button>
+              </form>
+              <a href="{% url 'manager:funciones_delete' funcion.pk %}">Eliminar</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">No hay funciones cargadas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% include "manager/_pagination.html" %}
+{% endblock %}

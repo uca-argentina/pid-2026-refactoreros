@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from domain.users.models import Cliente
+from domain.users.models import Acomodador, Cliente, Gerente
 
 
 class AuthPageRenderingTests(TestCase):
@@ -83,7 +83,7 @@ class LoginFlowTests(TestCase):
     def setUp(self):
         self.usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
-            email="ana@mail.com", 
+            email="ana@mail.com",
             password="PasswordSegura123!",
         )
 
@@ -98,6 +98,42 @@ class LoginFlowTests(TestCase):
 
         self.assertRedirects(response, reverse("home"))
         self.assertEqual(int(self.client.session["_auth_user_id"]), self.usuario.id)
+
+    def test_login_de_gerente_redirige_a_gestion(self):
+        usuario = get_user_model().objects.create_user(
+            username="gerente@mail.com",
+            email="gerente@mail.com",
+            password="PasswordSegura123!",
+        )
+        Gerente.objects.create(usuario=usuario)
+
+        response = self.client.post(
+            reverse("login"),
+            data={
+                "username": "gerente@mail.com",
+                "password": "PasswordSegura123!",
+            },
+        )
+
+        self.assertRedirects(response, reverse("manager:home"))
+
+    def test_login_de_acomodador_redirige_a_gestion(self):
+        usuario = get_user_model().objects.create_user(
+            username="acomodador@mail.com",
+            email="acomodador@mail.com",
+            password="PasswordSegura123!",
+        )
+        Acomodador.objects.create(usuario=usuario)
+
+        response = self.client.post(
+            reverse("login"),
+            data={
+                "username": "acomodador@mail.com",
+                "password": "PasswordSegura123!",
+            },
+        )
+
+        self.assertRedirects(response, reverse("manager:home"))
 
     def test_login_respeta_next_local(self):
         response = self.client.post(
@@ -140,6 +176,19 @@ class LoginFlowTests(TestCase):
 
         self.assertRedirects(response, reverse("home"))
 
+    def test_login_redirige_a_gestion_si_ya_hay_sesion_de_gerente(self):
+        usuario = get_user_model().objects.create_user(
+            username="gerente@mail.com",
+            email="gerente@mail.com",
+            password="PasswordSegura123!",
+        )
+        Gerente.objects.create(usuario=usuario)
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("login"))
+
+        self.assertRedirects(response, reverse("manager:home"))
+
 
 class SessionFlowTests(TestCase):
     def test_home_redirige_a_login_si_no_hay_sesion(self):
@@ -159,6 +208,32 @@ class SessionFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "auth/home.html")
+
+    def test_home_muestra_acceso_a_gestion_si_es_gerente(self):
+        usuario = get_user_model().objects.create_user(
+            username="gerente@mail.com",
+            email="gerente@mail.com",
+            password="PasswordSegura123!",
+        )
+        Gerente.objects.create(usuario=usuario)
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, reverse("manager:home"))
+
+    def test_home_no_muestra_acceso_a_gestion_si_es_cliente(self):
+        usuario = get_user_model().objects.create_user(
+            username="cliente@mail.com",
+            email="cliente@mail.com",
+            password="PasswordSegura123!",
+        )
+        Cliente.objects.create(usuario=usuario)
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("home"))
+
+        self.assertNotContains(response, reverse("manager:home"))
 
     def test_logout_cierra_sesion_y_redirige_a_login(self):
         usuario = get_user_model().objects.create_user(

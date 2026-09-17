@@ -6,7 +6,6 @@ from .forms import (
     AdminUsuarioChangeForm,
     AdminUsuarioCreationForm,
     ClienteSignupForm,
-    LoginForm,
 )
 from .models import Acomodador, Cliente, Gerente
 
@@ -137,19 +136,6 @@ class ValidacionMailAdminUsuarioTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("email", form.errors)
-
-
-class LoginFormTests(TestCase):
-    def test_login_form_configura_los_inputs_de_acceso(self):
-        form = LoginForm()
-
-        self.assertEqual(form.fields["username"].widget.attrs["autocomplete"], "username")
-        self.assertEqual(form.fields["username"].widget.attrs["placeholder"], "Email")
-        self.assertEqual(
-            form.fields["password"].widget.attrs["autocomplete"],
-            "current-password",
-        )
-        self.assertEqual(form.fields["password"].widget.attrs["placeholder"], "Contraseña")
 
 
 class SignupClienteFormTests(TestCase):

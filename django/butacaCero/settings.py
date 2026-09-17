@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "domain.screenings",
     "domain.users",
     "web.auth",
+    "web.manager",
 ]
 
 MIDDLEWARE = [

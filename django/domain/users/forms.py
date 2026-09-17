@@ -50,22 +50,6 @@ class LoginForm(AuthenticationForm):
         "inactive": "Esta cuenta está inactiva.",
     }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["username"].widget.attrs.update(
-            {
-                "autocomplete": "username",
-                "placeholder": "Email",
-            }
-        )
-        self.fields["password"].widget.attrs.update(
-            {
-                "autocomplete": "current-password",
-                "placeholder": "Contraseña",
-            }
-        )
-
-
 class ClienteSignupForm(EmailUnicoMixin, forms.Form):
     nombre = forms.CharField(
         label="Nombre",

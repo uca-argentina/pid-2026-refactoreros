@@ -1,0 +1,39 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Butaca Cero | Gestión</title>
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+  <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
+  <link rel="stylesheet" href="{% static 'manager.css' %}">
+</head>
+<body>
+  <header class="manager-header">
+    <a class="brand" href="{% url 'manager:home' %}">Butaca Cero</a>
+    <nav aria-label="Gestion">
+      {% if manager_role == "gerente" %}
+        <a href="{% url 'manager:usuarios_list' %}">Usuarios</a>
+        <a href="{% url 'manager:salas_list' %}">Salas</a>
+        <a href="{% url 'manager:peliculas_list' %}">Películas</a>
+        <a href="{% url 'manager:funciones_list' %}">Funciones</a>
+      {% endif %}
+      <a href="{% url 'home' %}">Inicio</a>
+      <a href="{% url 'logout' %}">Salir</a>
+    </nav>
+  </header>
+
+  <main class="manager-main">
+    {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+          <p class="message">{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

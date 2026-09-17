@@ -7,6 +7,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from domain.cinema.models import ConfiguracionCine
 from domain.users.forms import ClienteSignupForm, LoginForm
 from domain.users.models import Cliente
+from web.manager.views import manager_role
 
 
 def _auth_context(request, active_tab, login_form=None, signup_form=None):
@@ -20,6 +21,8 @@ def _auth_context(request, active_tab, login_form=None, signup_form=None):
 
 def login_view(request):
     if request.user.is_authenticated:
+        if manager_role(request.user):
+            return redirect("manager:home")
         return redirect("home")
 
     initial = {}
@@ -39,6 +42,8 @@ def login_view(request):
             require_https=request.is_secure(),
         ):
             return redirect(next_url)
+        if manager_role(request.user):
+            return redirect("manager:home")
         return redirect("home")
 
     return render(
@@ -77,8 +82,9 @@ def logout_view(request):
 def home_view(request):
     return render(
         request,
-            "auth/home.html",
+        "auth/home.html",
         {
             "cinema": ConfiguracionCine.actual(),
+            "manager_role": manager_role(request.user),
         },
     )

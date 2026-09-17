@@ -1,0 +1,30 @@
+{% extends "manager/base.html" %}
+
+{% block content %}
+  <section class="page-heading">
+    <p>{{ section }}</p>
+    <h1>{{ submit_label }} registro</h1>
+  </section>
+
+  <form class="manager-form" method="post"{% if enctype %} enctype="{{ enctype }}"{% endif %}>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    {% for field in form %}
+      <label{% if field.field.widget.input_type == "checkbox" %} class="checkbox-field"{% endif %}>
+        <span>{{ field.label }}</span>
+        {% if field.name == "imagen" and object.imagen %}
+          <img class="image-preview" src="{{ object.imagen.url }}" alt="{{ object.titulo }}">
+        {% endif %}
+        {{ field }}
+        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+        {{ field.errors }}
+      </label>
+    {% endfor %}
+
+    <div class="form-actions">
+      <button type="submit">{{ submit_label }}</button>
+      <a href="{{ request.META.HTTP_REFERER|default:'../' }}">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

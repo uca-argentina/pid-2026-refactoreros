@@ -30,6 +30,7 @@ def health(_request):
 
 urlpatterns = [
     path('', include('web.auth.urls')),
+    path('gestion/', include('web.manager.urls')),
     path('health/', health, name='health'),
     path('admin/', admin.site.urls),
 ]
