@@ -34,8 +34,8 @@ class SignupFlowTests(TestCase):
                 "nombre": "Ana",
                 "apellido": "Gomez",
                 "email": "ana@mail.com",
-                "password1": "PasswordSegura123",
-                "password2": "PasswordSegura123",
+                "password1": "PasswordSegura123!",
+                "password2": "PasswordSegura123!",
             },
         )
 
@@ -48,7 +48,7 @@ class SignupFlowTests(TestCase):
         get_user_model().objects.create_user(
             username="ana@mail.com",
             email="ana@mail.com",
-            password="PasswordSegura123",
+            password="PasswordSegura123!",
         )
 
         response = self.client.post(
@@ -57,8 +57,8 @@ class SignupFlowTests(TestCase):
                 "nombre": "Ana",
                 "apellido": "Gomez",
                 "email": "ana@mail.com",
-                "password1": "PasswordSegura123",
-                "password2": "PasswordSegura123",
+                "password1": "PasswordSegura123!",
+                "password2": "PasswordSegura123!",
             },
         )
 
@@ -70,7 +70,7 @@ class SignupFlowTests(TestCase):
         usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
             email="ana@mail.com",
-            password="PasswordSegura123",
+            password="PasswordSegura123!",
         )
         self.client.force_login(usuario)
 
@@ -84,7 +84,7 @@ class LoginFlowTests(TestCase):
         self.usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
             email="ana@mail.com", 
-            password="PasswordSegura123",
+            password="PasswordSegura123!",
         )
 
     def test_login_con_credenciales_validas_crea_sesion(self):
@@ -92,7 +92,7 @@ class LoginFlowTests(TestCase):
             reverse("login"),
             data={
                 "username": "ana@mail.com",
-                "password": "PasswordSegura123",
+                "password": "PasswordSegura123!",
             },
         )
 
@@ -104,7 +104,7 @@ class LoginFlowTests(TestCase):
             f"{reverse('login')}?next={reverse('home')}",
             data={
                 "username": "ana@mail.com",
-                "password": "PasswordSegura123",
+                "password": "PasswordSegura123!",
             },
         )
 
@@ -115,7 +115,7 @@ class LoginFlowTests(TestCase):
             f"{reverse('login')}?next=https://example.com/phishing",
             data={
                 "username": "ana@mail.com",
-                "password": "PasswordSegura123",
+                "password": "PasswordSegura123!",
             },
         )
 
@@ -151,7 +151,7 @@ class SessionFlowTests(TestCase):
         usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
             email="ana@mail.com",
-            password="PasswordSegura123",
+            password="PasswordSegura123!",
         )
         self.client.force_login(usuario)
 
@@ -164,7 +164,7 @@ class SessionFlowTests(TestCase):
         usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
             email="ana@mail.com",
-            password="PasswordSegura123",
+            password="PasswordSegura123!",
         )
         self.client.force_login(usuario)
 

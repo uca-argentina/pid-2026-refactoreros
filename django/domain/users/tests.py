@@ -13,7 +13,7 @@ from .models import Acomodador, Cliente, Gerente
 
 class PerfilesUsuarioTests(TestCase):
     def setUp(self):
-        self.password = "PasswordSegura123"
+        self.password = "PasswordSegura123!"
         self.usuario = get_user_model().objects.create_user(
             username="juan",
             email="juan@mail.com",
@@ -76,7 +76,7 @@ class ValidacionMailAdminUsuarioTests(TestCase):
         self.usuario = get_user_model().objects.create_user(
             username="juan",
             email="juan@mail.com",
-            password="PasswordSegura123",
+            password="PasswordSegura123!",
         )
 
     def test_al_crear_usuario_el_mail_es_obligatorio(self):
@@ -84,8 +84,8 @@ class ValidacionMailAdminUsuarioTests(TestCase):
             data={
                 "username": "ana",
                 "email": "",
-                "password1": "PasswordSegura123",
-                "password2": "PasswordSegura123",
+                "password1": "PasswordSegura123!",
+                "password2": "PasswordSegura123!",
             }
         )
 
@@ -97,8 +97,8 @@ class ValidacionMailAdminUsuarioTests(TestCase):
             data={
                 "username": "ana",
                 "email": "JUAN@mail.com",
-                "password1": "PasswordSegura123",
-                "password2": "PasswordSegura123",
+                "password1": "PasswordSegura123!",
+                "password2": "PasswordSegura123!",
             }
         )
 
@@ -123,7 +123,7 @@ class ValidacionMailAdminUsuarioTests(TestCase):
         otro_usuario = get_user_model().objects.create_user(
             username="ana",
             email="ana@mail.com",
-            password="PasswordSegura123",
+            password="PasswordSegura123!",
         )
         form = AdminUsuarioChangeForm(
             instance=otro_usuario,
@@ -159,8 +159,8 @@ class SignupClienteFormTests(TestCase):
                 "nombre": "Ana",
                 "apellido": "Gomez",
                 "email": "ANA@mail.com",
-                "password1": "PasswordSegura123",
-                "password2": "PasswordSegura123",
+                "password1": "PasswordSegura123!",
+                "password2": "PasswordSegura123!",
             }
         )
 
@@ -172,7 +172,7 @@ class SignupClienteFormTests(TestCase):
         self.assertEqual(usuario.email, "ana@mail.com")
         self.assertEqual(usuario.first_name, "Ana")
         self.assertEqual(usuario.last_name, "Gomez")
-        self.assertTrue(usuario.check_password("PasswordSegura123"))
+        self.assertTrue(usuario.check_password("PasswordSegura123!"))
 
     def test_si_un_usuario_se_registra_con_password_invalida_entonces_devuelve_error(self):
         form = ClienteSignupForm(
@@ -187,3 +187,39 @@ class SignupClienteFormTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("password1", form.errors)
+
+    def test_si_un_usuario_se_registra_sin_numero_entonces_devuelve_error(self):
+        form = ClienteSignupForm(
+            data={
+                "nombre": "Ana",
+                "apellido": "Gomez",
+                "email": "ana@mail.com",
+                "password1": "PasswordSegura!",
+                "password2": "PasswordSegura!",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("password1", form.errors)
+        self.assertIn(
+            "La contraseña debe incluir al menos un número.",
+            form.errors["password1"],
+        )
+
+    def test_si_un_usuario_se_registra_sin_caracter_especial_entonces_devuelve_error(self):
+        form = ClienteSignupForm(
+            data={
+                "nombre": "Ana",
+                "apellido": "Gomez",
+                "email": "ana@mail.com",
+                "password1": "PasswordSegura123",
+                "password2": "PasswordSegura123",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("password1", form.errors)
+        self.assertIn(
+            "La contraseña debe incluir al menos un carácter especial.",
+            form.errors["password1"],
+        )

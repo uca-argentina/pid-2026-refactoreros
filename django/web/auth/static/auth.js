@@ -79,6 +79,12 @@ if (signupForm) {
     } else if (/^\d+$/.test(password)) {
       showError(fields.password1, "La contraseña no puede ser solo numérica.");
       isValid = false;
+    } else if (!/\d/.test(password)) {
+      showError(fields.password1, "La contraseña debe incluir al menos un número.");
+      isValid = false;
+    } else if (!/[^A-Za-z0-9]/.test(password)) {
+      showError(fields.password1, "La contraseña debe incluir al menos un carácter especial.");
+      isValid = false;
     } else if (commonPasswords.has(normalize(password))) {
       showError(fields.password1, "La contraseña es demasiado común.");
       isValid = false;
