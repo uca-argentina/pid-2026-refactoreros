@@ -13,12 +13,11 @@ MAX_MOVIE_IMAGE_SIZE_BYTES = MAX_MOVIE_IMAGE_SIZE_MB * 1024 * 1024
 class UsuarioGestionForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ("first_name", "last_name", "email", "is_active")
+        fields = ("first_name", "last_name", "email")
         labels = {
             "first_name": "Nombre",
             "last_name": "Apellido",
             "email": "Email",
-            "is_active": "Usuario activo",
         }
 
     def clean_email(self):

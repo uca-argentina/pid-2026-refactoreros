@@ -28,11 +28,15 @@
             <td>{{ item.rol }}</td>
             <td>{% if item.usuario.is_active %}Activo{% else %}Bloqueado{% endif %}</td>
             <td class="table-actions">
-              <a href="{% url 'manager:usuarios_update' item.usuario.pk %}">Editar</a>
-              <form method="post" action="{% url 'manager:usuarios_toggle' item.usuario.pk %}">
-                {% csrf_token %}
-                <button type="submit">{% if item.usuario.is_active %}Bloquear{% else %}Activar{% endif %}</button>
-              </form>
+              {% if item.can_edit %}
+                <a href="{% url 'manager:usuarios_update' item.usuario.pk %}">Editar</a>
+              {% endif %}
+              {% if item.can_toggle %}
+                <form method="post" action="{% url 'manager:usuarios_toggle' item.usuario.pk %}">
+                  {% csrf_token %}
+                  <button type="submit">{% if item.usuario.is_active %}Bloquear{% else %}Activar{% endif %}</button>
+                </form>
+              {% endif %}
             </td>
           </tr>
         {% empty %}

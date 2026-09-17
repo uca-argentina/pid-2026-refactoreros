@@ -7,19 +7,23 @@
 
   {% if manager_role == "gerente" %}
     <section class="action-grid" aria-label="Accesos de gestion">
-      <a class="action-card" href="{% url 'manager:usuarios_list' %}">
+      <a class="action-card action-card-users" href="{% url 'manager:usuarios_list' %}">
+        <i data-lucide="users" class="action-icon" aria-hidden="true"></i>
         <strong>Usuarios</strong>
         <span>Modificar datos y bloquear accesos.</span>
       </a>
-      <a class="action-card" href="{% url 'manager:salas_list' %}">
+      <a class="action-card action-card-rooms" href="{% url 'manager:salas_list' %}">
+        <i data-lucide="armchair" class="action-icon" aria-hidden="true"></i>
         <strong>Salas</strong>
         <span>Crear y administrar salas.</span>
       </a>
-      <a class="action-card" href="{% url 'manager:peliculas_list' %}">
+      <a class="action-card action-card-movies" href="{% url 'manager:peliculas_list' %}">
+        <i data-lucide="clapperboard" class="action-icon" aria-hidden="true"></i>
         <strong>Películas</strong>
         <span>Crear y administrar películas.</span>
       </a>
-      <a class="action-card" href="{% url 'manager:funciones_list' %}">
+      <a class="action-card action-card-screenings" href="{% url 'manager:funciones_list' %}">
+        <i data-lucide="calendar-clock" class="action-icon" aria-hidden="true"></i>
         <strong>Funciones</strong>
         <span>Crear y administrar funciones publicadas.</span>
       </a>

@@ -14,6 +14,7 @@ from django.views.generic import (
     UpdateView,
 )
 
+from domain.cinema.models import ConfiguracionCine
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
 from domain.screenings.models import Funcion
@@ -50,6 +51,7 @@ class ManagerAccessMixin(LoginRequiredMixin):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["manager_role"] = self.manager_role
+        context["cinema"] = ConfiguracionCine.actual()
         return context
 
 
@@ -112,7 +114,7 @@ class GerenteCreateView(GerenteRequiredMixin, CreateView):
     template_name = "manager/form.html"
 
     def form_valid(self, form):
-        messages.success(self.request, f"{self.object_label} creada correctamente.")
+        messages.success(self.request, f"{self.object_label} creado/a correctamente.")
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -127,7 +129,7 @@ class GerenteUpdateView(GerenteRequiredMixin, UpdateView):
     template_name = "manager/form.html"
 
     def form_valid(self, form):
-        messages.success(self.request, f"{self.object_label} actualizado correctamente.")
+        messages.success(self.request, f"{self.object_label} actualizado/a correctamente.")
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -142,7 +144,7 @@ class GerenteDeleteView(GerenteRequiredMixin, DeleteView):
     template_name = "manager/confirm_delete.html"
 
     def form_valid(self, form):
-        messages.success(self.request, f"{self.object_label} eliminado correctamente.")
+        messages.success(self.request, f"{self.object_label} eliminado/a correctamente.")
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -169,13 +171,19 @@ class UsuariosListView(GerenteListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["usuarios"] = [
-            {
-                "usuario": usuario,
-                "rol": manager_role(usuario) or "cliente",
-            }
-            for usuario in context["object_list"]
-        ]
+        usuarios = []
+        for usuario in context["object_list"]:
+            rol = manager_role(usuario) or "cliente"
+            is_other_manager = rol == "gerente" and usuario.pk != self.request.user.pk
+            usuarios.append(
+                {
+                    "usuario": usuario,
+                    "rol": rol,
+                    "can_edit": not is_other_manager,
+                    "can_toggle": usuario.pk != self.request.user.pk and rol != "gerente",
+                }
+            )
+        context["usuarios"] = usuarios
         return context
 
     def get_queryset(self):
@@ -191,6 +199,12 @@ class UsuarioUpdateView(GerenteRequiredMixin, UpdateView):
     enctype = ""
     object_label = "Usuario"
 
+    def get_object(self, queryset=None):
+        usuario = super().get_object(queryset)
+        if manager_role(usuario) == "gerente" and usuario.pk != self.request.user.pk:
+            raise PermissionDenied
+        return usuario
+
     def form_valid(self, form):
         form.instance.username = form.cleaned_data["email"]
         return super().form_valid(form)
@@ -200,6 +214,8 @@ class UsuarioUpdateView(GerenteRequiredMixin, UpdateView):
         context["section"] = self.section
         context["submit_label"] = "Guardar"
         context["enctype"] = self.enctype
+        context["show_user_status_action"] = self.object.pk != self.request.user.pk
+        context["can_toggle_user_status"] = manager_role(self.object) != "gerente"
         return context
 
 
@@ -208,6 +224,12 @@ class UsuarioToggleActiveView(GerenteRequiredMixin, DetailView):
 
     def post(self, request, *args, **kwargs):
         usuario = self.get_object()
+        if usuario.pk == request.user.pk:
+            messages.error(request, "No podés bloquear tu propio usuario.")
+            return redirect("manager:usuarios_list")
+        if manager_role(usuario) == "gerente":
+            messages.error(request, "No podés cambiar el estado de otro gerente.")
+            return redirect("manager:usuarios_list")
         usuario.is_active = not usuario.is_active
         usuario.save(update_fields=["is_active"])
         estado = "activado" if usuario.is_active else "bloqueado"

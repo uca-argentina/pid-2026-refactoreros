@@ -27,4 +27,22 @@
       <a href="{{ request.META.HTTP_REFERER|default:'../' }}">Cancelar</a>
     </div>
   </form>
+
+  {% if show_user_status_action %}
+    <section class="status-action">
+      {% if can_toggle_user_status %}
+        <form method="post" action="{% url 'manager:usuarios_toggle' object.pk %}">
+          {% csrf_token %}
+          <button type="submit">{% if object.is_active %}Bloquear{% else %}Activar{% endif %}</button>
+          {% if object.is_active %}
+            <small>Si bloqueás este usuario, no va a poder acceder al sitio.</small>
+          {% else %}
+            <small>Al activarlo, va a poder volver a acceder al sitio.</small>
+          {% endif %}
+        </form>
+      {% else %}
+        <small>No podés bloquear tu propio usuario.</small>
+      {% endif %}
+    </section>
+  {% endif %}
 {% endblock %}

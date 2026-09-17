@@ -88,6 +88,12 @@ class ManagerUsuariosTests(TestCase):
             password="PasswordSegura123!",
         )
         Gerente.objects.create(usuario=self.gerente)
+        self.otro_gerente = get_user_model().objects.create_user(
+            username="otro-gerente@mail.com",
+            email="otro-gerente@mail.com",
+            password="PasswordSegura123!",
+        )
+        Gerente.objects.create(usuario=self.otro_gerente)
         self.usuario = get_user_model().objects.create_user(
             username="cliente@mail.com",
             email="cliente@mail.com",
@@ -104,6 +110,10 @@ class ManagerUsuariosTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cliente@mail.com")
         self.assertContains(response, "cliente")
+        self.assertContains(response, reverse("manager:usuarios_update", args=[self.gerente.pk]))
+        self.assertNotContains(
+            response, reverse("manager:usuarios_update", args=[self.otro_gerente.pk])
+        )
 
     def test_gerente_modifica_usuario(self):
         response = self.client.post(
@@ -122,12 +132,43 @@ class ManagerUsuariosTests(TestCase):
         self.assertEqual(self.usuario.email, "ana@mail.com")
         self.assertEqual(self.usuario.username, "ana@mail.com")
 
+    def test_edicion_usuario_muestra_boton_bloquear_sin_checkbox_activo(self):
+        response = self.client.get(reverse("manager:usuarios_update", args=[self.usuario.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Usuario activo")
+        self.assertContains(response, "Bloquear")
+        self.assertContains(response, "no va a poder acceder al sitio")
+
     def test_gerente_bloquea_usuario(self):
         response = self.client.post(reverse("manager:usuarios_toggle", args=[self.usuario.pk]))
 
         self.assertRedirects(response, reverse("manager:usuarios_list"))
         self.usuario.refresh_from_db()
         self.assertFalse(self.usuario.is_active)
+
+    def test_gerente_no_puede_autobloquearse(self):
+        response = self.client.post(reverse("manager:usuarios_toggle", args=[self.gerente.pk]))
+
+        self.assertRedirects(response, reverse("manager:usuarios_list"))
+        self.gerente.refresh_from_db()
+        self.assertTrue(self.gerente.is_active)
+
+    def test_gerente_no_puede_editar_otro_gerente(self):
+        response = self.client.get(
+            reverse("manager:usuarios_update", args=[self.otro_gerente.pk])
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_gerente_no_puede_bloquear_otro_gerente(self):
+        response = self.client.post(
+            reverse("manager:usuarios_toggle", args=[self.otro_gerente.pk])
+        )
+
+        self.assertRedirects(response, reverse("manager:usuarios_list"))
+        self.otro_gerente.refresh_from_db()
+        self.assertTrue(self.otro_gerente.is_active)
 
 
 class ManagerSalasTests(TestCase):
