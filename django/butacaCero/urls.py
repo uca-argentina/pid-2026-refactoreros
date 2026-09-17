@@ -20,13 +20,19 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 
+admin.site.site_header = "Butaca Cero - Admin Panel"
+admin.site.site_title = "Butaca Cero - Admin Panel"
+
 
 def health(_request):
     return JsonResponse({"status": "ok"})
 
 
 urlpatterns = [
-    path('', include('frontend.urls')),
+    path('', include('web.catalog.urls')),
+    path('', include('web.tickets.urls')),
+    path('', include('web.auth.urls')),
+    path('gestion/', include('web.manager.urls')),
     path('health/', health, name='health'),
     path('admin/', admin.site.urls),
 ]

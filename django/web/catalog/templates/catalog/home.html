@@ -1,0 +1,55 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ cinema.nombre }} | Cartelera</title>
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+  <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
+  <link rel="stylesheet" href="{% static 'catalog.css' %}">
+</head>
+<body class="client-page">
+  <header class="client-header">
+    <a class="client-brand" href="{% url 'home' %}">
+      {% if cinema.logo %}
+        <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="client-logo">
+      {% else %}
+        <strong>{{ cinema.nombre }}</strong>
+      {% endif %}
+    </a>
+    <nav>
+      <a href="{% url 'my_tickets' %}">Mis entradas</a>
+      {% if manager_role %}
+        <a href="{% url 'manager:home' %}">Gestion</a>
+      {% endif %}
+      <a href="{% url 'logout' %}">Cerrar sesion</a>
+    </nav>
+  </header>
+
+  <main class="client-main">
+    <section class="client-heading">
+      <h1>Funciones</h1>
+    </section>
+
+    {% if peliculas %}
+      <section class="movie-grid" aria-label="Peliculas con funciones publicadas">
+        {% for pelicula in peliculas %}
+          <a class="movie-card" href="{% url 'movie_detail' pelicula.pk %}">
+            <img src="{{ pelicula.imagen.url }}" alt="{{ pelicula.titulo }}">
+            <div class="movie-card-body">
+              <h2>{{ pelicula.titulo }}</h2>
+              <p>{{ pelicula.get_clasificacion_display }}</p>
+            </div>
+          </a>
+        {% endfor %}
+      </section>
+    {% else %}
+      <section class="client-empty">
+        <h2>No hay funciones publicadas</h2>
+        <p>Volve mas tarde para ver la proxima cartelera.</p>
+      </section>
+    {% endif %}
+  </main>
+</body>
+</html>

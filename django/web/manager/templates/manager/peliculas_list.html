@@ -1,0 +1,52 @@
+{% extends "manager/base.html" %}
+
+{% block content %}
+  <section class="page-heading page-heading-row">
+    <div>
+      <h1>Peliculas</h1>
+    </div>
+    {% if create_url_name %}<a class="primary-link" href="{% url create_url_name %}">Nueva pelicula</a>{% endif %}
+  </section>
+
+  {% include "manager/_list_controls.html" %}
+
+  <section class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Titulo</th>
+          <th>Imagen</th>
+          <th>Género</th>
+          <th>Clasificación</th>
+          <th>Duración</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pelicula in object_list %}
+          <tr>
+            <td>{{ pelicula.titulo }}</td>
+            <td>
+              {% if pelicula.imagen %}
+                <img class="table-thumb" src="{{ pelicula.imagen.url }}" alt="{{ pelicula.titulo }}">
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>{{ pelicula.get_genero_display }}</td>
+            <td>{{ pelicula.get_clasificacion_display }}</td>
+            <td>{{ pelicula.duracion_minutos }} min</td>
+            <td class="table-actions">
+              <a href="{% url 'manager:peliculas_update' pelicula.pk %}">Editar</a>
+              <a href="{% url 'manager:peliculas_delete' pelicula.pk %}">Eliminar</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">No hay películas cargadas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% include "manager/_pagination.html" %}
+{% endblock %}

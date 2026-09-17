@@ -1,0 +1,50 @@
+{% extends "manager/base.html" %}
+
+{% block content %}
+  <section class="page-heading page-heading-row">
+    <div>
+      <h1>Usuarios</h1>
+    </div>
+  </section>
+
+  {% include "manager/_list_controls.html" %}
+
+  <section class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Nombre</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in usuarios %}
+          <tr>
+            <td>{{ item.usuario.email|default:item.usuario.username }}</td>
+            <td>{{ item.usuario.get_full_name|default:"-" }}</td>
+            <td>{{ item.rol }}</td>
+            <td>{% if item.usuario.is_active %}Activo{% else %}Bloqueado{% endif %}</td>
+            <td class="table-actions">
+              {% if item.can_edit %}
+                <a href="{% url 'manager:usuarios_update' item.usuario.pk %}">Editar</a>
+              {% endif %}
+              {% if item.can_toggle %}
+                <form method="post" action="{% url 'manager:usuarios_toggle' item.usuario.pk %}">
+                  {% csrf_token %}
+                  <button type="submit">{% if item.usuario.is_active %}Bloquear{% else %}Activar{% endif %}</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">No hay usuarios cargados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% include "manager/_pagination.html" %}
+{% endblock %}

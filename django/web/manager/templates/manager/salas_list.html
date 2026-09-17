@@ -1,0 +1,40 @@
+{% extends "manager/base.html" %}
+
+{% block content %}
+  <section class="page-heading page-heading-row">
+    <div>
+      <h1>Salas</h1>
+    </div>
+    {% if create_url_name %}<a class="primary-link" href="{% url create_url_name %}">Nueva sala</a>{% endif %}
+  </section>
+
+  {% include "manager/_list_controls.html" %}
+
+  <section class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Capacidad</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sala in object_list %}
+          <tr>
+            <td>{{ sala.nombre }}</td>
+            <td>{{ sala.capacidad }}</td>
+            <td class="table-actions">
+              <a href="{% url 'manager:salas_update' sala.pk %}">Editar</a>
+              <a href="{% url 'manager:salas_delete' sala.pk %}">Eliminar</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3">No hay salas cargadas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% include "manager/_pagination.html" %}
+{% endblock %}

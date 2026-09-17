@@ -42,12 +42,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "cinema",
-    "movies",
-    "rooms",
-    "screenings",
-    "users",
-    "frontend",
+    "domain.cinema",
+    "domain.movies",
+    "domain.rooms",
+    "domain.screenings",
+    "domain.tickets",
+    "domain.users",
+    "web.auth",
+    "web.catalog",
+    "web.manager",
+    "web.tickets",
 ]
 
 MIDDLEWARE = [
@@ -99,6 +103,12 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
     {
+        'NAME': 'domain.users.password_validators.NumberPasswordValidator',
+    },
+    {
+        'NAME': 'domain.users.password_validators.SpecialCharacterPasswordValidator',
+    },
+    {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
@@ -127,9 +137,6 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
-
-MOVIES_URL  = '/media/peliculas'
-MOVIES_ROOT = BASE_DIR / MOVIES_URL
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
