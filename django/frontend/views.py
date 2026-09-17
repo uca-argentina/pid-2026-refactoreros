@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.db import transaction
 from django.shortcuts import redirect, render
+from django.http import Http404
 
 from cinema.models import ConfiguracionCine
 from users.forms import ClienteSignupForm
@@ -92,6 +93,26 @@ def listing_view(request):
         {
             "cinema": ConfiguracionCine.actual(),
             "funciones": Funcion.funciones_publicadas()
-
         }
     )
+
+#@login_required
+def screening_page(request, pk):
+    
+    try:
+        funcion = Funcion.objects.get(pk=pk)
+    except:
+        raise Http404("La función solicitada no existe")
+
+    return  render(
+        request,
+        "frontend/screening_page.html",
+        {
+            "cinema": ConfiguracionCine.actual(),
+            "funcion": funcion
+        }
+    )
+
+#@login_required
+def buy_tickets(request):
+    pass
