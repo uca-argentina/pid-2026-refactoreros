@@ -23,9 +23,9 @@
       <a href="{% url 'home' %}">Cartelera</a>
       <a href="{% url 'my_tickets' %}">Mis entradas</a>
       {% if manager_role %}
-        <a href="{% url 'manager:home' %}">Gestion</a>
+        <a href="{% url 'manager:home' %}">Gestión</a>
       {% endif %}
-      <a href="{% url 'logout' %}">Cerrar sesion</a>
+      <a href="{% url 'logout' %}">Cerrar sesión</a>
     </nav>
   </header>
 
@@ -47,15 +47,15 @@
 
         <dl class="screening-facts">
           <div>
-            <dt>Genero</dt>
+            <dt>Género</dt>
             <dd>{{ pelicula.get_genero_display }}</dd>
           </div>
           <div>
-            <dt>Clasificacion</dt>
+            <dt>Clasificación</dt>
             <dd>{{ pelicula.get_clasificacion_display }}</dd>
           </div>
           <div>
-            <dt>Duracion</dt>
+            <dt>Duración</dt>
             <dd>{{ pelicula.duracion_minutos }} min</dd>
           </div>
           <div>
@@ -78,6 +78,7 @@
                   name="funcion"
                   value="{{ item.pk }}"
                   data-purchase-url="{% url 'ticket_purchase' item.pk %}"
+                  data-available="{{ item.entradas_disponibles }}"
                   {% if item.pk == funcion.pk %}checked{% endif %}
                 >
                 <span>{{ item.fecha_horario|date:"l d/m H:i"|capfirst }}</span>
@@ -86,21 +87,28 @@
             {% endfor %}
           </div>
         </section>
-        {% if entradas_disponibles > 0 %}
-          <form class="purchase-form" method="post" action="{% url 'ticket_purchase' funcion.pk %}">
-            {% csrf_token %}
-            <label>
-              <span>Cantidad de entradas</span>
-              <input type="number" name="cantidad" value="1" min="1">
-            </label>
-            <div class="purchase-action">
-              <button type="submit" data-singular-label="Comprar entrada" data-plural-label="Comprar entradas">Comprar entrada</button>
-              {% if purchase_error  %}
-                <p class="purchase-error">{{ purchase_error }}</p>
-              {% endif %}
-            </div>
-          </form>
-        {% endif %}
+
+        <form class="purchase-form" method="post" action="{% url 'ticket_purchase' funcion.pk %}">
+          {% csrf_token %}
+          <label class="quantity-field"{% if entradas_disponibles <= 0 %} hidden{% endif %}>
+            <span>Cantidad de entradas</span>
+            <input type="number" name="cantidad" value="1" min="1">
+          </label>
+          <div class="purchase-action">
+            <button
+              type="submit"
+              data-singular-label="Comprar entrada"
+              data-plural-label="Comprar entradas"
+              data-sold-out-label="Entradas agotadas para esta función"
+              {% if entradas_disponibles <= 0 %}disabled{% endif %}
+            >
+              {% if entradas_disponibles > 0 %}Comprar entrada{% else %}Entradas agotadas para esta función{% endif %}
+            </button>
+            {% if purchase_error and entradas_disponibles > 0 %}
+              <p class="purchase-error">{{ purchase_error }}</p>
+            {% endif %}
+          </div>
+        </form>
       </section>
     </article>
   </main>

@@ -10,14 +10,14 @@ class AuthPageRenderingTests(TestCase):
         response = self.client.get(reverse("login"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "auth/auth.html")
+        self.assertTemplateUsed(response, "auth.html")
         self.assertEqual(response.context["active_tab"], "login")
 
     def test_signup_renderiza_template_de_auth(self):
         response = self.client.get(reverse("signup"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "auth/auth.html")
+        self.assertTemplateUsed(response, "auth.html")
         self.assertEqual(response.context["active_tab"], "signup")
 
     def test_login_con_mail_precargado_querystring_carga_exitosamente(self):

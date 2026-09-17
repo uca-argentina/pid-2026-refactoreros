@@ -21,9 +21,9 @@
     <nav>
       <a href="{% url 'my_tickets' %}">Mis entradas</a>
       {% if manager_role %}
-        <a href="{% url 'manager:home' %}">Gestion</a>
+        <a href="{% url 'manager:home' %}">Gestión</a>
       {% endif %}
-      <a href="{% url 'logout' %}">Cerrar sesion</a>
+      <a href="{% url 'logout' %}">Cerrar sesión</a>
     </nav>
   </header>
 
@@ -47,7 +47,7 @@
     {% else %}
       <section class="client-empty">
         <h2>No hay funciones publicadas</h2>
-        <p>Volve mas tarde para ver la proxima cartelera.</p>
+        <p>Volvé mas tarde para ver la próxima cartelera.</p>
       </section>
     {% endif %}
   </main>

@@ -47,7 +47,7 @@ def login_view(request):
 
     return render(
         request,
-        "auth/auth.html",
+        "auth.html",
         _auth_context(request, "login", login_form=form),
     )
 
@@ -67,7 +67,7 @@ def signup_view(request):
 
     return render(
         request,
-        "auth/auth.html",
+        "auth.html",
         _auth_context(request, "signup", signup_form=form),
     )
 

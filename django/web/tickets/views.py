@@ -54,7 +54,7 @@ def my_tickets_view(request):
     )
     return render(
         request,
-        "tickets/my_tickets.html",
+        "my_tickets.html",
         {
             "cinema": ConfiguracionCine.actual(),
             "compras": compras,

@@ -1,9 +1,9 @@
-{% extends "manager/base.html" %}
+{% extends "manager_base.html" %}
 
 {% block content %}
   <section class="page-heading">
     <p>{{ section }}</p>
-    <h1>{{ submit_label }} registro</h1>
+    <h1>{{ form_title }}</h1>
   </section>
 
   <form class="manager-form" method="post"{% if enctype %} enctype="{{ enctype }}"{% endif %}>

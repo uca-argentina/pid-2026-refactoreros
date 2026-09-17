@@ -1,4 +1,4 @@
-{% extends "manager/base.html" %}
+{% extends "manager_base.html" %}
 
 {% block content %}
   <section class="page-heading page-heading-row">
@@ -7,7 +7,7 @@
     </div>
   </section>
 
-  {% include "manager/_list_controls.html" %}
+  {% include "_list_controls.html" %}
 
   <section class="table-shell">
     <table>
@@ -23,11 +23,11 @@
       <tbody>
         {% for item in usuarios %}
           <tr>
-            <td>{{ item.usuario.email|default:item.usuario.username }}</td>
-            <td>{{ item.usuario.get_full_name|default:"-" }}</td>
-            <td>{{ item.rol }}</td>
-            <td>{% if item.usuario.is_active %}Activo{% else %}Bloqueado{% endif %}</td>
-            <td class="table-actions">
+            <td data-label="Email">{{ item.usuario.email|default:item.usuario.username }}</td>
+            <td data-label="Nombre">{{ item.usuario.get_full_name|default:"-" }}</td>
+            <td data-label="Rol">{{ item.rol }}</td>
+            <td data-label="Estado">{% if item.usuario.is_active %}Activo{% else %}Bloqueado{% endif %}</td>
+            <td class="table-actions" data-label="Acciones">
               {% if item.can_edit %}
                 <a href="{% url 'manager:usuarios_update' item.usuario.pk %}">Editar</a>
               {% endif %}
@@ -46,5 +46,5 @@
     </table>
   </section>
 
-  {% include "manager/_pagination.html" %}
+  {% include "_pagination.html" %}
 {% endblock %}

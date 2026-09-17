@@ -4,7 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import F, IntegerField, Q, Sum, Value
 from django.db.models.functions import Coalesce, Greatest
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.generic import (
     CreateView,
@@ -62,7 +62,7 @@ class GerenteRequiredMixin(ManagerAccessMixin):
 
 
 class GestionHomeView(ManagerAccessMixin, TemplateView):
-    template_name = "manager/home.html"
+    template_name = "manager_home.html"
 
 
 class GerenteListView(GerenteRequiredMixin, ListView):
@@ -70,6 +70,8 @@ class GerenteListView(GerenteRequiredMixin, ListView):
     page_size_options = (10, 20, 50, 100)
     search_placeholder = "Buscar"
     search_query_param = "q"
+    ordering_query_param = "order"
+    ordering_options = ()
 
     def get_page_size(self):
         try:
@@ -86,12 +88,34 @@ class GerenteListView(GerenteRequiredMixin, ListView):
     def get_search_query(self):
         return self.request.GET.get(self.search_query_param, "").strip()
 
+    def get_ordering_value(self):
+        requested_ordering = self.request.GET.get(self.ordering_query_param, "")
+        allowed_orderings = {option[0] for option in self.ordering_options}
+        if requested_ordering in allowed_orderings:
+            return requested_ordering
+        if self.ordering_options:
+            return self.ordering_options[0][0]
+        return ""
+
+    def get_ordering_fields(self):
+        selected_ordering = self.get_ordering_value()
+        for value, _label, fields in self.ordering_options:
+            if value == selected_ordering:
+                return fields
+        return ()
+
+    def apply_ordering(self, queryset):
+        ordering_fields = self.get_ordering_fields()
+        if ordering_fields:
+            return queryset.order_by(*ordering_fields)
+        return queryset
+
     def get_queryset(self):
         queryset = super().get_queryset()
         search_query = self.get_search_query()
         if search_query:
             queryset = self.apply_search(queryset, search_query)
-        return queryset
+        return self.apply_ordering(queryset)
 
     def apply_search(self, queryset, search_query):
         return queryset
@@ -103,8 +127,15 @@ class GerenteListView(GerenteRequiredMixin, ListView):
         context["columns"] = self.columns
         context["search_query"] = self.get_search_query()
         context["search_placeholder"] = self.search_placeholder
+        context["ordering_options"] = self.ordering_options
+        context["selected_ordering"] = self.get_ordering_value()
         context["page_size"] = self.get_page_size()
         context["page_size_options"] = self.page_size_options
+        context["has_list_filters"] = (
+            bool(self.get_search_query())
+            or self.get_ordering_value()
+            != (self.ordering_options[0][0] if self.ordering_options else "")
+        )
         query_params = self.request.GET.copy()
         query_params.pop("page", None)
         context["list_querystring"] = query_params.urlencode()
@@ -112,7 +143,8 @@ class GerenteListView(GerenteRequiredMixin, ListView):
 
 
 class GerenteCreateView(GerenteRequiredMixin, CreateView):
-    template_name = "manager/form.html"
+    template_name = "manager_form.html"
+    form_title = ""
 
     def form_valid(self, form):
         messages.success(self.request, f"{self.object_label} creado/a correctamente.")
@@ -122,12 +154,14 @@ class GerenteCreateView(GerenteRequiredMixin, CreateView):
         context = super().get_context_data(**kwargs)
         context["section"] = self.section
         context["submit_label"] = "Crear"
+        context["form_title"] = self.form_title or f"Nuevo {self.object_label.lower()}"
         context["enctype"] = self.enctype
         return context
 
 
 class GerenteUpdateView(GerenteRequiredMixin, UpdateView):
-    template_name = "manager/form.html"
+    template_name = "manager_form.html"
+    form_title = ""
 
     def form_valid(self, form):
         messages.success(self.request, f"{self.object_label} actualizado/a correctamente.")
@@ -137,30 +171,38 @@ class GerenteUpdateView(GerenteRequiredMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context["section"] = self.section
         context["submit_label"] = "Guardar"
+        context["form_title"] = self.form_title or f"Editar {self.object_label.lower()}"
         context["enctype"] = self.enctype
         return context
 
 
 class GerenteDeleteView(GerenteRequiredMixin, DeleteView):
-    template_name = "manager/confirm_delete.html"
+    template_name = "manager_confirm_delete.html"
 
     def form_valid(self, form):
-        messages.success(self.request, f"{self.object_label} eliminado/a correctamente.")
+        messages.success(self.request, f"Eliminado/a correctamente.")
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["section"] = self.section
+        context["object_label"] = self.object_label
         return context
 
 
 class UsuariosListView(GerenteListView):
     model = User
-    template_name = "manager/usuarios_list.html"
+    template_name = "manager_usuarios_list.html"
     section = "Usuarios"
     create_url_name = ""
     columns = ("Email", "Nombre", "Rol", "Estado")
     search_placeholder = "Buscar por email o nombre"
+    ordering_options = (
+        ("email_asc", "Email A-Z", ("email", "username")),
+        ("email_desc", "Email Z-A", ("-email", "-username")),
+        ("nombre_asc", "Nombre A-Z", ("first_name", "last_name", "email")),
+        ("recientes", "Más recientes", ("-date_joined",)),
+    )
 
     def apply_search(self, queryset, search_query):
         return queryset.filter(
@@ -187,14 +229,10 @@ class UsuariosListView(GerenteListView):
         context["usuarios"] = usuarios
         return context
 
-    def get_queryset(self):
-        return super().get_queryset().order_by("email", "username")
-
-
 class UsuarioUpdateView(GerenteRequiredMixin, UpdateView):
     model = User
     form_class = UsuarioGestionForm
-    template_name = "manager/form.html"
+    template_name = "manager_form.html"
     success_url = reverse_lazy("manager:usuarios_list")
     section = "Usuarios"
     enctype = ""
@@ -214,6 +252,7 @@ class UsuarioUpdateView(GerenteRequiredMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context["section"] = self.section
         context["submit_label"] = "Guardar"
+        context["form_title"] = "Editar usuario"
         context["enctype"] = self.enctype
         context["show_user_status_action"] = self.object.pk != self.request.user.pk
         context["can_toggle_user_status"] = manager_role(self.object) != "gerente"
@@ -240,11 +279,17 @@ class UsuarioToggleActiveView(GerenteRequiredMixin, DetailView):
 
 class SalasListView(GerenteListView):
     model = Sala
-    template_name = "manager/salas_list.html"
+    template_name = "manager_salas_list.html"
     section = "Salas"
     create_url_name = "manager:salas_create"
     columns = ("Nombre", "Capacidad")
     search_placeholder = "Buscar por nombre"
+    ordering_options = (
+        ("nombre_asc", "Nombre A-Z", ("nombre",)),
+        ("nombre_desc", "Nombre Z-A", ("-nombre",)),
+        ("capacidad_desc", "Mayor capacidad", ("-capacidad", "nombre")),
+        ("capacidad_asc", "Menor capacidad", ("capacidad", "nombre")),
+    )
 
     def apply_search(self, queryset, search_query):
         return queryset.filter(nombre__icontains=search_query)
@@ -257,6 +302,7 @@ class SalaCreateView(GerenteCreateView):
     section = "Salas"
     enctype = ""
     object_label = "Sala"
+    form_title = "Nueva sala"
 
 
 class SalaUpdateView(GerenteUpdateView):
@@ -266,6 +312,7 @@ class SalaUpdateView(GerenteUpdateView):
     section = "Salas"
     enctype = ""
     object_label = "Sala"
+    form_title = "Editar sala"
 
 
 class SalaDeleteView(GerenteDeleteView):
@@ -277,11 +324,18 @@ class SalaDeleteView(GerenteDeleteView):
 
 class PeliculasListView(GerenteListView):
     model = Pelicula
-    template_name = "manager/peliculas_list.html"
+    template_name = "manager_peliculas_list.html"
     section = "Peliculas"
     create_url_name = "manager:peliculas_create"
     columns = ("Titulo", "Genero", "Clasificacion", "Duracion")
-    search_placeholder = "Buscar por titulo, genero o sinopsis"
+    search_placeholder = "Buscar por título, género o sinopsis"
+    ordering_options = (
+        ("titulo_asc", "Título A-Z", ("titulo",)),
+        ("titulo_desc", "Título Z-A", ("-titulo",)),
+        ("genero_asc", "Género A-Z", ("genero", "titulo")),
+        ("duracion_desc", "Más largas", ("-duracion_minutos", "titulo")),
+        ("duracion_asc", "Más cortas", ("duracion_minutos", "titulo")),
+    )
 
     def apply_search(self, queryset, search_query):
         return queryset.filter(
@@ -298,6 +352,7 @@ class PeliculaCreateView(GerenteCreateView):
     section = "Peliculas"
     enctype = "multipart/form-data"
     object_label = "Pelicula"
+    form_title = "Nueva pelicula"
 
 
 class PeliculaUpdateView(GerenteUpdateView):
@@ -307,6 +362,7 @@ class PeliculaUpdateView(GerenteUpdateView):
     section = "Peliculas"
     enctype = "multipart/form-data"
     object_label = "Pelicula"
+    form_title = "Editar pelicula"
 
 
 class PeliculaDeleteView(GerenteDeleteView):
@@ -318,7 +374,7 @@ class PeliculaDeleteView(GerenteDeleteView):
 
 class FuncionesListView(GerenteListView):
     model = Funcion
-    template_name = "manager/funciones_list.html"
+    template_name = "manager_funciones_list.html"
     section = "Funciones"
     create_url_name = "manager:funciones_create"
     columns = (
@@ -330,7 +386,15 @@ class FuncionesListView(GerenteListView):
         "Vendidas",
         "Disponibles",
     )
-    search_placeholder = "Buscar por pelicula o sala"
+    search_placeholder = "Buscar por película o sala"
+    ordering_options = (
+        ("fecha_asc", "Fecha más próxima", ("fecha_horario",)),
+        ("fecha_desc", "Fecha más lejana", ("-fecha_horario",)),
+        ("pelicula_asc", "Película A-Z", ("pelicula__titulo", "fecha_horario")),
+        ("sala_asc", "Sala A-Z", ("sala__nombre", "fecha_horario")),
+        ("precio_desc", "Mayor precio", ("-precio_entrada", "fecha_horario")),
+        ("precio_asc", "Menor precio", ("precio_entrada", "fecha_horario")),
+    )
 
     def get_queryset(self):
         queryset = (
@@ -353,7 +417,7 @@ class FuncionesListView(GerenteListView):
         search_query = self.get_search_query()
         if search_query:
             queryset = self.apply_search(queryset, search_query)
-        return queryset
+        return self.apply_ordering(queryset)
 
     def apply_search(self, queryset, search_query):
         return queryset.filter(
@@ -369,6 +433,24 @@ class FuncionCreateView(GerenteCreateView):
     section = "Funciones"
     enctype = ""
     object_label = "Funcion"
+    form_title = "Nueva funcion"
+
+    def get_initial(self):
+        initial = super().get_initial()
+        plantilla_id = self.request.GET.get("plantilla")
+        if not plantilla_id:
+            return initial
+
+        plantilla = get_object_or_404(Funcion, pk=plantilla_id)
+        initial.update(
+            {
+                "pelicula": plantilla.pelicula,
+                "sala": plantilla.sala,
+                "fecha_horario": plantilla.fecha_horario,
+                "precio_entrada": plantilla.precio_entrada,
+            }
+        )
+        return initial
 
     def form_valid(self, form):
         form.instance.publicada = False
@@ -382,6 +464,7 @@ class FuncionUpdateView(GerenteUpdateView):
     section = "Funciones"
     enctype = ""
     object_label = "Funcion"
+    form_title = "Editar función"
 
 
 class FuncionDeleteView(GerenteDeleteView):

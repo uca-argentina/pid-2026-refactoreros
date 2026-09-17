@@ -41,12 +41,12 @@
       <section class="ticket-list" aria-label="Entradas compradas">
         {% for compra in compras %}
           <article class="ticket-card">
-            <div>
+            <div class="ticket-main">
               <span>{{ compra.funcion.fecha_horario|date:"l d/m H:i"|capfirst }}</span>
               <h2>{{ compra.funcion.pelicula.titulo }}</h2>
               <p>{{ compra.funcion.sala.nombre }}</p>
             </div>
-            <dl>
+            <dl class="ticket-summary">
               <div>
                 <dt>Cantidad</dt>
                 <dd>{{ compra.cantidad }}</dd>

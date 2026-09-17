@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
@@ -30,6 +31,17 @@ class Funcion(models.Model):
 
     def clean(self):
         super().clean()
+        errors = {}
+
+        if self.precio_entrada is not None and self.precio_entrada <= 0:
+            errors["precio_entrada"] = "El precio de entrada debe ser mayor a cero."
+
+        if self.fecha_horario and self.fecha_horario <= timezone.now():
+            errors["fecha_horario"] = "La fecha y horario deben ser futuros."
+
+        if errors:
+            raise ValidationError(errors)
+
         if not self.pelicula_id or not self.sala_id or not self.fecha_horario:
             return
 

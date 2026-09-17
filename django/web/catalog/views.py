@@ -17,7 +17,7 @@ def home_view(request):
     ).distinct()
     return render(
         request,
-        "catalog/home.html",
+        "home.html",
         {
             "cinema": ConfiguracionCine.actual(),
             "peliculas": peliculas,
@@ -44,16 +44,18 @@ def movie_detail_view(request, pk):
         ),
         pelicula.publicadas[0],
     )
+    for item in pelicula.publicadas:
+        item.entradas_disponibles = CompraEntrada.disponibles_para(item)
     purchase_error = request.session.pop("purchase_error", "")
     return render(
         request,
-        "catalog/screening_detail.html",
+        "screening_detail.html",
         {
             "cinema": ConfiguracionCine.actual(),
             "pelicula": pelicula,
             "funcion": funcion,
             "funciones": pelicula.publicadas,
-            "entradas_disponibles": CompraEntrada.disponibles_para(funcion),
+            "entradas_disponibles": funcion.entradas_disponibles,
             "purchase_error": purchase_error,
             "manager_role": manager_role(request.user),
         },

@@ -1,20 +1,20 @@
-{% extends "manager/base.html" %}
+{% extends "manager_base.html" %}
 
 {% block content %}
   <section class="page-heading page-heading-row">
     <div>
-      <h1>Peliculas</h1>
+      <h1>Películas</h1>
     </div>
-    {% if create_url_name %}<a class="primary-link" href="{% url create_url_name %}">Nueva pelicula</a>{% endif %}
+    {% if create_url_name %}<a class="primary-link" href="{% url create_url_name %}">Nueva película</a>{% endif %}
   </section>
 
-  {% include "manager/_list_controls.html" %}
+  {% include "_list_controls.html" %}
 
   <section class="table-shell">
     <table>
       <thead>
         <tr>
-          <th>Titulo</th>
+          <th>Título</th>
           <th>Imagen</th>
           <th>Género</th>
           <th>Clasificación</th>
@@ -25,18 +25,18 @@
       <tbody>
         {% for pelicula in object_list %}
           <tr>
-            <td>{{ pelicula.titulo }}</td>
-            <td>
+            <td data-label="Título">{{ pelicula.titulo }}</td>
+            <td data-label="Imagen">
               {% if pelicula.imagen %}
                 <img class="table-thumb" src="{{ pelicula.imagen.url }}" alt="{{ pelicula.titulo }}">
               {% else %}
                 -
               {% endif %}
             </td>
-            <td>{{ pelicula.get_genero_display }}</td>
-            <td>{{ pelicula.get_clasificacion_display }}</td>
-            <td>{{ pelicula.duracion_minutos }} min</td>
-            <td class="table-actions">
+            <td data-label="Género">{{ pelicula.get_genero_display }}</td>
+            <td data-label="Clasificación">{{ pelicula.get_clasificacion_display }}</td>
+            <td data-label="Duración">{{ pelicula.duracion_minutos }} min</td>
+            <td class="table-actions" data-label="Acciones">
               <a href="{% url 'manager:peliculas_update' pelicula.pk %}">Editar</a>
               <a href="{% url 'manager:peliculas_delete' pelicula.pk %}">Eliminar</a>
             </td>
@@ -48,5 +48,5 @@
     </table>
   </section>
 
-  {% include "manager/_pagination.html" %}
+  {% include "_pagination.html" %}
 {% endblock %}

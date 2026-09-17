@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
@@ -77,3 +78,20 @@ class FuncionForm(forms.ModelForm):
     class Meta:
         model = Funcion
         fields = ("pelicula", "sala", "fecha_horario", "precio_entrada")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["pelicula"].empty_label = "Seleccioná una película"
+        self.fields["sala"].empty_label = "Seleccioná una sala"
+
+    def clean_fecha_horario(self):
+        fecha_horario = self.cleaned_data["fecha_horario"]
+        if fecha_horario <= timezone.now():
+            raise forms.ValidationError("La fecha y horario deben ser futuros.")
+        return fecha_horario
+
+    def clean_precio_entrada(self):
+        precio_entrada = self.cleaned_data["precio_entrada"]
+        if precio_entrada <= 0:
+            raise forms.ValidationError("El precio de entrada debe ser mayor a cero.")
+        return precio_entrada

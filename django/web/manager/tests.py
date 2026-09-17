@@ -1,7 +1,9 @@
 import shutil
 import tempfile
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -72,6 +74,13 @@ class ManagerAccessTests(TestCase):
         self.assertContains(response, "Salas")
         self.assertContains(response, "Películas")
         self.assertContains(response, "Funciones")
+
+    def test_link_inicio_del_manager_apunta_al_home_de_gestion(self):
+        self.client.force_login(self.gerente)
+
+        response = self.client.get(reverse("manager:home"))
+
+        self.assertContains(response, f'href="{reverse("manager:home")}"')
 
     def test_acomodador_no_puede_entrar_a_abm_de_gerente(self):
         self.client.force_login(self.acomodador)
@@ -209,6 +218,28 @@ class ManagerSalasTests(TestCase):
         self.assertContains(response, "Sala 00")
         self.assertNotContains(response, "Microcine")
 
+    def test_gerente_ordena_salas_por_capacidad(self):
+        chica = Sala.objects.create(nombre="Sala chica", capacidad=80)
+        grande = Sala.objects.create(nombre="Sala grande", capacidad=180)
+
+        response = self.client.get(
+            reverse("manager:salas_list"),
+            {"order": "capacidad_desc"},
+        )
+
+        object_list = list(response.context["page_obj"].object_list)
+        self.assertContains(response, "Ordenar por")
+        self.assertEqual(object_list[0], grande)
+        self.assertEqual(object_list[1], chica)
+
+    def test_formulario_edicion_sala_muestra_titulo_especifico(self):
+        sala = Sala.objects.create(nombre="Sala 1", capacidad=120)
+
+        response = self.client.get(reverse("manager:salas_update", args=[sala.pk]))
+
+        self.assertContains(response, "Editar sala")
+        self.assertNotContains(response, "Guardar registro")
+
     def test_gerente_elimina_sala(self):
         sala = Sala.objects.create(nombre="Sala 1", capacidad=120)
 
@@ -284,6 +315,9 @@ class ManagerFuncionesTests(TestCase):
             ),
         )
 
+    def fecha_form(self, fecha):
+        return timezone.localtime(fecha).strftime("%Y-%m-%dT%H:%M")
+
     def test_gerente_crea_funcion_sin_publicarla(self):
         response = self.client.post(
             reverse("manager:funciones_create"),
@@ -298,6 +332,71 @@ class ManagerFuncionesTests(TestCase):
         self.assertRedirects(response, reverse("manager:funciones_list"))
         funcion = Funcion.objects.get()
         self.assertFalse(funcion.publicada)
+
+    def test_no_permite_crear_funcion_con_precio_cero(self):
+        response = self.client.post(
+            reverse("manager:funciones_create"),
+            data={
+                "pelicula": self.pelicula.pk,
+                "sala": self.sala.pk,
+                "fecha_horario": self.fecha_form(timezone.now() + timedelta(days=1)),
+                "precio_entrada": "0.00",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("precio_entrada", form.errors)
+        self.assertIn("mayor a cero", form.errors["precio_entrada"][0])
+        self.assertEqual(Funcion.objects.count(), 0)
+
+    def test_no_permite_crear_funcion_con_precio_negativo(self):
+        response = self.client.post(
+            reverse("manager:funciones_create"),
+            data={
+                "pelicula": self.pelicula.pk,
+                "sala": self.sala.pk,
+                "fecha_horario": self.fecha_form(timezone.now() + timedelta(days=1)),
+                "precio_entrada": "-1500.00",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("precio_entrada", form.errors)
+        self.assertIn("mayor a cero", form.errors["precio_entrada"][0])
+        self.assertEqual(Funcion.objects.count(), 0)
+
+    def test_no_permite_crear_funcion_con_fecha_pasada(self):
+        response = self.client.post(
+            reverse("manager:funciones_create"),
+            data={
+                "pelicula": self.pelicula.pk,
+                "sala": self.sala.pk,
+                "fecha_horario": self.fecha_form(timezone.now() - timedelta(days=1)),
+                "precio_entrada": "1500.00",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("fecha_horario", form.errors)
+        self.assertIn("deben ser futuros", form.errors["fecha_horario"][0])
+        self.assertEqual(Funcion.objects.count(), 0)
+
+    def test_modelo_funcion_valida_precio_y_fecha(self):
+        funcion = Funcion(
+            pelicula=self.pelicula,
+            sala=self.sala,
+            fecha_horario=timezone.now() - timedelta(days=1),
+            precio_entrada="0.00",
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            funcion.full_clean()
+
+        self.assertIn("precio_entrada", error.exception.message_dict)
+        self.assertIn("fecha_horario", error.exception.message_dict)
 
     def test_gerente_publica_y_oculta_funcion_desde_la_lista(self):
         funcion = Funcion.objects.create(
@@ -332,7 +431,104 @@ class ManagerFuncionesTests(TestCase):
         response = self.client.get(reverse("manager:funciones_list"))
 
         self.assertContains(response, "Publicar")
+        self.assertContains(response, 'class="publish-action"')
         self.assertNotContains(response, "Ocultar")
+
+    def test_lista_funciones_muestra_ocultar_sin_estilo_verde(self):
+        Funcion.objects.create(
+            pelicula=self.pelicula,
+            sala=self.sala,
+            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            precio_entrada="1500.00",
+            publicada=True,
+        )
+
+        response = self.client.get(reverse("manager:funciones_list"))
+
+        self.assertContains(response, "Ocultar")
+        self.assertNotContains(response, 'class="publish-action"')
+
+    def test_lista_funciones_muestra_precio_con_simbolo_pesos(self):
+        Funcion.objects.create(
+            pelicula=self.pelicula,
+            sala=self.sala,
+            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            precio_entrada="1500.00",
+            publicada=False,
+        )
+
+        response = self.client.get(reverse("manager:funciones_list"))
+
+        self.assertContains(response, "$1500.00")
+
+    def test_lista_funciones_ordena_por_mayor_precio(self):
+        barata = Funcion.objects.create(
+            pelicula=self.pelicula,
+            sala=self.sala,
+            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            precio_entrada="1000.00",
+            publicada=False,
+        )
+        cara = Funcion.objects.create(
+            pelicula=self.pelicula,
+            sala=self.sala,
+            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 22, 30)),
+            precio_entrada="2500.00",
+            publicada=False,
+        )
+
+        response = self.client.get(
+            reverse("manager:funciones_list"),
+            {"order": "precio_desc"},
+        )
+
+        object_list = list(response.context["page_obj"].object_list)
+        self.assertEqual(object_list[0], cara)
+        self.assertEqual(object_list[1], barata)
+
+    def test_lista_funciones_muestra_link_para_usar_como_plantilla(self):
+        funcion = Funcion.objects.create(
+            pelicula=self.pelicula,
+            sala=self.sala,
+            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            precio_entrada="1500.00",
+            publicada=False,
+        )
+
+        response = self.client.get(reverse("manager:funciones_list"))
+
+        self.assertContains(response, "Usar como plantilla")
+        self.assertContains(
+            response,
+            f'{reverse("manager:funciones_create")}?plantilla={funcion.pk}',
+        )
+
+    def test_crear_funcion_desde_plantilla_precarga_datos(self):
+        funcion = Funcion.objects.create(
+            pelicula=self.pelicula,
+            sala=self.sala,
+            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            precio_entrada="1500.00",
+            publicada=True,
+        )
+
+        response = self.client.get(
+            reverse("manager:funciones_create"),
+            {"plantilla": funcion.pk},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["form"].initial["pelicula"], self.pelicula)
+        self.assertEqual(response.context["form"].initial["sala"], self.sala)
+        self.assertEqual(
+            response.context["form"].initial["fecha_horario"],
+            funcion.fecha_horario,
+        )
+        self.assertEqual(
+            response.context["form"].initial["precio_entrada"],
+            funcion.precio_entrada,
+        )
+        self.assertContains(response, 'value="2026-09-18T20:30"')
 
     def test_lista_funciones_muestra_entradas_vendidas_y_disponibles(self):
         funcion = Funcion.objects.create(
