@@ -15,14 +15,13 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.http import HttpResponse, JsonResponse
-from django.urls import path
+from django.http import JsonResponse
+from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 
-
-def home(_request):
-    return HttpResponse("Butaca Cero esta funcionando.")
+admin.site.site_header = "Butaca Cero - Admin Panel"
+admin.site.site_title = "Butaca Cero - Admin Panel"
 
 
 def health(_request):
@@ -30,7 +29,10 @@ def health(_request):
 
 
 urlpatterns = [
-    path('', home, name='home'),
+    path('', include('web.catalog.urls')),
+    path('', include('web.tickets.urls')),
+    path('', include('web.auth.urls')),
+    path('gestion/', include('web.manager.urls')),
     path('health/', health, name='health'),
     path('admin/', admin.site.urls),
 ]

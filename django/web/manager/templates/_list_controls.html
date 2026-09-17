@@ -1,0 +1,31 @@
+<form class="list-controls" method="get">
+  <label>
+    <span>Buscar</span>
+    <input type="search" name="q" value="{{ search_query }}" placeholder="{{ search_placeholder }}">
+  </label>
+
+  <label>
+    <span>Por página</span>
+    <select name="per_page">
+      {% for option in page_size_options %}
+        <option value="{{ option }}"{% if option == page_size %} selected{% endif %}>{{ option }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  {% if ordering_options %}
+    <label>
+      <span>Ordenar por</span>
+      <select name="order">
+        {% for option in ordering_options %}
+          <option value="{{ option.0 }}"{% if option.0 == selected_ordering %} selected{% endif %}>{{ option.1 }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  {% endif %}
+
+  <button type="submit">Aplicar</button>
+  {% if has_list_filters %}
+    <a href="{{ request.path }}">Limpiar filtro</a>
+  {% endif %}
+</form>

@@ -1,54 +1,72 @@
 # Butaca Cero
 
-Proyecto Django dockerizado con PostgreSQL.
+Backend Django dockerizado con PostgreSQL.
 
-## Estructura
+## Levantar
 
-```text
-.
-├── docker-compose.yml
-├── .env.example
-├── docker/
-│   └── django/
-│       ├── Dockerfile
-│       └── entrypoint.sh
-└── django/
-    ├── manage.py
-    ├── requirements.txt
-    └── butacaCero/
-```
-
-## Levantar el proyecto
+Crear el `.env` local:
 
 ```powershell
 Copy-Item .env.example .env
+```
+
+Editar `.env` y cambiar los valores `change-me...`.
+
+Levantar contenedores:
+
+```powershell
 docker compose up --build
 ```
 
-La aplicacion queda disponible en:
+La app queda en:
 
 ```text
 http://localhost:8000
 ```
 
-El admin de Django queda en:
+Si se cambia el `.env` con Docker ya levantado, recrear el contenedor web:
+
+```powershell
+docker compose up -d --force-recreate web
+```
+
+## URLs utiles
+
+```text
+Login:  http://localhost:8000/login/
+Signup: http://localhost:8000/signup/
+Admin:  http://localhost:8000/admin/
+Health: http://localhost:8000/health/
+```
+
+## Primer acceso admin
+
+Crear el primer superusuario de Django:
+
+```powershell
+docker compose exec web python manage.py createsuperuser
+```
+
+Entrar a:
 
 ```text
 http://localhost:8000/admin/
 ```
 
+Con ese superusuario, crear el primer usuario gerente:
+
+1. Crear un usuario normal desde `Users`.
+2. Asignarle email y password.
+3. Crear/asociar un perfil `Gerente`.
+
+El admin queda solo para uso excepcional/sysadmin. El uso normal va a ir por pantallas propias.
+
 ## Comandos utiles
 
-Ejecutar migraciones manualmente:
+Ver estado:
 
 ```powershell
-docker compose exec web python manage.py migrate
-```
-
-Crear superusuario:
-
-```powershell
-docker compose exec web python manage.py createsuperuser
+docker compose ps
 ```
 
 Ver logs:
@@ -57,14 +75,42 @@ Ver logs:
 docker compose logs -f web
 ```
 
-Apagar contenedores:
+Correr tests:
+
+```powershell
+docker compose run --rm web python manage.py test
+```
+
+Crear migraciones:
+
+```powershell
+docker compose exec web python manage.py makemigrations
+```
+
+Aplicar migraciones:
+
+```powershell
+docker compose exec web python manage.py migrate
+```
+
+Apagar:
 
 ```powershell
 docker compose down
 ```
 
-Apagar y borrar la base de datos local:
+Borrar contenedores y base local:
 
 ```powershell
 docker compose down -v
 ```
+
+## Consideraciones
+
+- No subir `.env` a Git.
+- `.env.example` es solo una plantilla.
+- PostgreSQL no expone puerto al host; Django se conecta internamente a `db:5432`.
+- El servicio Docker `web` es Django.
+- Las apps bajo `django/domain/` contienen dominio/backend: modelos, admin y validaciones reutilizables.
+- Las apps bajo `django/web/` contienen pantallas server-rendered: views, urls, templates, CSS y JS.
+- Las apps `users`, `movies`, `rooms`, `screenings` y `cinema` contienen dominio/backend.

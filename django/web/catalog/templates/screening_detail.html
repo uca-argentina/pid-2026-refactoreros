@@ -1,0 +1,116 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ funcion.pelicula.titulo }} | {{ cinema.nombre }}</title>
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+  <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
+  <link rel="stylesheet" href="{% static 'catalog.css' %}">
+  <script src="{% static 'catalog.js' %}" defer></script>
+</head>
+<body class="client-page">
+  <header class="client-header">
+    <a class="client-brand" href="{% url 'home' %}">
+      {% if cinema.logo %}
+        <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="client-logo">
+      {% else %}
+        <strong>{{ cinema.nombre }}</strong>
+      {% endif %}
+    </a>
+    <nav>
+      <a href="{% url 'home' %}">Cartelera</a>
+      <a href="{% url 'my_tickets' %}">Mis entradas</a>
+      {% if manager_role %}
+        <a href="{% url 'manager:home' %}">Gestión</a>
+      {% endif %}
+      <a href="{% url 'logout' %}">Cerrar sesión</a>
+    </nav>
+  </header>
+
+  <main class="client-main">
+    {% if messages %}
+      <div class="client-messages">
+        {% for message in messages %}
+          <p>{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <article class="screening-detail">
+      <img src="{{ funcion.pelicula.imagen.url }}" alt="{{ funcion.pelicula.titulo }}">
+      <section class="screening-copy">
+        <p class="screening-kicker">{{ pelicula.get_genero_display }} - {{ pelicula.duracion_minutos }} min</p>
+        <h1>{{ pelicula.titulo }}</h1>
+        <p>{{ pelicula.sinopsis }}</p>
+
+        <dl class="screening-facts">
+          <div>
+            <dt>Género</dt>
+            <dd>{{ pelicula.get_genero_display }}</dd>
+          </div>
+          <div>
+            <dt>Clasificación</dt>
+            <dd>{{ pelicula.get_clasificacion_display }}</dd>
+          </div>
+          <div>
+            <dt>Duración</dt>
+            <dd>{{ pelicula.duracion_minutos }} min</dd>
+          </div>
+          <div>
+            <dt>Desde</dt>
+            <dd>${{ funcion.precio_entrada }}</dd>
+          </div>
+          <div>
+            <dt>Funciones</dt>
+            <dd>{{ funciones|length }}</dd>
+          </div>
+        </dl>
+
+        <section class="screening-options" aria-label="Funciones disponibles">
+          <h2>Elegí tu función</h2>
+          <div>
+            {% for item in funciones %}
+              <label>
+                <input
+                  type="radio"
+                  name="funcion"
+                  value="{{ item.pk }}"
+                  data-purchase-url="{% url 'ticket_purchase' item.pk %}"
+                  data-available="{{ item.entradas_disponibles }}"
+                  {% if item.pk == funcion.pk %}checked{% endif %}
+                >
+                <span>{{ item.fecha_horario|date:"l d/m H:i"|capfirst }}</span>
+                <small>{{ item.sala.nombre }} - ${{ item.precio_entrada }}</small>
+              </label>
+            {% endfor %}
+          </div>
+        </section>
+
+        <form class="purchase-form" method="post" action="{% url 'ticket_purchase' funcion.pk %}">
+          {% csrf_token %}
+          <label class="quantity-field"{% if entradas_disponibles <= 0 %} hidden{% endif %}>
+            <span>Cantidad de entradas</span>
+            <input type="number" name="cantidad" value="1" min="1">
+          </label>
+          <div class="purchase-action">
+            <button
+              type="submit"
+              data-singular-label="Comprar entrada"
+              data-plural-label="Comprar entradas"
+              data-sold-out-label="Entradas agotadas para esta función"
+              {% if entradas_disponibles <= 0 %}disabled{% endif %}
+            >
+              {% if entradas_disponibles > 0 %}Comprar entrada{% else %}Entradas agotadas para esta función{% endif %}
+            </button>
+            {% if purchase_error and entradas_disponibles > 0 %}
+              <p class="purchase-error">{{ purchase_error }}</p>
+            {% endif %}
+          </div>
+        </form>
+      </section>
+    </article>
+  </main>
+</body>
+</html>

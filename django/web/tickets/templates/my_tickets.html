@@ -1,0 +1,70 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mis entradas | {{ cinema.nombre }}</title>
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+  <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
+  <link rel="stylesheet" href="{% static 'catalog.css' %}">
+</head>
+<body class="client-page">
+  <header class="client-header">
+    <a class="client-brand" href="{% url 'home' %}">
+      {% if cinema.logo %}
+        <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="client-logo">
+      {% else %}
+        <strong>{{ cinema.nombre }}</strong>
+      {% endif %}
+    </a>
+    <nav>
+      <a href="{% url 'home' %}">Cartelera</a>
+      <a href="{% url 'logout' %}">Cerrar sesion</a>
+    </nav>
+  </header>
+
+  <main class="client-main">
+    {% if messages %}
+      <div class="client-messages client-messages-success">
+        {% for message in messages %}
+          <p>{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <section class="client-heading">
+      <h1>Mis entradas</h1>
+    </section>
+
+    {% if compras %}
+      <section class="ticket-list" aria-label="Entradas compradas">
+        {% for compra in compras %}
+          <article class="ticket-card">
+            <div class="ticket-main">
+              <span>{{ compra.funcion.fecha_horario|date:"l d/m H:i"|capfirst }}</span>
+              <h2>{{ compra.funcion.pelicula.titulo }}</h2>
+              <p>{{ compra.funcion.sala.nombre }}</p>
+            </div>
+            <dl class="ticket-summary">
+              <div>
+                <dt>Cantidad</dt>
+                <dd>{{ compra.cantidad }}</dd>
+              </div>
+              <div>
+                <dt>Total</dt>
+                <dd>${{ compra.total }}</dd>
+              </div>
+            </dl>
+          </article>
+        {% endfor %}
+      </section>
+    {% else %}
+      <section class="client-empty">
+        <h2>Todavia no compraste entradas</h2>
+        <p>Elegí una función de la cartelera para empezar.</p>
+      </section>
+    {% endif %}
+  </main>
+</body>
+</html>

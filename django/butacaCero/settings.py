@@ -25,18 +25,12 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env(
-    "DJANGO_SECRET_KEY",
-    default="django-insecure-dev-only-change-me",
-)
+SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool("DJANGO_DEBUG", default=True)
+DEBUG = env.bool("DJANGO_DEBUG")
 
-ALLOWED_HOSTS = env.list(
-    "DJANGO_ALLOWED_HOSTS",
-    default=["localhost", "127.0.0.1", "0.0.0.0"],
-)
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS")
 
 
 # Application definition
@@ -48,9 +42,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "movies",
-    "rooms",
-    "screenings",
+    "domain.cinema",
+    "domain.movies",
+    "domain.rooms",
+    "domain.screenings",
+    "domain.tickets",
+    "domain.users",
+    "web.auth",
+    "web.catalog",
+    "web.manager",
+    "web.tickets",
 ]
 
 MIDDLEWARE = [
@@ -87,10 +88,7 @@ WSGI_APPLICATION = 'butacaCero.wsgi.application'
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 DATABASES = {
-    "default": env.db(
-        "DATABASE_URL",
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-    )
+    "default": env.db("DATABASE_URL")
 }
 
 
@@ -105,6 +103,12 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
     {
+        'NAME': 'domain.users.password_validators.NumberPasswordValidator',
+    },
+    {
+        'NAME': 'domain.users.password_validators.SpecialCharacterPasswordValidator',
+    },
+    {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
@@ -116,9 +120,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "es-ar"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "America/Argentina/Buenos_Aires"
 
 USE_I18N = True
 
@@ -133,6 +137,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "home"
+LOGOUT_REDIRECT_URL = "login"
 
 
 # Email

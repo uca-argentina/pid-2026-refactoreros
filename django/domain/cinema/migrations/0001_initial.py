@@ -1,0 +1,25 @@
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+    initial = True
+
+    dependencies = []
+
+    operations = [
+        migrations.CreateModel(
+            name="ConfiguracionCine",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("nombre", models.CharField(default="Butaca Cero", max_length=120)),
+                ("slogan", models.CharField(default="Tu entrada al cine", max_length=160)),
+                ("logo", models.ImageField(blank=True, upload_to="branding/")),
+                ("imagen_login", models.ImageField(blank=True, upload_to="branding/")),
+                ("actualizado_en", models.DateTimeField(auto_now=True)),
+            ],
+            options={
+                "verbose_name": "Configuracion del cine",
+                "verbose_name_plural": "Configuracion del cine",
+            },
+        ),
+    ]

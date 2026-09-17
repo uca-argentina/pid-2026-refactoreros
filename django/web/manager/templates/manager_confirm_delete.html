@@ -1,0 +1,17 @@
+{% extends "manager_base.html" %}
+
+{% block content %}
+  <section class="page-heading">
+    <p>{{ section }}</p>
+    <h1>Eliminar {{ object_label|lower }}</h1>
+  </section>
+
+  <form class="manager-form" method="post">
+    {% csrf_token %}
+    <p>Vas a eliminar <strong>{{ object }}</strong>.</p>
+    <div class="form-actions">
+      <button class="danger" type="submit">Eliminar</button>
+      <a href="../">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

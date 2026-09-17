@@ -1,0 +1,37 @@
+{% extends "manager_base.html" %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>Gestión</h1>
+  </section>
+
+  {% if manager_role == "gerente" %}
+    <section class="action-grid" aria-label="Accesos de gestion">
+      <a class="action-card action-card-users" href="{% url 'manager:usuarios_list' %}">
+        <i data-lucide="users" class="action-icon" aria-hidden="true"></i>
+        <strong>Usuarios</strong>
+        <span>Modificar datos y bloquear accesos.</span>
+      </a>
+      <a class="action-card action-card-rooms" href="{% url 'manager:salas_list' %}">
+        <i data-lucide="armchair" class="action-icon" aria-hidden="true"></i>
+        <strong>Salas</strong>
+        <span>Crear y administrar salas.</span>
+      </a>
+      <a class="action-card action-card-movies" href="{% url 'manager:peliculas_list' %}">
+        <i data-lucide="clapperboard" class="action-icon" aria-hidden="true"></i>
+        <strong>Películas</strong>
+        <span>Crear y administrar películas.</span>
+      </a>
+      <a class="action-card action-card-screenings" href="{% url 'manager:funciones_list' %}">
+        <i data-lucide="calendar-clock" class="action-icon" aria-hidden="true"></i>
+        <strong>Funciones</strong>
+        <span>Crear y administrar funciones publicadas.</span>
+      </a>
+    </section>
+  {% else %}
+    <section class="empty-state">
+      <h2>Panel de acomodador</h2>
+      <p>Todavia no hay tareas habilitadas para este rol.</p>
+    </section>
+  {% endif %}
+{% endblock %}

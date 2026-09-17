@@ -1,0 +1,57 @@
+{% extends "manager_base.html" %}
+
+{% block content %}
+  <section class="page-heading page-heading-row">
+    <div>
+      <h1>Funciones</h1>
+    </div>
+    {% if create_url_name %}<a class="primary-link" href="{% url create_url_name %}">Nueva funcion</a>{% endif %}
+  </section>
+
+  {% include "_list_controls.html" %}
+
+  <section class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Película</th>
+          <th>Sala</th>
+          <th>Fecha</th>
+          <th>Publicada</th>
+          <th>Precio</th>
+          <th>Vendidas</th>
+          <th>Disponibles</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for funcion in object_list %}
+          <tr>
+            <td data-label="Película">{{ funcion.pelicula.titulo }}</td>
+            <td data-label="Sala">{{ funcion.sala.nombre }}</td>
+            <td data-label="Fecha">{{ funcion.fecha_horario|date:"d/m/Y H:i" }}</td>
+            <td data-label="Publicada">{% if funcion.publicada %}Si{% else %}No{% endif %}</td>
+            <td data-label="Precio">${{ funcion.precio_entrada }}</td>
+            <td data-label="Vendidas">{{ funcion.entradas_vendidas }}</td>
+            <td data-label="Disponibles">{{ funcion.entradas_disponibles }}</td>
+            <td class="table-actions" data-label="Acciones">
+              <a href="{% url 'manager:funciones_update' funcion.pk %}">Editar</a>
+              <a href="{% url 'manager:funciones_create' %}?plantilla={{ funcion.pk }}">Usar como plantilla</a>
+              <form method="post" action="{% url 'manager:funciones_toggle' funcion.pk %}">
+                {% csrf_token %}
+                <button type="submit"{% if not funcion.publicada %} class="publish-action"{% endif %}>
+                  {% if funcion.publicada %}Ocultar{% else %}Publicar{% endif %}
+                </button>
+              </form>
+              <a href="{% url 'manager:funciones_delete' funcion.pk %}">Eliminar</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8">No hay funciones cargadas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% include "_pagination.html" %}
+{% endblock %}
