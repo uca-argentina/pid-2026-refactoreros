@@ -86,20 +86,21 @@
             {% endfor %}
           </div>
         </section>
-
-        <form class="purchase-form" method="post" action="{% url 'ticket_purchase' funcion.pk %}">
-          {% csrf_token %}
-          <label>
-            <span>Cantidad de entradas</span>
-            <input type="number" name="cantidad" value="1" min="1">
-          </label>
-          <div class="purchase-action">
-            <button type="submit" data-singular-label="Comprar entrada" data-plural-label="Comprar entradas">Comprar entrada</button>
-            {% if purchase_error %}
-              <p class="purchase-error">{{ purchase_error }}</p>
-            {% endif %}
-          </div>
-        </form>
+        {% if entradas_disponibles > 0 %}
+          <form class="purchase-form" method="post" action="{% url 'ticket_purchase' funcion.pk %}">
+            {% csrf_token %}
+            <label>
+              <span>Cantidad de entradas</span>
+              <input type="number" name="cantidad" value="1" min="1">
+            </label>
+            <div class="purchase-action">
+              <button type="submit" data-singular-label="Comprar entrada" data-plural-label="Comprar entradas">Comprar entrada</button>
+              {% if purchase_error  %}
+                <p class="purchase-error">{{ purchase_error }}</p>
+              {% endif %}
+            </div>
+          </form>
+        {% endif %}
       </section>
     </article>
   </main>
