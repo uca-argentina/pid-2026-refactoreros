@@ -113,6 +113,3 @@ def screening_page(request, pk):
         }
     )
 
-#@login_required
-def buy_tickets(request):
-    pass
