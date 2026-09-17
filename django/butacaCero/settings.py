@@ -42,12 +42,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "cinema",
-    "movies",
-    "rooms",
-    "screenings",
-    "users",
-    "frontend",
+    "domain.cinema",
+    "domain.movies",
+    "domain.rooms",
+    "domain.screenings",
+    "domain.users",
+    "web.auth",
 ]
 
 MIDDLEWARE = [

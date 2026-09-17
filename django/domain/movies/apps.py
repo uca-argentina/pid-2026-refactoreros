@@ -1,7 +1,7 @@
 from django.apps import AppConfig
 
 
-class CinemaConfig(AppConfig):
+class MoviesConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "cinema"
-    verbose_name = "Cine"
+    name = "domain.movies"
+    verbose_name = "Películas"

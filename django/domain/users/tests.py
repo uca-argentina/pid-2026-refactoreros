@@ -2,7 +2,12 @@ from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from .forms import ClienteSignupForm, UsuarioChangeForm, UsuarioCreationForm
+from .forms import (
+    AdminUsuarioChangeForm,
+    AdminUsuarioCreationForm,
+    ClienteSignupForm,
+    LoginForm,
+)
 from .models import Acomodador, Cliente, Gerente
 
 
@@ -66,7 +71,7 @@ class PerfilesUsuarioTests(TestCase):
         self.assertEqual(Gerente.objects.count(), 0)
 
 
-class ValidacionMailUsuarioTests(TestCase):
+class ValidacionMailAdminUsuarioTests(TestCase):
     def setUp(self):
         self.usuario = get_user_model().objects.create_user(
             username="juan",
@@ -75,7 +80,7 @@ class ValidacionMailUsuarioTests(TestCase):
         )
 
     def test_al_crear_usuario_el_mail_es_obligatorio(self):
-        form = UsuarioCreationForm(
+        form = AdminUsuarioCreationForm(
             data={
                 "username": "ana",
                 "email": "",
@@ -88,7 +93,7 @@ class ValidacionMailUsuarioTests(TestCase):
         self.assertIn("email", form.errors)
 
     def test_al_crear_usuario_el_mail_no_puede_repetirse(self):
-        form = UsuarioCreationForm(
+        form = AdminUsuarioCreationForm(
             data={
                 "username": "ana",
                 "email": "JUAN@mail.com",
@@ -99,9 +104,10 @@ class ValidacionMailUsuarioTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("email", form.errors)
+        self.assertEqual(form.email_duplicado, "juan@mail.com")
 
     def test_al_editar_usuario_permite_conservar_su_mismo_mail(self):
-        form = UsuarioChangeForm(
+        form = AdminUsuarioChangeForm(
             instance=self.usuario,
             data={
                 "username": "juan",
@@ -119,7 +125,7 @@ class ValidacionMailUsuarioTests(TestCase):
             email="ana@mail.com",
             password="PasswordSegura123",
         )
-        form = UsuarioChangeForm(
+        form = AdminUsuarioChangeForm(
             instance=otro_usuario,
             data={
                 "username": "ana",
@@ -131,6 +137,19 @@ class ValidacionMailUsuarioTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("email", form.errors)
+
+
+class LoginFormTests(TestCase):
+    def test_login_form_configura_los_inputs_de_acceso(self):
+        form = LoginForm()
+
+        self.assertEqual(form.fields["username"].widget.attrs["autocomplete"], "username")
+        self.assertEqual(form.fields["username"].widget.attrs["placeholder"], "Email")
+        self.assertEqual(
+            form.fields["password"].widget.attrs["autocomplete"],
+            "current-password",
+        )
+        self.assertEqual(form.fields["password"].widget.attrs["placeholder"], "Contraseña")
 
 
 class SignupClienteFormTests(TestCase):
@@ -155,7 +174,7 @@ class SignupClienteFormTests(TestCase):
         self.assertEqual(usuario.last_name, "Gomez")
         self.assertTrue(usuario.check_password("PasswordSegura123"))
 
-    def test_signup_form_valida_password_con_reglas_de_django(self):
+    def test_si_un_usuario_se_registra_con_password_invalida_entonces_devuelve_error(self):
         form = ClienteSignupForm(
             data={
                 "nombre": "Ana",

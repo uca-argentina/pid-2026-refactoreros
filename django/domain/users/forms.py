@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import UserChangeForm, UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserChangeForm, UserCreationForm
 from django.contrib.auth.password_validation import validate_password
 
 User = get_user_model()
@@ -8,6 +8,7 @@ User = get_user_model()
 
 class EmailUnicoMixin:
     def clean_email(self):
+        self.email_duplicado = ""
         email = (self.cleaned_data.get("email") or "").strip().lower()
 
         if not email:
@@ -21,12 +22,13 @@ class EmailUnicoMixin:
             )
 
         if usuarios_con_mismo_mail.exists():
+            self.email_duplicado = email
             raise forms.ValidationError("Ya existe un usuario con ese mail.")
 
         return email
 
 
-class UsuarioCreationForm(EmailUnicoMixin, UserCreationForm):
+class AdminUsuarioCreationForm(EmailUnicoMixin, UserCreationForm):
     email = forms.EmailField(label="Mail", required=True)
 
     class Meta(UserCreationForm.Meta):
@@ -34,11 +36,34 @@ class UsuarioCreationForm(EmailUnicoMixin, UserCreationForm):
         fields = ("username", "email")
 
 
-class UsuarioChangeForm(EmailUnicoMixin, UserChangeForm):
+class AdminUsuarioChangeForm(EmailUnicoMixin, UserChangeForm):
     email = forms.EmailField(label="Mail", required=True)
 
     class Meta(UserChangeForm.Meta):
         model = User
+
+
+# Desde este formulario puede acceder cualquier usuario (Cliente, Acomodador o Gerente)
+class LoginForm(AuthenticationForm):
+    error_messages = {
+        "invalid_login": "No encontramos una cuenta con esos datos. Revisá el email y la contraseña.",
+        "inactive": "Esta cuenta está inactiva.",
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["username"].widget.attrs.update(
+            {
+                "autocomplete": "username",
+                "placeholder": "Email",
+            }
+        )
+        self.fields["password"].widget.attrs.update(
+            {
+                "autocomplete": "current-password",
+                "placeholder": "Contraseña",
+            }
+        )
 
 
 class ClienteSignupForm(EmailUnicoMixin, forms.Form):

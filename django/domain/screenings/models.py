@@ -1,7 +1,7 @@
 from django.db import models
 
-from movies.models import Pelicula
-from rooms.models import Sala
+from domain.movies.models import Pelicula
+from domain.rooms.models import Sala
 
 
 class Funcion(models.Model):

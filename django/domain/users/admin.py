@@ -3,7 +3,7 @@ from django.contrib.admin.sites import NotRegistered
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from .forms import UsuarioChangeForm, UsuarioCreationForm
+from .forms import AdminUsuarioChangeForm, AdminUsuarioCreationForm
 from .models import Acomodador, Cliente, Gerente
 
 User = get_user_model()
@@ -34,8 +34,8 @@ class GerenteInline(admin.StackedInline):
 
 
 class UserAdmin(DjangoUserAdmin):
-    form = UsuarioChangeForm
-    add_form = UsuarioCreationForm
+    form = AdminUsuarioChangeForm
+    add_form = AdminUsuarioCreationForm
     add_fieldsets = (
         (
             None,

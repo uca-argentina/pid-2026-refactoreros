@@ -5,8 +5,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ cinema.nombre }} | Acceso</title>
-  <link rel="stylesheet" href="{% static 'frontend/auth.css' %}">
-  <script src="{% static 'frontend/auth.js' %}" defer></script>
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+  <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
+  <link rel="stylesheet" href="{% static 'auth.css' %}">
+  <script src="{% static 'auth.js' %}" defer></script>
 </head>
 <body>
   <main class="auth-page">
@@ -16,30 +18,26 @@
           {% if cinema.logo %}
             <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="brand-logo">
           {% else %}
-            <span class="brand-mark">BC</span>
+            <div>
+              <strong>{{ cinema.nombre }}</strong>
+            </div>
           {% endif %}
-          <div>
-            <strong>{{ cinema.nombre }}</strong>
-            <span>{{ cinema.slogan }}</span>
-          </div>
         </div>
 
         <div class="brand-message">
-          <h1>Grandes historias te esperan</h1>
+          <h1>{{ cinema.slogan }}</h1>
         </div>
       </aside>
 
       <section class="form-panel">
-        <div class="brand-lockup">
+        <div class="mobile-brand">
           {% if cinema.logo %}
             <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="brand-logo">
           {% else %}
-            <span class="brand-mark">BC</span>
+            <div>
+              <strong>{{ cinema.nombre }}</strong>
+            </div>
           {% endif %}
-          <div>
-            <strong>{{ cinema.nombre }}</strong>
-            <span>{{ cinema.slogan }}</span>
-          </div>
         </div>
 
         <nav class="auth-tabs" aria-label="Acceso">
@@ -51,7 +49,7 @@
           <form class="auth-form" method="post" action="{% url 'login' %}">
             {% csrf_token %}
             {% if login_form.non_field_errors %}
-              <div class="form-errors">{{ login_form.non_field_errors }}</div>
+              <div class="field-help field-help-error">{{ login_form.non_field_errors }}</div>
             {% endif %}
 
             <label>
@@ -96,7 +94,11 @@
               <span>Email</span>
               {{ signup_form.email }}
               <small data-error-for="id_email"></small>
-              {{ signup_form.email.errors }}
+              {% if signup_form.email_duplicado %}
+                <small class="field-help"><span>Ese email ya tiene cuenta.</span><a href="{% url 'login' %}?email={{ signup_form.email_duplicado|urlencode }}">Iniciá sesión</a></small>
+              {% else %}
+                {{ signup_form.email.errors }}
+              {% endif %}
             </label>
 
             <label>
@@ -121,3 +123,4 @@
   </main>
 </body>
 </html>
+

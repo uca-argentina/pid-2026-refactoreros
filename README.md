@@ -111,5 +111,6 @@ docker compose down -v
 - `.env.example` es solo una plantilla.
 - PostgreSQL no expone puerto al host; Django se conecta internamente a `db:5432`.
 - El servicio Docker `web` es Django.
-- La app Django `frontend` contiene templates, CSS y JS simples.
+- Las apps bajo `django/domain/` contienen dominio/backend: modelos, admin y validaciones reutilizables.
+- Las apps bajo `django/web/` contienen pantallas server-rendered: views, urls, templates, CSS y JS.
 - Las apps `users`, `movies`, `rooms`, `screenings` y `cinema` contienen dominio/backend.
