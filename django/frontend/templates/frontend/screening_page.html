@@ -1,3 +1,4 @@
+
 {% load static %}
 <!DOCTYPE html>
 <html>
@@ -22,17 +23,13 @@
 
 </div>
 
-<div class="movie_catalogue">
-    {% for funcion in funciones %}
-    <a href="{% url 'screening_page' pk=funcion.pk %}" class="movie_item">
-        <img class="movie_item_image" src="{{funcion.pelicula.imagen.url}}" >
-        <div class="movie_item_title">{{ funcion.pelicula.titulo }}</div>
-        <div class="movie_item_agerating">
-            <div class="agerating_text">{{ funcion.pelicula.clasificacion }}</div>
-        </div>
-    </a>
-    {% endfor %}
-</div>
+<div class="screening_page">
+    <img src="{{ funcion.pelicula.imagen.url }}">
+    <h1>{{ funcion.pelicula.titulo }}</h1>
+    <h2>{{ funcion.pelicula.sinopsis}}</h2>
+    <p>Genero: {{ funcion.pelicula.genero}}</p>
+    <p>Clasificación: {{ funcion.pelicula.clasificacion }}</p>
+    <p>Horario: {{ funcion.fecha_horario }}</p>
 
-</body>
-</html>
+    
+</div>
