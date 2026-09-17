@@ -1,3 +1,6 @@
+from datetime import timedelta
+
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from domain.movies.models import Pelicula
@@ -20,3 +23,30 @@ class Funcion(models.Model):
 
     def __str__(self):
         return f"{self.pelicula.titulo} - {self.sala.nombre} - {self.fecha_horario:%d/%m/%Y %H:%M}"
+
+    @property
+    def fecha_fin(self):
+        return self.fecha_horario + timedelta(minutes=self.pelicula.duracion_minutos)
+
+    def clean(self):
+        super().clean()
+        if not self.pelicula_id or not self.sala_id or not self.fecha_horario:
+            return
+
+        inicio = self.fecha_horario
+        fin = self.fecha_fin
+        funciones_misma_sala = (
+            Funcion.objects.filter(sala=self.sala)
+            .select_related("pelicula")
+            .exclude(pk=self.pk)
+        )
+
+        for funcion in funciones_misma_sala:
+            if funcion.fecha_horario < fin and funcion.fecha_fin > inicio:
+                raise ValidationError(
+                    "La sala ya tiene una funcion programada en ese horario."
+                )
+
+    @classmethod
+    def funciones_publicadas(cls):
+        return cls.objects.filter(publicada=True).select_related("pelicula", "sala")

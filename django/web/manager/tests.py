@@ -10,6 +10,7 @@ from django.utils import timezone
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
 from domain.screenings.models import Funcion
+from domain.tickets.models import CompraEntrada
 from domain.users.models import Acomodador, Cliente, Gerente
 
 from .forms import PeliculaForm
@@ -333,6 +334,28 @@ class ManagerFuncionesTests(TestCase):
         self.assertContains(response, "Publicar")
         self.assertNotContains(response, "Ocultar")
 
+    def test_lista_funciones_muestra_entradas_vendidas_y_disponibles(self):
+        funcion = Funcion.objects.create(
+            pelicula=self.pelicula,
+            sala=self.sala,
+            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            precio_entrada="1500.00",
+            publicada=True,
+        )
+        cliente = get_user_model().objects.create_user(
+            username="cliente@mail.com",
+            email="cliente@mail.com",
+            password="PasswordSegura123!",
+        )
+        CompraEntrada.comprar(cliente, funcion, 35)
+
+        response = self.client.get(reverse("manager:funciones_list"))
+
+        self.assertContains(response, "Vendidas")
+        self.assertContains(response, "Disponibles")
+        self.assertContains(response, "<td>35</td>", html=True)
+        self.assertContains(response, "<td>85</td>", html=True)
+
     def test_fecha_de_funcion_se_precarga_al_editar(self):
         funcion = Funcion.objects.create(
             pelicula=self.pelicula,
@@ -345,3 +368,94 @@ class ManagerFuncionesTests(TestCase):
         response = self.client.get(reverse("manager:funciones_update", args=[funcion.pk]))
 
         self.assertContains(response, 'value="2026-09-18T20:30"')
+
+    def test_no_permite_funciones_solapadas_en_misma_sala(self):
+        Funcion.objects.create(
+            pelicula=self.pelicula,
+            sala=self.sala,
+            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 0)),
+            precio_entrada="1500.00",
+            publicada=False,
+        )
+
+        response = self.client.post(
+            reverse("manager:funciones_create"),
+            data={
+                "pelicula": self.pelicula.pk,
+                "sala": self.sala.pk,
+                "fecha_horario": "2026-09-18T21:00",
+                "precio_entrada": "1500.00",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "La sala ya tiene una funcion programada")
+        self.assertEqual(Funcion.objects.count(), 1)
+
+    def test_permite_funciones_en_misma_sala_cuando_no_se_solapan(self):
+        Funcion.objects.create(
+            pelicula=self.pelicula,
+            sala=self.sala,
+            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 0)),
+            precio_entrada="1500.00",
+            publicada=False,
+        )
+
+        response = self.client.post(
+            reverse("manager:funciones_create"),
+            data={
+                "pelicula": self.pelicula.pk,
+                "sala": self.sala.pk,
+                "fecha_horario": "2026-09-18T21:40",
+                "precio_entrada": "1500.00",
+            },
+        )
+
+        self.assertRedirects(response, reverse("manager:funciones_list"))
+        self.assertEqual(Funcion.objects.count(), 2)
+
+    def test_permite_funciones_solapadas_en_salas_distintas(self):
+        otra_sala = Sala.objects.create(nombre="Sala 2", capacidad=80)
+        Funcion.objects.create(
+            pelicula=self.pelicula,
+            sala=self.sala,
+            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 0)),
+            precio_entrada="1500.00",
+            publicada=False,
+        )
+
+        response = self.client.post(
+            reverse("manager:funciones_create"),
+            data={
+                "pelicula": self.pelicula.pk,
+                "sala": otra_sala.pk,
+                "fecha_horario": "2026-09-18T21:00",
+                "precio_entrada": "1500.00",
+            },
+        )
+
+        self.assertRedirects(response, reverse("manager:funciones_list"))
+        self.assertEqual(Funcion.objects.count(), 2)
+
+    def test_editar_funcion_no_colisiona_consigo_misma(self):
+        funcion = Funcion.objects.create(
+            pelicula=self.pelicula,
+            sala=self.sala,
+            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 0)),
+            precio_entrada="1500.00",
+            publicada=False,
+        )
+
+        response = self.client.post(
+            reverse("manager:funciones_update", args=[funcion.pk]),
+            data={
+                "pelicula": self.pelicula.pk,
+                "sala": self.sala.pk,
+                "fecha_horario": "2026-09-18T20:00",
+                "precio_entrada": "1600.00",
+            },
+        )
+
+        self.assertRedirects(response, reverse("manager:funciones_list"))
+        funcion.refresh_from_db()
+        self.assertEqual(str(funcion.precio_entrada), "1600.00")

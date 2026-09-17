@@ -46,9 +46,12 @@ INSTALLED_APPS = [
     "domain.movies",
     "domain.rooms",
     "domain.screenings",
+    "domain.tickets",
     "domain.users",
     "web.auth",
+    "web.catalog",
     "web.manager",
+    "web.tickets",
 ]
 
 MIDDLEWARE = [

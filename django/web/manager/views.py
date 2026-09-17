@@ -2,7 +2,8 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
+from django.db.models import F, IntegerField, Q, Sum, Value
+from django.db.models.functions import Coalesce, Greatest
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -320,11 +321,35 @@ class FuncionesListView(GerenteListView):
     template_name = "manager/funciones_list.html"
     section = "Funciones"
     create_url_name = "manager:funciones_create"
-    columns = ("Pelicula", "Sala", "Fecha", "Publicada", "Precio")
+    columns = (
+        "Pelicula",
+        "Sala",
+        "Fecha",
+        "Publicada",
+        "Precio",
+        "Vendidas",
+        "Disponibles",
+    )
     search_placeholder = "Buscar por pelicula o sala"
 
     def get_queryset(self):
-        queryset = Funcion.objects.select_related("pelicula", "sala")
+        queryset = (
+            Funcion.objects.select_related("pelicula", "sala")
+            .annotate(
+                entradas_vendidas=Coalesce(
+                    Sum("compras_entradas__cantidad"),
+                    Value(0),
+                    output_field=IntegerField(),
+                )
+            )
+            .annotate(
+                entradas_disponibles=Greatest(
+                    F("sala__capacidad") - F("entradas_vendidas"),
+                    Value(0),
+                    output_field=IntegerField(),
+                )
+            )
+        )
         search_query = self.get_search_query()
         if search_query:
             queryset = self.apply_search(queryset, search_query)

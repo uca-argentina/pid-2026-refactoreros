@@ -29,6 +29,8 @@ def health(_request):
 
 
 urlpatterns = [
+    path('', include('web.catalog.urls')),
+    path('', include('web.tickets.urls')),
     path('', include('web.auth.urls')),
     path('gestion/', include('web.manager.urls')),
     path('health/', health, name='health'),

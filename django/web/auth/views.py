@@ -1,5 +1,4 @@
 from django.contrib.auth import login, logout
-from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -76,15 +75,3 @@ def signup_view(request):
 def logout_view(request):
     logout(request)
     return redirect("login")
-
-
-@login_required
-def home_view(request):
-    return render(
-        request,
-        "auth/home.html",
-        {
-            "cinema": ConfiguracionCine.actual(),
-            "manager_role": manager_role(request.user),
-        },
-    )
