@@ -24,7 +24,7 @@
 <div class="movie_catalogue">
     {% for funcion in funciones %}
     <div class="movie_item">
-        <img class="movie_item_image" src="{{funcion.pelicula.imagen.path}}">
+        <img class="movie_item_image" src="{{funcion.pelicula.imagen.url}}" >
         <div class="movie_item_title">{{ funcion.pelicula.titulo }}</div>
         <div class="movie_item_agerating">
             <div class="agerating_text">{{ funcion.pelicula.clasificacion }}</div>
