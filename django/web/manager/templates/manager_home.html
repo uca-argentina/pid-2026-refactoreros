@@ -1,37 +1,124 @@
 {% extends "manager_base.html" %}
 
 {% block content %}
-  <section class="page-heading">
-    <h1>Gestión</h1>
+  <section class="page-heading dashboard-heading">
+    <div>
+      <p>Centro de control</p>
+      <h1>Gestión del cine</h1>
+    </div>
+    {% if manager_role == "gerente" %}
+      <a class="primary-link" href="{% url 'manager:funciones_create' %}">
+        <i data-lucide="plus" aria-hidden="true"></i>
+        <span>Nueva función</span>
+      </a>
+    {% endif %}
   </section>
 
   {% if manager_role == "gerente" %}
-    <section class="action-grid" aria-label="Accesos de gestion">
-      <a class="action-card action-card-users" href="{% url 'manager:usuarios_list' %}">
-        <i data-lucide="users" class="action-icon" aria-hidden="true"></i>
-        <strong>Usuarios</strong>
-        <span>Modificar datos y bloquear accesos.</span>
-      </a>
-      <a class="action-card action-card-rooms" href="{% url 'manager:salas_list' %}">
-        <i data-lucide="armchair" class="action-icon" aria-hidden="true"></i>
-        <strong>Salas</strong>
-        <span>Crear y administrar salas.</span>
-      </a>
-      <a class="action-card action-card-movies" href="{% url 'manager:peliculas_list' %}">
-        <i data-lucide="clapperboard" class="action-icon" aria-hidden="true"></i>
-        <strong>Películas</strong>
-        <span>Crear y administrar películas.</span>
-      </a>
-      <a class="action-card action-card-screenings" href="{% url 'manager:funciones_list' %}">
-        <i data-lucide="calendar-clock" class="action-icon" aria-hidden="true"></i>
-        <strong>Funciones</strong>
-        <span>Crear y administrar funciones publicadas.</span>
-      </a>
+    <section class="stat-grid" aria-label="Resumen de operación">
+      {% for stat in dashboard_stats %}
+        <article class="stat-card stat-{{ stat.tone }}">
+          <span class="stat-icon"><i data-lucide="{{ stat.icon }}" aria-hidden="true"></i></span>
+          <div>
+            <strong>{{ stat.value }}</strong>
+            <span>{{ stat.label }}</span>
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+
+    <section class="dashboard-layout">
+      <div class="dashboard-main-column">
+        <section class="panel-section">
+          <div class="section-title">
+            <div>
+              <p>Próximas funciones</p>
+              <h2>Agenda inmediata</h2>
+            </div>
+            <a href="{% url 'manager:funciones_list' %}">Ver todo</a>
+          </div>
+
+          <div class="schedule-list">
+            {% for funcion in next_screenings %}
+              <article class="schedule-item">
+                <div class="schedule-date">
+                  <strong>{{ funcion.fecha_horario|date:"d" }}</strong>
+                  <span>{{ funcion.fecha_horario|date:"M" }}</span>
+                </div>
+                <div class="schedule-content">
+                  <h3>{{ funcion.pelicula.titulo }}</h3>
+                  <span>{{ funcion.sala.nombre }} · {{ funcion.fecha_horario|date:"H:i" }} · {{ funcion.entradas_vendidas }} vendidas</span>
+                </div>
+                {% if funcion.publicada %}
+                  <span class="status-pill status-live">Publicada</span>
+                {% else %}
+                  <span class="status-pill status-draft">Oculta</span>
+                {% endif %}
+              </article>
+            {% empty %}
+              <div class="empty-state compact">
+                <i data-lucide="calendar-x" aria-hidden="true"></i>
+                <div>
+                  <h2>No hay funciones próximas</h2>
+                  <p>Creá una función para que el equipo pueda empezar a operar la agenda.</p>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </section>
+
+        <section class="action-grid" aria-label="Accesos de gestión">
+          <a class="action-card action-users" href="{% url 'manager:usuarios_list' %}">
+            <i data-lucide="users" class="action-icon" aria-hidden="true"></i>
+            <strong>Usuarios</strong>
+            <span>Roles, accesos y bloqueos de cuenta.</span>
+          </a>
+          <a class="action-card action-rooms" href="{% url 'manager:salas_list' %}">
+            <i data-lucide="armchair" class="action-icon" aria-hidden="true"></i>
+            <strong>Salas</strong>
+            <span>Capacidad total: {{ total_room_capacity }} butacas.</span>
+          </a>
+          <a class="action-card action-movies" href="{% url 'manager:peliculas_list' %}">
+            <i data-lucide="clapperboard" class="action-icon" aria-hidden="true"></i>
+            <strong>Películas</strong>
+            <span>Catálogo, duración, género y clasificación.</span>
+          </a>
+          <a class="action-card action-screenings" href="{% url 'manager:funciones_list' %}">
+            <i data-lucide="calendar-clock" class="action-icon" aria-hidden="true"></i>
+            <strong>Funciones</strong>
+            <span>Publicación, precios y disponibilidad.</span>
+          </a>
+        </section>
+      </div>
+
+      <aside class="ops-panel">
+        <div class="section-title">
+          <div>
+            <p>Estado</p>
+            <h2>Operación</h2>
+          </div>
+        </div>
+        <div class="ops-metric">
+          <span>Próximas publicadas</span>
+          <strong>{{ published_upcoming_count }}</strong>
+        </div>
+        <div class="ops-metric warning">
+          <span>Próximas ocultas</span>
+          <strong>{{ hidden_upcoming_count }}</strong>
+        </div>
+        <a class="secondary-link" href="{% url 'manager:funciones_list' %}?order=fecha_asc">
+          <i data-lucide="list-filter" aria-hidden="true"></i>
+          <span>Revisar agenda</span>
+        </a>
+      </aside>
     </section>
   {% else %}
     <section class="empty-state">
-      <h2>Panel de acomodador</h2>
-      <p>Todavia no hay tareas habilitadas para este rol.</p>
+      <i data-lucide="user-check" aria-hidden="true"></i>
+      <div>
+        <h2>Panel de acomodador</h2>
+        <p>Todavía no hay tareas habilitadas para este rol.</p>
+      </div>
     </section>
   {% endif %}
 {% endblock %}

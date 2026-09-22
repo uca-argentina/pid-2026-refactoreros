@@ -3,6 +3,7 @@
 {% block content %}
   <section class="page-heading page-heading-row">
     <div>
+      <p>Equipo y accesos</p>
       <h1>Usuarios</h1>
     </div>
   </section>
@@ -23,18 +24,37 @@
       <tbody>
         {% for item in usuarios %}
           <tr>
-            <td data-label="Email">{{ item.usuario.email|default:item.usuario.username }}</td>
+            <td data-label="Email">
+              <strong class="cell-title">{{ item.usuario.email|default:item.usuario.username }}</strong>
+            </td>
             <td data-label="Nombre">{{ item.usuario.get_full_name|default:"-" }}</td>
-            <td data-label="Rol">{{ item.rol }}</td>
-            <td data-label="Estado">{% if item.usuario.is_active %}Activo{% else %}Bloqueado{% endif %}</td>
+            <td data-label="Rol"><span class="status-pill status-neutral">{{ item.rol }}</span></td>
+            <td data-label="Estado">
+              {% if item.usuario.is_active %}
+                <span class="status-pill status-live">Activo</span>
+              {% else %}
+                <span class="status-pill status-blocked">Bloqueado</span>
+              {% endif %}
+            </td>
             <td class="table-actions" data-label="Acciones">
               {% if item.can_edit %}
-                <a href="{% url 'manager:usuarios_update' item.usuario.pk %}">Editar</a>
+                <a href="{% url 'manager:usuarios_update' item.usuario.pk %}">
+                  <i data-lucide="pencil" aria-hidden="true"></i>
+                  <span>Editar</span>
+                </a>
               {% endif %}
               {% if item.can_toggle %}
                 <form method="post" action="{% url 'manager:usuarios_toggle' item.usuario.pk %}">
                   {% csrf_token %}
-                  <button type="submit">{% if item.usuario.is_active %}Bloquear{% else %}Activar{% endif %}</button>
+                  <button type="submit">
+                    {% if item.usuario.is_active %}
+                      <i data-lucide="lock" aria-hidden="true"></i>
+                      <span>Bloquear</span>
+                    {% else %}
+                      <i data-lucide="unlock" aria-hidden="true"></i>
+                      <span>Activar</span>
+                    {% endif %}
+                  </button>
                 </form>
               {% endif %}
             </td>

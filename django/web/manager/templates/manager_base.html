@@ -10,40 +10,75 @@
   <link rel="stylesheet" href="{% static 'manager.css' %}">
 </head>
 <body>
-  <header class="manager-header">
-    <a class="brand" href="{% url 'manager:home' %}" aria-label="Butaca Cero gestion">
-      <img src="{% static 'butaca-cero-logo.png' %}" alt="Butaca Cero" class="brand-logo">
-      <span class="cinema-brand" aria-label="{{ cinema.nombre }}">
-        {% if cinema.logo %}
-          <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="cinema-logo">
-        {% else %}
-          <span class="cinema-logo-placeholder">{{ cinema.nombre|slice:":1" }}</span>
+  <div class="manager-shell">
+    <aside class="manager-sidebar" aria-label="Panel de gestión">
+      <a class="brand" href="{% url 'manager:home' %}" aria-label="Butaca Cero y {{ cinema.nombre }}">
+        <img src="{% static 'butaca-cero-logo.png' %}" alt="Butaca Cero" class="brand-logo">
+        <span class="cinema-mark" aria-hidden="true">
+          {% if cinema.logo %}
+            <img src="{{ cinema.logo.url }}" alt="" class="cinema-logo">
+          {% else %}
+            <span class="cinema-logo-placeholder">{{ cinema.nombre|slice:":1" }}</span>
+          {% endif %}
+        </span>
+      </a>
+
+      <nav class="manager-nav" aria-label="Gestión">
+        <a href="{% url 'manager:home' %}" class="nav-dashboard {% if not section %}is-active{% endif %}">
+          <i data-lucide="layout-dashboard" aria-hidden="true"></i>
+          <span>Inicio</span>
+        </a>
+        {% if manager_role == "gerente" %}
+          <a href="{% url 'manager:usuarios_list' %}" class="nav-users {% if section == 'Usuarios' %}is-active{% endif %}">
+            <i data-lucide="users" aria-hidden="true"></i>
+            <span>Usuarios</span>
+          </a>
+          <a href="{% url 'manager:salas_list' %}" class="nav-rooms {% if section == 'Salas' %}is-active{% endif %}">
+            <i data-lucide="armchair" aria-hidden="true"></i>
+            <span>Salas</span>
+          </a>
+          <a href="{% url 'manager:peliculas_list' %}" class="nav-movies {% if section == 'Películas' or section == 'Peliculas' %}is-active{% endif %}">
+            <i data-lucide="clapperboard" aria-hidden="true"></i>
+            <span>Películas</span>
+          </a>
+          <a href="{% url 'manager:funciones_list' %}" class="nav-screenings {% if section == 'Funciones' %}is-active{% endif %}">
+            <i data-lucide="calendar-clock" aria-hidden="true"></i>
+            <span>Funciones</span>
+          </a>
         {% endif %}
-      </span>
-    </a>
-    <nav aria-label="Gestion">
-      {% if manager_role == "gerente" %}
-        <a href="{% url 'manager:usuarios_list' %}">Usuarios</a>
-        <a href="{% url 'manager:salas_list' %}">Salas</a>
-        <a href="{% url 'manager:peliculas_list' %}">Películas</a>
-        <a href="{% url 'manager:funciones_list' %}">Funciones</a>
-      {% endif %}
-      <a href="{% url 'manager:home' %}">Inicio</a>
-      <a href="{% url 'logout' %}">Salir</a>
-    </nav>
-  </header>
+      </nav>
 
-  <main class="manager-main">
-    {% if messages %}
-      <div class="messages">
-        {% for message in messages %}
-          <p class="message">{{ message }}</p>
-        {% endfor %}
-      </div>
-    {% endif %}
+      <a class="logout-link" href="{% url 'logout' %}">
+        <i data-lucide="log-out" aria-hidden="true"></i>
+        <span>Salir</span>
+      </a>
+    </aside>
 
-    {% block content %}{% endblock %}
-  </main>
+    <div class="manager-workspace">
+      <header class="manager-topbar">
+        <div>
+          <span>Panel administrativo</span>
+          <strong>{{ cinema.nombre }}</strong>
+        </div>
+        <div class="topbar-user">
+          <i data-lucide="circle-user-round" aria-hidden="true"></i>
+          <span>{{ request.user.get_full_name|default:request.user.email|default:request.user.username }}</span>
+        </div>
+      </header>
+
+      <main class="manager-main">
+        {% if messages %}
+          <div class="messages" aria-live="polite">
+            {% for message in messages %}
+              <p class="message">{{ message }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     if (window.lucide) {

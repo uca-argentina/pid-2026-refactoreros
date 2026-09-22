@@ -1,13 +1,19 @@
 {% if is_paginated %}
-  <nav class="pagination" aria-label="Paginacion">
+  <nav class="pagination" aria-label="Paginación">
     {% if page_obj.has_previous %}
-      <a href="?{% if list_querystring %}{{ list_querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+      <a href="?{% if list_querystring %}{{ list_querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">
+        <i data-lucide="chevron-left" aria-hidden="true"></i>
+        <span>Anterior</span>
+      </a>
     {% endif %}
 
     <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
 
     {% if page_obj.has_next %}
-      <a href="?{% if list_querystring %}{{ list_querystring }}&{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>
+      <a href="?{% if list_querystring %}{{ list_querystring }}&{% endif %}page={{ page_obj.next_page_number }}">
+        <span>Siguiente</span>
+        <i data-lucide="chevron-right" aria-hidden="true"></i>
+      </a>
     {% endif %}
   </nav>
 {% endif %}
