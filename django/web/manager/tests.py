@@ -1,6 +1,7 @@
 import shutil
 import tempfile
 from datetime import timedelta
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -459,7 +460,7 @@ class ManagerFuncionesTests(TestCase):
 
         response = self.client.get(reverse("manager:funciones_list"))
 
-        self.assertContains(response, "$1500.00")
+        self.assertContains(response, "$1500,00")
 
     def test_lista_funciones_ordena_por_mayor_precio(self):
         barata = Funcion.objects.create(
@@ -526,7 +527,7 @@ class ManagerFuncionesTests(TestCase):
         )
         self.assertEqual(
             response.context["form"].initial["precio_entrada"],
-            funcion.precio_entrada,
+            Decimal("1500.00"),
         )
         self.assertContains(response, 'value="2026-09-18T20:30"')
 
@@ -549,8 +550,8 @@ class ManagerFuncionesTests(TestCase):
 
         self.assertContains(response, "Vendidas")
         self.assertContains(response, "Disponibles")
-        self.assertContains(response, "<td>35</td>", html=True)
-        self.assertContains(response, "<td>85</td>", html=True)
+        self.assertContains(response, '<td data-label="Vendidas">35</td>', html=True)
+        self.assertContains(response, '<td data-label="Disponibles">85</td>', html=True)
 
     def test_fecha_de_funcion_se_precarga_al_editar(self):
         funcion = Funcion.objects.create(

@@ -433,7 +433,7 @@ class FuncionCreateView(GerenteCreateView):
     section = "Funciones"
     enctype = ""
     object_label = "Funcion"
-    form_title = "Nueva funcion"
+    form_title = "Nueva función"
 
     def get_initial(self):
         initial = super().get_initial()
