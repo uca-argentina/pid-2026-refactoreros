@@ -397,19 +397,19 @@ svg {
 }
 
 .stat-teal .stat-icon {
-  background: #2563eb;
+  background: #ea580c;
 }
 
 .stat-amber .stat-icon {
-  background: #d97706;
-}
-
-.stat-violet .stat-icon {
   background: #7c3aed;
 }
 
+.stat-violet .stat-icon {
+  background: #059669;
+}
+
 .stat-rose .stat-icon {
-  background: #dc2626;
+  background: #2563eb;
 }
 
 .dashboard-layout {
@@ -614,8 +614,8 @@ svg {
 }
 
 .list-controls {
-  display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(128px, auto) minmax(180px, auto) auto auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: end;
   margin-bottom: 16px;
@@ -626,6 +626,15 @@ svg {
   display: grid;
   gap: 7px;
   min-width: 0;
+}
+
+.list-controls label:not(.search-field) {
+  flex: 0 1 180px;
+}
+
+.list-controls .search-field {
+  flex: 1 1 340px;
+  min-width: min(100%, 260px);
 }
 
 .list-controls label > span {
@@ -641,14 +650,12 @@ svg {
 
 .search-field svg {
   position: absolute;
-  bottom: 11px;
-  left: 12px;
+  bottom: 12px;
+  left: 14px;
+  width: 16px;
+  height: 16px;
   color: var(--muted);
   pointer-events: none;
-}
-
-.search-field input {
-  padding-left: 40px;
 }
 
 .list-controls input,
@@ -667,6 +674,10 @@ svg {
   font: inherit;
 }
 
+.list-controls .search-field input {
+  padding-left: 44px;
+}
+
 .list-controls input:focus,
 .list-controls select:focus,
 .manager-form input:focus,
@@ -677,6 +688,7 @@ svg {
 }
 
 .list-controls button {
+  flex: 0 0 auto;
   min-height: 42px;
   padding: 0 14px;
   border: 1px solid var(--brand-strong);
@@ -686,11 +698,17 @@ svg {
 
 .ghost-link,
 .pagination a {
+  flex: 0 0 auto;
   min-height: 42px;
   padding: 0 14px;
   border: 1px solid var(--border);
   color: var(--ink);
   background: #fff;
+}
+
+.list-controls .ghost-link {
+  height: 42px;
+  align-self: end;
 }
 
 .table-shell {
@@ -955,6 +973,12 @@ th {
     padding: 16px 24px;
   }
 
+  .brand {
+    justify-content: center;
+    width: 100%;
+    padding-bottom: 16px;
+  }
+
   .logout-link {
     display: none;
   }
@@ -995,6 +1019,11 @@ th {
   .brand-logo {
     width: 96px;
     height: 48px;
+  }
+
+  .brand {
+    flex-wrap: wrap;
+    gap: 14px;
   }
 
   .cinema-logo,
@@ -1050,7 +1079,17 @@ th {
   }
 
   .list-controls {
-    grid-template-columns: 1fr;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .list-controls label,
+  .list-controls label:not(.search-field),
+  .list-controls .search-field,
+  .list-controls button,
+  .list-controls .ghost-link {
+    flex: 1 1 auto;
+    width: 100%;
   }
 
   .table-shell {
@@ -1133,5 +1172,24 @@ th {
 
   .table-thumb {
     width: 52px;
+  }
+}
+
+@media (max-width: 420px) {
+  .brand {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .brand-logo {
+    width: 112px;
+    height: 52px;
+  }
+
+  .cinema-logo,
+  .cinema-logo-placeholder {
+    width: 98px;
+    height: 56px;
   }
 }
