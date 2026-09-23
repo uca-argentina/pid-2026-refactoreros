@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from decimal import Decimal
 
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
@@ -63,13 +64,13 @@ class TicketPurchaseTests(TestCase):
         self.assertRedirects(response, reverse("my_tickets"))
         self.assertContains(
             response,
-            "Pago aprobado. Compraste 3 entradas para Publicada. Te esperamos.",
+            "Pago aprobado. Compraste 3 entradas para Publicada. ¡Te esperamos!",
         )
         compra = CompraEntrada.objects.get()
         self.assertEqual(compra.usuario, usuario)
         self.assertEqual(compra.funcion, funcion)
         self.assertEqual(compra.cantidad, 3)
-        self.assertEqual(compra.total, funcion.precio_entrada * 3)
+        self.assertEqual(compra.total, Decimal("4500.00"))
 
     def test_compra_funcion_publicada_muestra_mensaje_singular(self):
         funcion = crear_funcion(publicada=True, titulo="Publicada")
@@ -88,7 +89,7 @@ class TicketPurchaseTests(TestCase):
 
         self.assertContains(
             response,
-            "Pago aprobado. Compraste 1 entrada para Publicada. Te esperamos.",
+            "Pago aprobado. Compraste 1 entrada para Publicada. ¡Te esperamos!",
         )
 
     def test_compra_falla_si_supera_disponibilidad(self):
@@ -106,7 +107,7 @@ class TicketPurchaseTests(TestCase):
             follow=True,
         )
 
-        self.assertRedirects(response, reverse("screening_detail", args=[funcion.pk]))
+        self.assertRedirects(response, reverse("movie_detail", args=[funcion.pelicula.pk]))
         self.assertContains(
             response,
             "Solo tenemos disponibles 2 entradas para esta función.",

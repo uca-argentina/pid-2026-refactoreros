@@ -1,6 +1,7 @@
 import shutil
 import tempfile
 from datetime import timedelta
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -318,13 +319,20 @@ class ManagerFuncionesTests(TestCase):
     def fecha_form(self, fecha):
         return timezone.localtime(fecha).strftime("%Y-%m-%dT%H:%M")
 
+    def fecha_futura(self, hora=20, minuto=30):
+        fecha = timezone.datetime.combine(
+            timezone.localdate() + timedelta(days=30),
+            timezone.datetime.min.time(),
+        ).replace(hour=hora, minute=minuto)
+        return timezone.make_aware(fecha)
+
     def test_gerente_crea_funcion_sin_publicarla(self):
         response = self.client.post(
             reverse("manager:funciones_create"),
             data={
                 "pelicula": self.pelicula.pk,
                 "sala": self.sala.pk,
-                "fecha_horario": "2026-09-18T20:30",
+                "fecha_horario": self.fecha_form(self.fecha_futura()),
                 "precio_entrada": "1500.00",
             },
         )
@@ -402,7 +410,7 @@ class ManagerFuncionesTests(TestCase):
         funcion = Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            fecha_horario=self.fecha_futura(),
             precio_entrada="1500.00",
             publicada=False,
         )
@@ -423,7 +431,7 @@ class ManagerFuncionesTests(TestCase):
         Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            fecha_horario=self.fecha_futura(),
             precio_entrada="1500.00",
             publicada=False,
         )
@@ -438,7 +446,7 @@ class ManagerFuncionesTests(TestCase):
         Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            fecha_horario=self.fecha_futura(),
             precio_entrada="1500.00",
             publicada=True,
         )
@@ -452,27 +460,27 @@ class ManagerFuncionesTests(TestCase):
         Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            fecha_horario=self.fecha_futura(),
             precio_entrada="1500.00",
             publicada=False,
         )
 
         response = self.client.get(reverse("manager:funciones_list"))
 
-        self.assertContains(response, "$1500.00")
+        self.assertContains(response, "$1500,00")
 
     def test_lista_funciones_ordena_por_mayor_precio(self):
         barata = Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            fecha_horario=self.fecha_futura(20, 30),
             precio_entrada="1000.00",
             publicada=False,
         )
         cara = Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 22, 30)),
+            fecha_horario=self.fecha_futura(22, 30),
             precio_entrada="2500.00",
             publicada=False,
         )
@@ -490,7 +498,7 @@ class ManagerFuncionesTests(TestCase):
         funcion = Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            fecha_horario=self.fecha_futura(),
             precio_entrada="1500.00",
             publicada=False,
         )
@@ -507,7 +515,7 @@ class ManagerFuncionesTests(TestCase):
         funcion = Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            fecha_horario=self.fecha_futura(),
             precio_entrada="1500.00",
             publicada=True,
         )
@@ -526,15 +534,18 @@ class ManagerFuncionesTests(TestCase):
         )
         self.assertEqual(
             response.context["form"].initial["precio_entrada"],
-            funcion.precio_entrada,
+            Decimal("1500.00"),
         )
-        self.assertContains(response, 'value="2026-09-18T20:30"')
+        self.assertContains(
+            response,
+            f'value="{self.fecha_form(funcion.fecha_horario)}"',
+        )
 
     def test_lista_funciones_muestra_entradas_vendidas_y_disponibles(self):
         funcion = Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            fecha_horario=self.fecha_futura(),
             precio_entrada="1500.00",
             publicada=True,
         )
@@ -549,27 +560,30 @@ class ManagerFuncionesTests(TestCase):
 
         self.assertContains(response, "Vendidas")
         self.assertContains(response, "Disponibles")
-        self.assertContains(response, "<td>35</td>", html=True)
-        self.assertContains(response, "<td>85</td>", html=True)
+        self.assertContains(response, '<td data-label="Vendidas">35</td>', html=True)
+        self.assertContains(response, '<td data-label="Disponibles">85</td>', html=True)
 
     def test_fecha_de_funcion_se_precarga_al_editar(self):
         funcion = Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 30)),
+            fecha_horario=self.fecha_futura(),
             precio_entrada="1500.00",
             publicada=False,
         )
 
         response = self.client.get(reverse("manager:funciones_update", args=[funcion.pk]))
 
-        self.assertContains(response, 'value="2026-09-18T20:30"')
+        self.assertContains(
+            response,
+            f'value="{self.fecha_form(funcion.fecha_horario)}"',
+        )
 
     def test_no_permite_funciones_solapadas_en_misma_sala(self):
         Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 0)),
+            fecha_horario=self.fecha_futura(20, 0),
             precio_entrada="1500.00",
             publicada=False,
         )
@@ -579,7 +593,7 @@ class ManagerFuncionesTests(TestCase):
             data={
                 "pelicula": self.pelicula.pk,
                 "sala": self.sala.pk,
-                "fecha_horario": "2026-09-18T21:00",
+                "fecha_horario": self.fecha_form(self.fecha_futura(21, 0)),
                 "precio_entrada": "1500.00",
             },
         )
@@ -592,7 +606,7 @@ class ManagerFuncionesTests(TestCase):
         Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 0)),
+            fecha_horario=self.fecha_futura(20, 0),
             precio_entrada="1500.00",
             publicada=False,
         )
@@ -602,7 +616,7 @@ class ManagerFuncionesTests(TestCase):
             data={
                 "pelicula": self.pelicula.pk,
                 "sala": self.sala.pk,
-                "fecha_horario": "2026-09-18T21:40",
+                "fecha_horario": self.fecha_form(self.fecha_futura(21, 40)),
                 "precio_entrada": "1500.00",
             },
         )
@@ -615,7 +629,7 @@ class ManagerFuncionesTests(TestCase):
         Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 0)),
+            fecha_horario=self.fecha_futura(20, 0),
             precio_entrada="1500.00",
             publicada=False,
         )
@@ -625,7 +639,7 @@ class ManagerFuncionesTests(TestCase):
             data={
                 "pelicula": self.pelicula.pk,
                 "sala": otra_sala.pk,
-                "fecha_horario": "2026-09-18T21:00",
+                "fecha_horario": self.fecha_form(self.fecha_futura(21, 0)),
                 "precio_entrada": "1500.00",
             },
         )
@@ -637,7 +651,7 @@ class ManagerFuncionesTests(TestCase):
         funcion = Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
-            fecha_horario=timezone.make_aware(timezone.datetime(2026, 9, 18, 20, 0)),
+            fecha_horario=self.fecha_futura(20, 0),
             precio_entrada="1500.00",
             publicada=False,
         )
@@ -647,7 +661,7 @@ class ManagerFuncionesTests(TestCase):
             data={
                 "pelicula": self.pelicula.pk,
                 "sala": self.sala.pk,
-                "fecha_horario": "2026-09-18T20:00",
+                "fecha_horario": self.fecha_form(self.fecha_futura(20, 0)),
                 "precio_entrada": "1600.00",
             },
         )

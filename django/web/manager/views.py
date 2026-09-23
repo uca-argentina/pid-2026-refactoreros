@@ -6,6 +6,7 @@ from django.db.models import F, IntegerField, Q, Sum, Value
 from django.db.models.functions import Coalesce, Greatest
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -63,6 +64,59 @@ class GerenteRequiredMixin(ManagerAccessMixin):
 
 class GestionHomeView(ManagerAccessMixin, TemplateView):
     template_name = "manager_home.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.manager_role != "gerente":
+            return context
+
+        now = timezone.now()
+        today = timezone.localdate()
+        funciones_base = Funcion.objects.select_related("pelicula", "sala").annotate(
+            entradas_vendidas=Coalesce(
+                Sum("compras_entradas__cantidad"),
+                Value(0),
+                output_field=IntegerField(),
+            )
+        )
+        proximas_funciones = funciones_base.filter(fecha_horario__gte=now)
+        context["dashboard_stats"] = [
+            {
+                "label": "Funciones hoy",
+                "value": Funcion.objects.filter(fecha_horario__date=today).count(),
+                "icon": "calendar-days",
+                "tone": "teal",
+            },
+            {
+                "label": "Películas activas",
+                "value": Pelicula.objects.count(),
+                "icon": "clapperboard",
+                "tone": "amber",
+            },
+            {
+                "label": "Salas disponibles",
+                "value": Sala.objects.count(),
+                "icon": "armchair",
+                "tone": "violet",
+            },
+            {
+                "label": "Usuarios activos",
+                "value": User.objects.filter(is_active=True).count(),
+                "icon": "users",
+                "tone": "rose",
+            },
+        ]
+        context["next_screenings"] = proximas_funciones.order_by("fecha_horario")[:5]
+        context["hidden_upcoming_count"] = proximas_funciones.filter(
+            publicada=False
+        ).count()
+        context["published_upcoming_count"] = proximas_funciones.filter(
+            publicada=True
+        ).count()
+        context["total_room_capacity"] = (
+            Sala.objects.aggregate(total=Coalesce(Sum("capacidad"), Value(0)))["total"]
+        )
+        return context
 
 
 class GerenteListView(GerenteRequiredMixin, ListView):
@@ -433,7 +487,7 @@ class FuncionCreateView(GerenteCreateView):
     section = "Funciones"
     enctype = ""
     object_label = "Funcion"
-    form_title = "Nueva funcion"
+    form_title = "Nueva función"
 
     def get_initial(self):
         initial = super().get_initial()

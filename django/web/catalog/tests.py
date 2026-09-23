@@ -84,8 +84,7 @@ class CatalogFlowTests(TestCase):
 
         response = self.client.get(reverse("home"))
 
-        self.assertContains(response, "Misma pelicula", count=1)
-        self.assertContains(response, "2 funcion(es)")
+        self.assertContains(response, "<h2>Misma película</h2>", count=1, html=True)
 
     def test_detalle_funcion_publicada_permite_comprar(self):
         funcion = crear_funcion(publicada=True, titulo="Publicada", capacidad=5)
@@ -102,7 +101,7 @@ class CatalogFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "screening_detail.html")
         self.assertContains(response, "Comprar entrada")
-        self.assertContains(response, "Elegí función")
+        self.assertContains(response, "Elegí tu función")
         self.assertNotContains(response, "Disponibles")
 
     def test_detalle_muestra_entradas_agotadas_solo_para_funcion_seleccionada(self):

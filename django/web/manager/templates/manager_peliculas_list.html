@@ -3,9 +3,15 @@
 {% block content %}
   <section class="page-heading page-heading-row">
     <div>
+      <p>Catálogo exhibido</p>
       <h1>Películas</h1>
     </div>
-    {% if create_url_name %}<a class="primary-link" href="{% url create_url_name %}">Nueva película</a>{% endif %}
+    {% if create_url_name %}
+      <a class="primary-link" href="{% url create_url_name %}">
+        <i data-lucide="plus" aria-hidden="true"></i>
+        <span>Nueva película</span>
+      </a>
+    {% endif %}
   </section>
 
   {% include "_list_controls.html" %}
@@ -25,20 +31,26 @@
       <tbody>
         {% for pelicula in object_list %}
           <tr>
-            <td data-label="Título">{{ pelicula.titulo }}</td>
+            <td data-label="Título"><strong class="cell-title">{{ pelicula.titulo }}</strong></td>
             <td data-label="Imagen">
               {% if pelicula.imagen %}
                 <img class="table-thumb" src="{{ pelicula.imagen.url }}" alt="{{ pelicula.titulo }}">
               {% else %}
-                -
+                <span class="muted-text">Sin imagen</span>
               {% endif %}
             </td>
             <td data-label="Género">{{ pelicula.get_genero_display }}</td>
-            <td data-label="Clasificación">{{ pelicula.get_clasificacion_display }}</td>
+            <td data-label="Clasificación"><span class="status-pill status-neutral">{{ pelicula.get_clasificacion_display }}</span></td>
             <td data-label="Duración">{{ pelicula.duracion_minutos }} min</td>
             <td class="table-actions" data-label="Acciones">
-              <a href="{% url 'manager:peliculas_update' pelicula.pk %}">Editar</a>
-              <a href="{% url 'manager:peliculas_delete' pelicula.pk %}">Eliminar</a>
+              <a href="{% url 'manager:peliculas_update' pelicula.pk %}">
+                <i data-lucide="pencil" aria-hidden="true"></i>
+                <span>Editar</span>
+              </a>
+              <a href="{% url 'manager:peliculas_delete' pelicula.pk %}" class="danger-link">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                <span>Eliminar</span>
+              </a>
             </td>
           </tr>
         {% empty %}
