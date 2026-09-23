@@ -546,3 +546,14 @@ body {
     justify-content: flex-start;
   }
 }
+
+.screening-options label.is-sold-out {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.screening-options .sold-out-badge {
+  font-size: 0.75em;
+  text-transform: uppercase;
+  color: #c0392b;
+}

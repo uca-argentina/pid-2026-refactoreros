@@ -20,7 +20,7 @@
       {% endif %}
     </a>
     <nav>
-      <a href="{% url 'home' %}">Cartelera</a>
+      <a href="{% url 'home' %}">Peliculas</a>
       <a href="{% url 'my_tickets' %}">Mis entradas</a>
       {% if manager_role %}
         <a href="{% url 'manager:home' %}">Gestión</a>
@@ -72,7 +72,7 @@
           <h2>Elegí tu función</h2>
           <div>
             {% for item in funciones %}
-              <label>
+              <label{% if item.entradas_disponibles <= 0 %} class="is-sold-out" title="Función agotada"{% endif %}>
                 <input
                   type="radio"
                   name="funcion"
@@ -80,9 +80,16 @@
                   data-purchase-url="{% url 'ticket_purchase' item.pk %}"
                   data-available="{{ item.entradas_disponibles }}"
                   {% if item.pk == funcion.pk %}checked{% endif %}
+                  {% if item.entradas_disponibles <= 0 %}disabled aria-disabled="true"{% endif %}
                 >
                 <span>{{ item.fecha_horario|date:"l d/m H:i"|capfirst }}</span>
-                <small>{{ item.sala.nombre }} - ${{ item.precio_entrada }}</small>
+                <small>
+                  {% if item.entradas_disponibles <= 0 %}
+                    <strong class="sold-out-badge">Función agotada</strong>
+                  {% else %}
+                    {{ item.sala.nombre }} - ${{ item.precio_entrada }}
+                  {% endif %}
+                </small>
               </label>
             {% endfor %}
           </div>
