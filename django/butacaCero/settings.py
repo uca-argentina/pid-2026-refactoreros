@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "domain.screenings",
     "domain.tickets",
     "domain.users",
+    "domain.seats",
     "web.auth",
     "web.catalog",
     "web.manager",

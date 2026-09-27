@@ -358,6 +358,8 @@ class SalaCreateView(GerenteCreateView):
     object_label = "Sala"
     form_title = "Nueva sala"
 
+    template_name = "manager_nueva_sala_form.html"
+
 
 class SalaUpdateView(GerenteUpdateView):
     model = Sala
