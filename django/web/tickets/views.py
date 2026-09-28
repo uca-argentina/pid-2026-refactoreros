@@ -12,6 +12,7 @@ from .forms import TicketPurchaseForm
 
 @login_required
 def ticket_purchase_view(request, pk):
+    Funcion.finalizar_vencidas()
     funcion = get_object_or_404(Funcion.funciones_publicadas(), pk=pk)
     if request.method == "POST":
         form = TicketPurchaseForm(request.POST)
@@ -23,11 +24,8 @@ def ticket_purchase_view(request, pk):
                     cantidad=form.cleaned_data["cantidad"],
                 )
             except ValidationError as error:
-                disponibles = CompraEntrada.disponibles_para(funcion)
                 request.session["selected_funcion_id"] = funcion.pk
-                request.session["purchase_error"] = (
-                    f"Solo tenemos disponibles {disponibles} entradas para esta función."
-                )
+                request.session["purchase_error"] = error.messages[0]
             else:
                 entrada_label = "entrada" if compra.cantidad == 1 else "entradas"
                 messages.success(

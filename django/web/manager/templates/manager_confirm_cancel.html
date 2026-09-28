@@ -1,0 +1,30 @@
+{% extends "manager_base.html" %}
+
+{% block content %}
+  <section class="page-heading">
+    <p>{{ section }}</p>
+    <h1>Cancelar función</h1>
+  </section>
+
+  <form class="manager-form danger-form" method="post" action="{% url 'manager:funciones_estado' object.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="estado" value="cancelada">
+    <div class="delete-warning">
+      <i data-lucide="triangle-alert" aria-hidden="true"></i>
+      <div>
+        <h2>Confirmar cancelación</h2>
+        <p>Vas a cancelar <strong>{{ object }}</strong>. Deja de estar a la venta y no se puede volver a publicar.</p>
+        {% if entradas_vendidas %}
+          <p>Ya se vendieron <strong>{{ entradas_vendidas }}</strong> entrada{{ entradas_vendidas|pluralize }}. Los clientes van a ver la función como cancelada en "Mis entradas".</p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="danger" type="submit">
+        <i data-lucide="ban" aria-hidden="true"></i>
+        <span>Cancelar función</span>
+      </button>
+      <a href="{% url 'manager:funciones_list' %}">Volver</a>
+    </div>
+  </form>
+{% endblock %}

@@ -766,25 +766,35 @@ th {
   white-space: nowrap;
 }
 
-.status-live {
+.status-live,
+.status-publicada {
   border-color: #bfd8ce;
   color: #0f5132;
   background: #eef8f4;
 }
 
-.status-draft {
+.status-draft,
+.status-borrador {
   border-color: #cbd5e1;
   color: #475569;
   background: #f8fafc;
 }
 
-.status-blocked {
+.status-programada {
+  border-color: #bfdbfe;
+  color: var(--brand);
+  background: #eff6ff;
+}
+
+.status-blocked,
+.status-cancelada {
   border-color: #f0c2bd;
   color: var(--danger);
   background: #fff5f5;
 }
 
-.status-neutral {
+.status-neutral,
+.status-finalizada {
   border-color: var(--border);
   color: var(--muted);
   background: #f8fafc;
@@ -831,6 +841,99 @@ th {
 .danger-link,
 .table-actions a.danger-link {
   color: var(--danger);
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.table-actions .row-actions a,
+.table-actions .row-actions button {
+  margin: 0;
+}
+
+.row-menu summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  list-style: none;
+}
+
+.row-menu summary::marker {
+  content: "";
+}
+
+.row-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.row-menu summary:hover,
+.row-menu[open] summary {
+  border-color: var(--border);
+  color: var(--ink);
+  background: var(--surface-soft);
+}
+
+.row-menu summary svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.75;
+}
+
+.row-menu-list {
+  position: fixed;
+  z-index: 50;
+  display: grid;
+  min-width: 210px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.table-actions .row-menu-list form {
+  display: block;
+}
+
+.table-actions .row-menu-list a,
+.table-actions .row-menu-list button {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 36px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.table-actions .row-menu-list a:hover,
+.table-actions .row-menu-list button:hover {
+  background: var(--surface-soft);
+}
+
+.table-actions .row-menu-list a.danger-link {
+  color: var(--danger);
+}
+
+.row-menu-list hr {
+  margin: 6px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
 }
 
 .pagination {

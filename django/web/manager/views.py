@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import F, IntegerField, Q, Sum, Value
 from django.db.models.functions import Coalesce, Greatest
 from django.shortcuts import get_object_or_404, redirect
@@ -20,6 +20,7 @@ from domain.cinema.models import ConfiguracionCine
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
 from domain.screenings.models import Funcion
+from domain.tickets.models import CompraEntrada
 
 from .forms import FuncionForm, PeliculaForm, SalaForm, UsuarioGestionForm
 
@@ -70,6 +71,7 @@ class GestionHomeView(ManagerAccessMixin, TemplateView):
         if self.manager_role != "gerente":
             return context
 
+        Funcion.finalizar_vencidas()
         now = timezone.now()
         today = timezone.localdate()
         funciones_base = Funcion.objects.select_related("pelicula", "sala").annotate(
@@ -108,10 +110,10 @@ class GestionHomeView(ManagerAccessMixin, TemplateView):
         ]
         context["next_screenings"] = proximas_funciones.order_by("fecha_horario")[:5]
         context["hidden_upcoming_count"] = proximas_funciones.filter(
-            publicada=False
+            estado__in=(Funcion.Estado.BORRADOR, Funcion.Estado.PROGRAMADA)
         ).count()
         context["published_upcoming_count"] = proximas_funciones.filter(
-            publicada=True
+            estado=Funcion.Estado.PUBLICADA
         ).count()
         context["total_room_capacity"] = (
             Sala.objects.aggregate(total=Coalesce(Sum("capacidad"), Value(0)))["total"]
@@ -435,7 +437,7 @@ class FuncionesListView(GerenteListView):
         "Pelicula",
         "Sala",
         "Fecha",
-        "Publicada",
+        "Estado",
         "Precio",
         "Vendidas",
         "Disponibles",
@@ -451,6 +453,7 @@ class FuncionesListView(GerenteListView):
     )
 
     def get_queryset(self):
+        Funcion.finalizar_vencidas()
         queryset = (
             Funcion.objects.select_related("pelicula", "sala")
             .annotate(
@@ -507,7 +510,7 @@ class FuncionCreateView(GerenteCreateView):
         return initial
 
     def form_valid(self, form):
-        form.instance.publicada = False
+        form.instance.estado = Funcion.Estado.BORRADOR
         return super().form_valid(form)
 
 
@@ -520,6 +523,12 @@ class FuncionUpdateView(GerenteUpdateView):
     object_label = "Funcion"
     form_title = "Editar función"
 
+    def get_object(self, queryset=None):
+        funcion = super().get_object(queryset)
+        if not funcion.es_editable:
+            raise PermissionDenied
+        return funcion
+
 
 class FuncionDeleteView(GerenteDeleteView):
     model = Funcion
@@ -527,14 +536,50 @@ class FuncionDeleteView(GerenteDeleteView):
     section = "Funciones"
     object_label = "Funcion"
 
+    def get_object(self, queryset=None):
+        funcion = super().get_object(queryset)
+        if not funcion.es_eliminable:
+            raise PermissionDenied
+        return funcion
 
-class FuncionTogglePublicadaView(GerenteRequiredMixin, DetailView):
+
+class FuncionCambiarEstadoView(GerenteRequiredMixin, DetailView):
     model = Funcion
+    mensajes = {
+        Funcion.Estado.BORRADOR: "La función volvió a borrador.",
+        Funcion.Estado.PROGRAMADA: "Función programada correctamente.",
+        Funcion.Estado.PUBLICADA: "Función publicada correctamente.",
+        Funcion.Estado.CANCELADA: "Función cancelada correctamente.",
+    }
 
     def post(self, request, *args, **kwargs):
         funcion = self.get_object()
-        funcion.publicada = not funcion.publicada
-        funcion.save(update_fields=["publicada"])
-        estado = "publicada" if funcion.publicada else "oculta"
-        messages.success(request, f"Funcion {estado} correctamente.")
+        nuevo_estado = request.POST.get("estado", "")
+        if nuevo_estado not in self.mensajes:
+            messages.error(request, "Estado inválido.")
+            return redirect("manager:funciones_list")
+        try:
+            funcion.cambiar_estado(nuevo_estado)
+        except ValidationError as error:
+            messages.error(request, error.messages[0])
+        else:
+            messages.success(request, self.mensajes[nuevo_estado])
         return redirect("manager:funciones_list")
+
+
+class FuncionCancelarView(GerenteRequiredMixin, DetailView):
+    model = Funcion
+    template_name = "manager_confirm_cancel.html"
+
+    def get(self, request, *args, **kwargs):
+        funcion = self.get_object()
+        if not funcion.puede_pasar_a(Funcion.Estado.CANCELADA):
+            messages.error(request, "Esta función no se puede cancelar.")
+            return redirect("manager:funciones_list")
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["section"] = "Funciones"
+        context["entradas_vendidas"] = CompraEntrada.cantidad_vendida(self.object)
+        return context

@@ -433,6 +433,27 @@ body {
   text-transform: uppercase;
 }
 
+.ticket-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ticket-card .ticket-status {
+  border-color: rgba(248, 113, 113, .5);
+  color: #fecaca;
+  background: rgba(185, 28, 28, .35);
+}
+
+.ticket-card.is-cancelled h2,
+.ticket-card.is-cancelled .ticket-summary {
+  opacity: .55;
+}
+
+.ticket-card.is-cancelled h2 {
+  text-decoration: line-through;
+}
+
 .ticket-card h2,
 .ticket-card p,
 .ticket-summary {
@@ -548,7 +569,7 @@ body {
 }
 
 .screening-options label.is-sold-out {
-  opacity: 0.3;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 

@@ -7,7 +7,7 @@
   <title>Butaca Cero | Gestión</title>
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
   <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
-  <link rel="stylesheet" href="{% static 'manager.css' %}">
+  <link rel="stylesheet" href="{% static 'manager.css' %}?v=20260927">
 </head>
 <body>
   <div class="manager-shell">
@@ -85,5 +85,6 @@
       lucide.createIcons();
     }
   </script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>
