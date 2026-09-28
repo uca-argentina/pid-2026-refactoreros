@@ -1,10 +1,12 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+import json
 
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
 from domain.screenings.models import Funcion
+from domain.seats.models import Seat
 
 User = get_user_model()
 MAX_MOVIE_IMAGE_SIZE_MB = 2
@@ -34,9 +36,43 @@ class UsuarioGestionForm(forms.ModelForm):
 
 
 class SalaForm(forms.ModelForm):
+
+    MAX_ROW, MAX_COLUMN = 100,100
+
+    layout_sala = forms.CharField(widget=forms.HiddenInput)
+
     class Meta:
         model = Sala
-        fields = ("nombre", "capacidad")
+        fields = ("nombre",)
+
+    def clean_layout_sala(self):
+        try:
+            data_as_string = self.cleaned_data["layout"]
+            data = json.loads(data_as_string)
+        except ValueError:
+            raise forms.ValidationError("El plano enviado no es válido.")
+
+        if not isinstance(data, list) or not data:
+            raise forms.ValidationError("Dibujá al menos un asiento.")
+        if len(data) > (self.MAX_ROW*self.MAX_COLUMN):
+            raise forms.ValidationError(f"Máximo {self.MAX_ROW*self.MAX_COLUMN} asientos por sala.")
+
+        seats_data, positions = [] , set()
+        for seat_data in data:
+            try:
+                row,column = seat_data["row"], seat_data["column"]
+            except(KeyError, TypeError,ValueError):
+                raise forms.ValidationError("El plano de la sala contiene datos incorrectos.")
+
+            if(row > self.MAX_ROW or column > self.MAX_COLUMN):
+                raise forms.ValidationError(f"Hay asientos fuera del limite (máximo de filas {self.MAX_ROW} y máximo de columnas {self.MAX_COLUMN}).")
+
+            if((row,column) in positions):
+                raise forms.ValidationError("Hay asientos duplicados.")
+            positions.add((row,column))
+            seats_data.append({"row":row,"column":column})
+
+        return seats_data
 
 
 class PeliculaForm(forms.ModelForm):

@@ -5,6 +5,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import F, IntegerField, Q, Sum, Value
 from django.db.models.functions import Coalesce, Greatest
 from django.shortcuts import get_object_or_404, redirect
+from django.db import transaction
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import (
@@ -20,6 +21,7 @@ from domain.cinema.models import ConfiguracionCine
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
 from domain.screenings.models import Funcion
+from domain.seats.models import Seat
 
 from .forms import FuncionForm, PeliculaForm, SalaForm, UsuarioGestionForm
 
@@ -349,6 +351,17 @@ class SalasListView(GerenteListView):
         return queryset.filter(nombre__icontains=search_query)
 
 
+
+
+
+
+
+
+
+
+
+
+
 class SalaCreateView(GerenteCreateView):
     model = Sala
     form_class = SalaForm
@@ -359,6 +372,28 @@ class SalaCreateView(GerenteCreateView):
     form_title = "Nueva sala"
 
     template_name = "manager_nueva_sala_form.html"
+
+    def form_valid(self,form):
+        with transaction.atomic():
+            self.object = form.save()
+            Seat.objects.bulk_create(self.object,form.cleaned_data["layout_sala"])
+        messages.success(self.request, f"{self.object_label} creado/a correctamente.")
+        return redirect(self.get_success_url())
+    
+
+
+def build_seats(room, seats_layout):
+    seats = []
+    for seat_data in seats_layout:
+        seats.append(Seat(sala=room,fila=seat_data["row"],columna=seat_data["column"],precio_base=1000))
+
+
+
+
+
+
+
+
 
 
 class SalaUpdateView(GerenteUpdateView):
