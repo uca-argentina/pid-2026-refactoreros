@@ -1,0 +1,85 @@
+#room_layout_table {
+    border-collapse: separate;
+    border-spacing: 3px;
+    margin: 20px auto;
+    user-select: none;
+}
+
+#room_layout_table td {
+    padding: 0;
+}
+
+.celda-checkbox {
+    display: block;
+    width: 28px;
+    height: 28px;
+    border: 2px solid #cbd5e1;
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+    transition:
+        background-color 0.1s,
+        border-color 0.1s,
+        transform 0.05s;
+}
+
+.celda-checkbox:hover {
+    border-color: #4f46e5;
+    transform: scale(1.05);
+}
+
+.celda-checkbox.checked {
+    background: #4f46e5;
+    border-color: #4f46e5;
+}
+
+.seat_checkbox{
+    display: none;
+}
+
+.tool-selector {
+  display: inline-flex;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--surface);
+}
+
+.tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--ink);
+  background: var(--surface-soft);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tool-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+.tool-btn:hover {
+  background: var(--accent-soft);
+}
+
+.tool-btn.seat {
+  color: #fff;
+  border-color: var(--brand-strong);
+  background: var(--brand);
+}
+
+
+#room_layout_table {
+  user-select: none;
+}

@@ -1,16 +1,12 @@
 {% extends "manager_base.html" %}
-
+{% block extra_css %}
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'manager_nueva_sala_form_style.css' %}">
+{% endblock %}
 {% block content %}
   <section class="page-heading">
     <p>{{ section }}</p>
     <h1>{{ form_title }}</h1>
-
-    <div class="icon-box">
-      <svg viewBox="0 0 24 24" width="32" height="32">
-        <rect x="2" y="2" width="20" height="20" rx="6" fill="#4F46E5"/>
-      </svg>
-    </div>
-
   </section>
 
   <div class="form-layout">
@@ -33,52 +29,105 @@
 
       <div class="controles">
         <label>Filas:
-          <input type="number" id="filas" min="1" max="100" value="3">
+          <input type="number" id="rows" min="1" max="100" value="20">
         </label>
         <label>Columnas:
-          <input type="number" id="columnas" min="1" max="100" value="3">
+          <input type="number" id="columns" min="1" max="100" value="20">
         </label>
       </div>
 
-      <table id="tabla"></table>
+      <div class="tool-selector">
+        <button type="button" id="tool-seat-button" class="tool-btn seat">
+          <i data-lucide="armchair" aria-hidden="true"></i>
+          <span>Asiento</span>
+        </button>
+        <button type="button" id="tool-eraser-button" class="tool-btn erase">
+          <i data-lucide="eraser" aria-hidden="true"></i>
+          <span>Borrar</span>
+        </button>
+      </div>
+
+      <table id="room_layout_table"></table>
       
       <script>
-        const inputFilas = document.getElementById("filas");
-        const inputColumnas = document.getElementById("columnas");
-        const tabla = document.getElementById("tabla");
+        const inputFilas = document.getElementById("rows");
+        const inputColumnas = document.getElementById("columns");
+        const tabla  = document.getElementById("room_layout_table");
+        let toolMode = "seat"; 
 
-        // Guarda el estado (fila-columna -> checked) para no perderlo al redimensionar
-        const estado = {};
+        let estado = {};
+        let isMouseClicking = false;
 
-        function limitar(valor) {
+        function limitSize(valor) {
           const n = parseInt(valor, 10);
           return isNaN(n) ? 1 : Math.min(Math.max(n, 1), 100);
         }
 
         function dibujarTabla() {
-          const filas = limitar(inputFilas.value);
-          const columnas = limitar(inputColumnas.value);
+          const filas    = limitSize(inputFilas.value);
+          const columnas = limitSize(inputColumnas.value);
 
           tabla.innerHTML = "";
           for (let f = 0; f < filas; f++) {
             const tr = document.createElement("tr");
             for (let c = 0; c < columnas; c++) {
               const key = `${f}-${c}`;
-              const td = document.createElement("td");
-              const cb = document.createElement("input");
+              const td    = document.createElement("td");
+              const cb    = document.createElement("input");
+              const label = document.createElement("label");
+
+              label.className = "celda-checkbox";
+
               cb.type = "checkbox";
               cb.name = `celda_${f}_${c}`;
+              cb.className = "seat_checkbox"
               cb.checked = !!estado[key];
-              cb.addEventListener("change", () => { estado[key] = cb.checked; });
-              td.appendChild(cb);
+              cb.addEventListener("change", () => { estado[key] = cb.checked; updateVisual(cb, label); });
+              
+              label.addEventListener("mousedown",  () => {isMouseClicking = true;});
+              label.addEventListener("mouseenter", () => {paintSeatCb(cb,label,key)});
+              label.addEventListener("mouseup",    () => {isMouseClicking = false;});
+
+
+              label.appendChild(cb);
+              td.appendChild(label);
               tr.appendChild(td);
             }
             tabla.appendChild(tr);
           }
         }
 
-        inputFilas.addEventListener("input", dibujarTabla);
-        inputColumnas.addEventListener("input", dibujarTabla);
+        function updateVisual(cb, label) {
+          label.classList.toggle("checked", cb.checked);
+        }
+
+        function paintSeatCb(cb,label,key) {
+          if (isMouseClicking) {
+            if(toolMode == "seat"){
+              cb.checked = true;
+              estado[key] = cb.checked;
+              updateVisual(cb, label);
+            }else if (toolMode == "eraser"){
+              cb.checked = false;
+              estado[key] = cb.checked;
+              updateVisual(cb, label);
+            }
+
+          }
+        }
+
+        function changeToolMode(mode) {
+          toolMode = mode;
+        }
+
+        const seatModeButton = document.getElementById("tool-seat-button");
+        const eraseModeButton = document.getElementById("tool-eraser-button");
+        seatModeButton.addEventListener("click",() => {changeToolMode("seat")});
+        eraseModeButton.addEventListener("click",() => {changeToolMode("eraser")});
+
+
+        inputFilas.addEventListener("input",    () => {dibujarTabla();estado = {};});
+        inputColumnas.addEventListener("input", () => {dibujarTabla();estado = {};});
         dibujarTabla();
       </script>
 
