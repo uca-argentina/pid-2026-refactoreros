@@ -62,6 +62,9 @@ class CompraEntrada(models.Model):
         if self.cantidad < 1:
             raise ValidationError({"cantidad": "Elegí al menos una entrada."})
 
+        if not self.pk and self.funcion.estado != Funcion.Estado.PUBLICADA:
+            raise ValidationError("Esta función no tiene entradas a la venta.")
+
         disponibles = self.disponibles_para(self.funcion)
         if self.pk:
             disponibles += self.cantidad

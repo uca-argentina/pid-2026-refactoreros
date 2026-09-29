@@ -11,8 +11,11 @@ from web.manager.views import manager_role
 
 @login_required
 def home_view(request):
+    Funcion.finalizar_vencidas()
     funciones_publicadas = Funcion.funciones_publicadas()
-    peliculas = Pelicula.objects.filter(funciones__publicada=True).prefetch_related(
+    peliculas = Pelicula.objects.filter(
+        funciones__estado=Funcion.Estado.PUBLICADA
+    ).prefetch_related(
         Prefetch("funciones", queryset=funciones_publicadas, to_attr="publicadas")
     ).distinct()
     return render(
@@ -28,9 +31,12 @@ def home_view(request):
 
 @login_required
 def movie_detail_view(request, pk):
+    Funcion.finalizar_vencidas()
     funciones_publicadas = Funcion.funciones_publicadas()
     pelicula = get_object_or_404(
-        Pelicula.objects.filter(funciones__publicada=True).prefetch_related(
+        Pelicula.objects.filter(
+            funciones__estado=Funcion.Estado.PUBLICADA
+        ).prefetch_related(
             Prefetch("funciones", queryset=funciones_publicadas, to_attr="publicadas")
         ).distinct(),
         pk=pk,
@@ -64,6 +70,7 @@ def movie_detail_view(request, pk):
 
 @login_required
 def screening_detail_view(request, pk):
+    Funcion.finalizar_vencidas()
     funcion = get_object_or_404(Funcion.funciones_publicadas(), pk=pk)
     request.session["selected_funcion_id"] = funcion.pk
     return redirect("movie_detail", pk=funcion.pelicula_id)

@@ -109,7 +109,7 @@
               data-sold-out-label="Entradas agotadas para esta función"
               {% if entradas_disponibles <= 0 %}disabled{% endif %}
             >
-              {% if entradas_disponibles > 0 %}Comprar entrada{% else %}Entradas agotadas para esta función{% endif %}
+              {% if entradas_disponibles > 0 %}Comprar entrada{% endif %}
             </button>
             {% if purchase_error and entradas_disponibles > 0 %}
               <p class="purchase-error">{{ purchase_error }}</p>

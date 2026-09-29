@@ -23,7 +23,7 @@
           <th>Película</th>
           <th>Sala</th>
           <th>Fecha</th>
-          <th>Publicación</th>
+          <th>Estado</th>
           <th>Precio</th>
           <th>Vendidas</th>
           <th>Disponibles</th>
@@ -36,41 +36,97 @@
             <td data-label="Película"><strong class="cell-title">{{ funcion.pelicula.titulo }}</strong></td>
             <td data-label="Sala">{{ funcion.sala.nombre }}</td>
             <td data-label="Fecha">{{ funcion.fecha_horario|date:"d/m/Y H:i" }}</td>
-            <td data-label="Publicación">
-              {% if funcion.publicada %}
-                <span class="status-pill status-live">Publicada</span>
-              {% else %}
-                <span class="status-pill status-draft">Oculta</span>
-              {% endif %}
+            <td data-label="Estado">
+              <span class="status-pill status-{{ funcion.estado }}">{{ funcion.get_estado_display }}</span>
             </td>
             <td data-label="Precio">${{ funcion.precio_entrada }}</td>
             <td data-label="Vendidas">{{ funcion.entradas_vendidas }}</td>
             <td data-label="Disponibles">{{ funcion.entradas_disponibles }}</td>
             <td class="table-actions" data-label="Acciones">
-              <a href="{% url 'manager:funciones_update' funcion.pk %}">
-                <i data-lucide="pencil" aria-hidden="true"></i>
-                <span>Editar</span>
-              </a>
-              <a href="{% url 'manager:funciones_create' %}?plantilla={{ funcion.pk }}">
-                <i data-lucide="copy" aria-hidden="true"></i>
-                <span>Usar como plantilla</span>
-              </a>
-              <form method="post" action="{% url 'manager:funciones_toggle' funcion.pk %}">
-                {% csrf_token %}
-                <button type="submit"{% if not funcion.publicada %} class="publish-action"{% endif %}>
-                  {% if funcion.publicada %}
-                    <i data-lucide="eye-off" aria-hidden="true"></i>
-                    <span>Ocultar</span>
-                  {% else %}
-                    <i data-lucide="send" aria-hidden="true"></i>
-                    <span>Publicar</span>
+              {% with transiciones=funcion.transiciones_disponibles %}
+                <div class="row-actions">
+                  {% if funcion.es_editable %}
+                    <a href="{% url 'manager:funciones_update' funcion.pk %}">
+                      <i data-lucide="pencil" aria-hidden="true"></i>
+                      <span>Editar</span>
+                    </a>
                   {% endif %}
-                </button>
-              </form>
-              <a href="{% url 'manager:funciones_delete' funcion.pk %}" class="danger-link">
-                <i data-lucide="trash-2" aria-hidden="true"></i>
-                <span>Eliminar</span>
-              </a>
+                  {% if funcion.estado == "borrador" and "programada" in transiciones %}
+                    <form method="post" action="{% url 'manager:funciones_estado' funcion.pk %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="estado" value="programada">
+                      <button type="submit" class="publish-action">
+                        <i data-lucide="calendar-check" aria-hidden="true"></i>
+                        <span>Programar</span>
+                      </button>
+                    </form>
+                  {% endif %}
+                  {% if "publicada" in transiciones %}
+                    <form method="post" action="{% url 'manager:funciones_estado' funcion.pk %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="estado" value="publicada">
+                      <button type="submit" class="publish-action">
+                        <i data-lucide="send" aria-hidden="true"></i>
+                        <span>Publicar</span>
+                      </button>
+                    </form>
+                  {% endif %}
+
+                  {% if not transiciones and not funcion.es_eliminable %}
+                    <a href="{% url 'manager:funciones_create' %}?plantilla={{ funcion.pk }}">
+                      <i data-lucide="copy" aria-hidden="true"></i>
+                      <span>Usar como plantilla</span>
+                    </a>
+                  {% else %}
+                    <details class="row-menu">
+                      <summary aria-label="Más acciones" title="Más acciones">
+                        <i data-lucide="ellipsis-vertical" aria-hidden="true"></i>
+                      </summary>
+                      <div class="row-menu-list">
+                        <a href="{% url 'manager:funciones_create' %}?plantilla={{ funcion.pk }}">
+                          <i data-lucide="copy" aria-hidden="true"></i>
+                          <span>Usar como plantilla</span>
+                        </a>
+                        {% if funcion.estado == "publicada" and "programada" in transiciones %}
+                          <form method="post" action="{% url 'manager:funciones_estado' funcion.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="estado" value="programada">
+                            <button type="submit">
+                              <i data-lucide="eye-off" aria-hidden="true"></i>
+                              <span>Ocultar</span>
+                            </button>
+                          </form>
+                        {% endif %}
+                        {% if "borrador" in transiciones %}
+                          <form method="post" action="{% url 'manager:funciones_estado' funcion.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="estado" value="borrador">
+                            <button type="submit">
+                              <i data-lucide="undo-2" aria-hidden="true"></i>
+                              <span>Volver a borrador</span>
+                            </button>
+                          </form>
+                        {% endif %}
+                        {% if "cancelada" in transiciones or funcion.es_eliminable %}
+                          <hr>
+                        {% endif %}
+                        {% if "cancelada" in transiciones %}
+                          <a href="{% url 'manager:funciones_cancelar' funcion.pk %}" class="danger-link">
+                            <i data-lucide="ban" aria-hidden="true"></i>
+                            <span>Cancelar función</span>
+                          </a>
+                        {% endif %}
+                        {% if funcion.es_eliminable %}
+                          <a href="{% url 'manager:funciones_delete' funcion.pk %}" class="danger-link">
+                            <i data-lucide="trash-2" aria-hidden="true"></i>
+                            <span>Eliminar</span>
+                          </a>
+                        {% endif %}
+                      </div>
+                    </details>
+                  {% endif %}
+                </div>
+              {% endwith %}
             </td>
           </tr>
         {% empty %}
@@ -81,4 +137,52 @@
   </section>
 
   {% include "_pagination.html" %}
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (function () {
+      const menus = document.querySelectorAll(".row-menu");
+
+      function closeMenus(except) {
+        menus.forEach((menu) => {
+          if (menu !== except) menu.open = false;
+        });
+      }
+
+      // La tabla tiene overflow-x: auto, así que el menú se posiciona "fixed"
+      // respecto de la ventana para que no quede recortado.
+      function placeMenu(menu) {
+        const trigger = menu.querySelector("summary").getBoundingClientRect();
+        const list = menu.querySelector(".row-menu-list");
+        const gap = 6;
+        let top = trigger.bottom + gap;
+        if (top + list.offsetHeight > window.innerHeight - gap) {
+          top = trigger.top - list.offsetHeight - gap;
+        }
+        const left = Math.max(gap, trigger.right - list.offsetWidth);
+        list.style.top = `${Math.max(gap, top)}px`;
+        list.style.left = `${left}px`;
+      }
+
+      menus.forEach((menu) => {
+        menu.addEventListener("toggle", () => {
+          if (!menu.open) return;
+          closeMenus(menu);
+          placeMenu(menu);
+        });
+      });
+
+      document.addEventListener("click", (event) => {
+        menus.forEach((menu) => {
+          if (menu.open && !menu.contains(event.target)) menu.open = false;
+        });
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeMenus();
+      });
+      window.addEventListener("scroll", () => closeMenus(), true);
+      window.addEventListener("resize", () => closeMenus());
+    })();
+  </script>
 {% endblock %}

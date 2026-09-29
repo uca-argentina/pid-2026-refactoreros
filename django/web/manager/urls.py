@@ -20,6 +20,7 @@ urlpatterns = [
     path("funciones/", views.FuncionesListView.as_view(), name="funciones_list"),
     path("funciones/nueva/", views.FuncionCreateView.as_view(), name="funciones_create"),
     path("funciones/<int:pk>/editar/", views.FuncionUpdateView.as_view(), name="funciones_update"),
-    path("funciones/<int:pk>/publicacion/", views.FuncionTogglePublicadaView.as_view(), name="funciones_toggle"),
+    path("funciones/<int:pk>/estado/", views.FuncionCambiarEstadoView.as_view(), name="funciones_estado"),
+    path("funciones/<int:pk>/cancelar/", views.FuncionCancelarView.as_view(), name="funciones_cancelar"),
     path("funciones/<int:pk>/eliminar/", views.FuncionDeleteView.as_view(), name="funciones_delete"),
 ]
