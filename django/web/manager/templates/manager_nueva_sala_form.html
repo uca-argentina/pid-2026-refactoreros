@@ -30,6 +30,58 @@
         </label>
       {% endfor %}
 
+
+      <div class="controles">
+        <label>Filas:
+          <input type="number" id="filas" min="1" max="100" value="3">
+        </label>
+        <label>Columnas:
+          <input type="number" id="columnas" min="1" max="100" value="3">
+        </label>
+      </div>
+
+      <table id="tabla"></table>
+      
+      <script>
+        const inputFilas = document.getElementById("filas");
+        const inputColumnas = document.getElementById("columnas");
+        const tabla = document.getElementById("tabla");
+
+        // Guarda el estado (fila-columna -> checked) para no perderlo al redimensionar
+        const estado = {};
+
+        function limitar(valor) {
+          const n = parseInt(valor, 10);
+          return isNaN(n) ? 1 : Math.min(Math.max(n, 1), 100);
+        }
+
+        function dibujarTabla() {
+          const filas = limitar(inputFilas.value);
+          const columnas = limitar(inputColumnas.value);
+
+          tabla.innerHTML = "";
+          for (let f = 0; f < filas; f++) {
+            const tr = document.createElement("tr");
+            for (let c = 0; c < columnas; c++) {
+              const key = `${f}-${c}`;
+              const td = document.createElement("td");
+              const cb = document.createElement("input");
+              cb.type = "checkbox";
+              cb.name = `celda_${f}_${c}`;
+              cb.checked = !!estado[key];
+              cb.addEventListener("change", () => { estado[key] = cb.checked; });
+              td.appendChild(cb);
+              tr.appendChild(td);
+            }
+            tabla.appendChild(tr);
+          }
+        }
+
+        inputFilas.addEventListener("input", dibujarTabla);
+        inputColumnas.addEventListener("input", dibujarTabla);
+        dibujarTabla();
+      </script>
+
       <div class="form-actions">
         <button type="submit">
           <i data-lucide="save" aria-hidden="true"></i>

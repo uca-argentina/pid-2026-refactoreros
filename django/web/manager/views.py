@@ -351,17 +351,6 @@ class SalasListView(GerenteListView):
         return queryset.filter(nombre__icontains=search_query)
 
 
-
-
-
-
-
-
-
-
-
-
-
 class SalaCreateView(GerenteCreateView):
     model = Sala
     form_class = SalaForm
@@ -386,14 +375,6 @@ def build_seats(room, seats_layout):
     seats = []
     for seat_data in seats_layout:
         seats.append(Seat(sala=room,fila=seat_data["row"],columna=seat_data["column"],precio_base=1000))
-
-
-
-
-
-
-
-
 
 
 class SalaUpdateView(GerenteUpdateView):
