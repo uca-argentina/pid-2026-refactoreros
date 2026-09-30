@@ -39,15 +39,18 @@ class SalaForm(forms.ModelForm):
 
     MAX_ROW, MAX_COLUMN = 100,100
 
-    layout_sala = forms.CharField(widget=forms.HiddenInput)
+    layout_sala = forms.CharField(widget=forms.HiddenInput(attrs={"id": "id_layout_sala"}))
 
     class Meta:
         model = Sala
         fields = ("nombre",)
 
+    def _to_int(self,value):
+        return int(value)
+    
     def clean_layout_sala(self):
         try:
-            data_as_string = self.cleaned_data["layout"]
+            data_as_string = self.cleaned_data["layout_sala"]
             data = json.loads(data_as_string)
         except ValueError:
             raise forms.ValidationError("El plano enviado no es válido.")
@@ -60,9 +63,9 @@ class SalaForm(forms.ModelForm):
         seats_data, positions = [] , set()
         for seat_data in data:
             try:
-                row,column = seat_data["row"], seat_data["column"]
+                row,column = self._to_int(seat_data["row"]) , self._to_int(seat_data["column"])
             except(KeyError, TypeError,ValueError):
-                raise forms.ValidationError("El plano de la sala contiene datos incorrectos.")
+                raise forms.ValidationError(f"El plano de la sala contiene datos incorrectos.")
 
             if(row > self.MAX_ROW or column > self.MAX_COLUMN):
                 raise forms.ValidationError(f"Hay asientos fuera del limite (máximo de filas {self.MAX_ROW} y máximo de columnas {self.MAX_COLUMN}).")

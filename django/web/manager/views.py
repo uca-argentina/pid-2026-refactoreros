@@ -6,6 +6,7 @@ from django.db.models import F, IntegerField, Q, Sum, Value
 from django.db.models.functions import Coalesce, Greatest
 from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
+from django.db.models import Count
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import (
@@ -115,9 +116,7 @@ class GestionHomeView(ManagerAccessMixin, TemplateView):
         context["published_upcoming_count"] = proximas_funciones.filter(
             publicada=True
         ).count()
-        context["total_room_capacity"] = (
-            Sala.objects.aggregate(total=Coalesce(Sum("capacidad"), Value(0)))["total"]
-        )
+        context["total_room_capacity"] = Seat.objects.count()
         return context
 
 
@@ -343,9 +342,16 @@ class SalasListView(GerenteListView):
     ordering_options = (
         ("nombre_asc", "Nombre A-Z", ("nombre",)),
         ("nombre_desc", "Nombre Z-A", ("-nombre",)),
-        ("capacidad_desc", "Mayor capacidad", ("-capacidad", "nombre")),
-        ("capacidad_asc", "Menor capacidad", ("capacidad", "nombre")),
+        ("capacidad_desc", "Mayor capacidad", ("-_capacidad", "nombre")),
+        ("capacidad_asc", "Menor capacidad", ("_capacidad", "nombre")),
     )
+
+    def get_queryset(self):
+        queryset = Sala.objects.annotate(_capacidad=Count("seats"))
+        search_query = self.get_search_query()
+        if search_query:
+            queryset = self.apply_search(queryset, search_query)
+        return self.apply_ordering(queryset)
 
     def apply_search(self, queryset, search_query):
         return queryset.filter(nombre__icontains=search_query)
@@ -365,16 +371,17 @@ class SalaCreateView(GerenteCreateView):
     def form_valid(self,form):
         with transaction.atomic():
             self.object = form.save()
-            Seat.objects.bulk_create(self.object,form.cleaned_data["layout_sala"])
+            Seat.objects.bulk_create(self.build_seats(self.object,form.cleaned_data["layout_sala"]))
         messages.success(self.request, f"{self.object_label} creado/a correctamente.")
         return redirect(self.get_success_url())
     
 
 
-def build_seats(room, seats_layout):
-    seats = []
-    for seat_data in seats_layout:
-        seats.append(Seat(sala=room,fila=seat_data["row"],columna=seat_data["column"],precio_base=1000))
+    def build_seats(self,room, seats_layout):
+        seats = []
+        for seat_data in seats_layout:
+            seats.append(Seat(sala=room,fila=seat_data["row"],columna=seat_data["column"],precio_base=1000))
+        return seats
 
 
 class SalaUpdateView(GerenteUpdateView):

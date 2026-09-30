@@ -3,8 +3,13 @@ from django.db import models
 
 class Sala(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
-    capacidad = models.PositiveIntegerField()
-
+    
+    @property
+    def capacidad(self):
+        if hasattr(self, "_capacidad"):
+            return self._capacidad
+        return self.seats.count()
+    
     class Meta:
         verbose_name = "Sala"
         verbose_name_plural = "Salas"

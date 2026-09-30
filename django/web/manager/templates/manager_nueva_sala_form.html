@@ -79,7 +79,8 @@
               label.className = "celda-checkbox";
 
               cb.type = "checkbox";
-              cb.name = `celda_${f}_${c}`;
+              cb.dataset.row = f;
+              cb.dataset.column = c;
               cb.className = "seat_checkbox"
               cb.checked = !!estado[key];
               cb.addEventListener("change", () => { estado[key] = cb.checked; updateVisual(cb, label); });
@@ -120,14 +121,25 @@
           toolMode = mode;
         }
 
-        const seatModeButton = document.getElementById("tool-seat-button");
+        const seatModeButton  = document.getElementById("tool-seat-button");
         const eraseModeButton = document.getElementById("tool-eraser-button");
         seatModeButton.addEventListener("click",() => {changeToolMode("seat")});
         eraseModeButton.addEventListener("click",() => {changeToolMode("eraser")});
 
+        const form = document.querySelector(".manager-form");
+        const layoutInput = document.getElementById("id_layout_sala");
+        
+        form.addEventListener("submit",() => {
+          const seats = [];
+          document.querySelectorAll("#room_layout_table .seat_checkbox:checked").forEach( (cb) => {
+            seats.push({"row":parseInt(cb.dataset.row,10),"column":parseInt(cb.dataset.column,10)});
+          });
+          layoutInput.value = JSON.stringify(seats);
+          console.log(layoutInput.value);
+        });
 
-        inputFilas.addEventListener("input",    () => {dibujarTabla();estado = {};});
-        inputColumnas.addEventListener("input", () => {dibujarTabla();estado = {};});
+        inputFilas.addEventListener("input",() => {estado = {};dibujarTabla();});
+        inputColumnas.addEventListener("input",() => {estado = {};dibujarTabla();});
         dibujarTabla();
       </script>
 

@@ -4,7 +4,7 @@ from domain.rooms.models import Sala
 
 class Seat(models.Model):
 
-    sala        = models.ForeignKey(Sala, on_delete=models.CASCADE, related_name="asientos")
+    sala        = models.ForeignKey(Sala, on_delete=models.CASCADE, related_name="seats")
     fila        = models.PositiveIntegerField()
     columna     = models.PositiveIntegerField()
     precio_base = models.DecimalField(max_digits=8, decimal_places=2)
