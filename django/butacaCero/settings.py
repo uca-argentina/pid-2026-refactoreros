@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "domain.tickets",
     "domain.users",
     "domain.seats",
+    "domain.seat_types",
     "web.auth",
     "web.catalog",
     "web.manager",

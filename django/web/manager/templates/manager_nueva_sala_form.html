@@ -40,11 +40,15 @@
         </label>
       </div>
 
+
+
       <div class="tool-selector">
-        <button type="button" id="tool-seat-button" class="tool-btn seat">
-          <i data-lucide="armchair" aria-hidden="true"></i>
-          <span>Asiento</span>
-        </button>
+        {% for seat_type in seat_types %}
+          <button type="button" id="tool-{{ seat_type.nombre }}-button" class="tool-btn seat" data-color="{{ seat_type.color }}" data-nombre="{{seat_type.nombre}}">
+            <i data-lucide="armchair" aria-hidden="true"></i>
+            <span>{{ seat_type.nombre }}</span>
+          </button>
+        {% endfor %}
         <button type="button" id="tool-eraser-button" class="tool-btn erase">
           <i data-lucide="eraser" aria-hidden="true"></i>
           <span>Borrar</span>

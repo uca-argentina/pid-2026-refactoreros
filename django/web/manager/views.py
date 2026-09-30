@@ -25,6 +25,7 @@ from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
 from domain.screenings.models import Funcion
 from domain.seats.models import Seat
+from domain.seat_types.models import SeatType
 
 from .forms import FuncionForm, PeliculaForm, SalaForm, UsuarioGestionForm
 
@@ -370,6 +371,11 @@ class SalaCreateView(GerenteCreateView):
 
     template_name = "manager_nueva_sala_form.html"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["seat_types"] = list(SeatType.objects.all())
+        return context
+
     def form_valid(self,form):
         with transaction.atomic():
             self.object = form.save()
@@ -378,11 +384,10 @@ class SalaCreateView(GerenteCreateView):
         return redirect(self.get_success_url())
     
 
-
     def build_seats(self,room, seats_layout):
         seats = []
         for seat_data in seats_layout:
-            seats.append(Seat(sala=room,fila=seat_data["row"],columna=seat_data["column"],precio_base=1000))
+            seats.append(Seat(sala=room,fila=seat_data["row"],columna=seat_data["column"],tipo_id=seat_data["type"]))
         return seats
 
 

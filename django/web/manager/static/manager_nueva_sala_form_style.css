@@ -1,3 +1,7 @@
+:root{
+  --seat-hover-color:#4f46e5;
+}
+
 #room_layout_table {
     border-collapse: separate;
     border-spacing: 3px;
@@ -24,13 +28,14 @@
 }
 
 .celda-checkbox:hover {
-    border-color: #4f46e5;
+    border-color: var(--seat-hover-color);
     transform: scale(1.05);
 }
 
 .celda-checkbox.checked {
-    background: #4f46e5;
-    border-color: #4f46e5;
+    --checked-color: #4f46e5;
+    background: var(--checked-color);
+    border-color: var(--checked-color);
 }
 
 .seat_checkbox{

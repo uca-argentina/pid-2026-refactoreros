@@ -7,6 +7,7 @@ from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
 from domain.screenings.models import Funcion
 from domain.seats.models import Seat
+from domain.seat_types.models import SeatType
 
 User = get_user_model()
 MAX_MOVIE_IMAGE_SIZE_MB = 2
@@ -61,9 +62,12 @@ class SalaForm(forms.ModelForm):
             raise forms.ValidationError(f"Máximo {self.MAX_ROW*self.MAX_COLUMN} asientos por sala.")
 
         seats_data, positions = [] , set()
+        exsisting_seat_types = dict(SeatType.objects.values_list("nombre", "pk"))
+
         for seat_data in data:
             try:
                 row,column = self._to_int(seat_data["row"]) , self._to_int(seat_data["column"])
+                seat_type  = seat_data["type"]
             except(KeyError, TypeError,ValueError):
                 raise forms.ValidationError(f"El plano de la sala contiene datos incorrectos.")
 
@@ -72,8 +76,12 @@ class SalaForm(forms.ModelForm):
 
             if((row,column) in positions):
                 raise forms.ValidationError("Hay asientos duplicados.")
+
+            if(seat_type not in exsisting_seat_types):
+                raise forms.ValidationError(f"No existen asientos de tipo {seat_type}.")
+            
             positions.add((row,column))
-            seats_data.append({"row":row,"column":column})
+            seats_data.append({"row":row,"column":column,"type":exsisting_seat_types[seat_type]})
 
         return seats_data
 

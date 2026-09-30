@@ -1,10 +1,11 @@
 const inputFilas = document.getElementById("rows");
 const inputColumnas = document.getElementById("columns");
 const tabla  = document.getElementById("room_layout_table");
-let toolMode = "seat"; 
 
-let estado = {};
 let isMouseClicking = false;
+let toolMode = "seat"; 
+let estado = {};
+
 
 function limitSize(valor) {
     const n = parseInt(valor, 10);
@@ -29,9 +30,10 @@ function dibujarTabla() {
         cb.type = "checkbox";
         cb.dataset.row = f;
         cb.dataset.column = c;
+        cb.dataset.type = "none";
         cb.className = "seat_checkbox"
         cb.checked = !!estado[key];
-        cb.addEventListener("change", () => { estado[key] = cb.checked; updateVisual(cb, label); });
+        cb.addEventListener("change", () => { estado[key] = {"checked":cb.checked,"type":selectedSeatType.dataset.nombre}; updateVisual(cb, label);});
         
         label.addEventListener("mousedown",  () => {isMouseClicking = true;});
         label.addEventListener("mouseenter", () => {paintSeatCb(cb,label,key)});
@@ -48,13 +50,15 @@ function dibujarTabla() {
 
 function updateVisual(cb, label) {
     label.classList.toggle("checked", cb.checked);
+    label.style.setProperty("--checked-color",selectedSeatType.dataset.color);
 }
 
 function paintSeatCb(cb,label,key) {
     if (isMouseClicking) {
     if(toolMode == "seat"){
         cb.checked = true;
-        estado[key] = cb.checked;
+        cb.dataset.type = selectedSeatType.dataset.nombre;
+        estado[key] = {"checked":cb.checked,"type":selectedSeatType.dataset.nombre};
         updateVisual(cb, label);
     }else if (toolMode == "eraser"){
         cb.checked = false;
@@ -65,14 +69,31 @@ function paintSeatCb(cb,label,key) {
     }
 }
 
+
+document.querySelectorAll("[data-color]").forEach(toolButton => {
+    toolButton.style.background = toolButton.dataset.color;
+});
+
 function changeToolMode(mode) {
     toolMode = mode;
+    console.log(estado);
 }
 
-const seatModeButton  = document.getElementById("tool-seat-button");
+function changeSelectedSeatType(newSeatType){
+    selectedSeatType = newSeatType;
+    document.documentElement.style.setProperty('--seat-hover-color',newSeatType.dataset.color );
+}
+
+const seatModeButtons = document.getElementsByClassName("tool-btn")
 const eraseModeButton = document.getElementById("tool-eraser-button");
-seatModeButton.addEventListener("click",() => {changeToolMode("seat")});
-eraseModeButton.addEventListener("click",() => {changeToolMode("eraser")});
+for(let i =0;i<(seatModeButtons.length-1);i++ ){
+    seatModeButtons[i].addEventListener("click",() => {changeToolMode("seat");changeSelectedSeatType(seatModeButtons[i]);});
+}
+let selectedSeatType = seatModeButtons[0];
+
+eraseModeButton.addEventListener("click",() => {changeToolMode("eraser");document.documentElement.style.setProperty('--seat-hover-color',"#cbd5e1");});
+
+
 
 const form = document.querySelector(".manager-form");
 const layoutInput = document.getElementById("id_layout_sala");
@@ -80,10 +101,9 @@ const layoutInput = document.getElementById("id_layout_sala");
 form.addEventListener("submit",() => {
     const seats = [];
     document.querySelectorAll("#room_layout_table .seat_checkbox:checked").forEach( (cb) => {
-    seats.push({"row":parseInt(cb.dataset.row,10),"column":parseInt(cb.dataset.column,10)});
+    seats.push({"row":parseInt(cb.dataset.row,10),"column":parseInt(cb.dataset.column,10),"type":cb.dataset.type});
     });
     layoutInput.value = JSON.stringify(seats);
-    console.log(layoutInput.value);
 });
 
 inputFilas.addEventListener("input",() => {estado = {};dibujarTabla();});

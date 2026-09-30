@@ -9,7 +9,7 @@
   <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
   <link rel="stylesheet" href="{% static 'manager.css' %}">
   {% block extra_css %}{% endblock %}
-  {% block extra_scripts %}{% endblock %}
+  
 </head>
 <body>
   <div class="manager-shell">
@@ -87,5 +87,6 @@
       lucide.createIcons();
     }
   </script>
+  {% block extra_scripts %}{% endblock %}
 </body>
 </html>
