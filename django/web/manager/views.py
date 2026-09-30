@@ -395,6 +395,30 @@ class SalaUpdateView(GerenteUpdateView):
     object_label = "Sala"
     form_title = "Editar sala"
 
+    template_name = "manager_nueva_sala_form.html"
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            self.object = form.save()
+            self.sync_seats(self.object, form.cleaned_data["layout_sala"])
+        messages.success(self.request, f"{self.object_label} actualizado/a correctamente.")
+        return redirect(self.get_success_url())
+
+    def sync_seats(self, room, seats_layout):
+        existing = {(s.fila, s.columna): s for s in Seat.objects.filter(sala=room)}
+        new_keys = {(d["row"], d["column"]) for d in seats_layout}
+
+        to_delete = [s.pk for key, s in existing.items() if key not in new_keys]
+        if to_delete:
+            Seat.objects.filter(pk__in=to_delete).delete()
+
+        to_create = [
+            Seat(sala=room, fila=row, columna=col, precio_base=1000)
+            for (row, col) in new_keys
+            if (row, col) not in existing
+        ]
+        Seat.objects.bulk_create(to_create)
+
 
 class SalaDeleteView(GerenteDeleteView):
     model = Sala
