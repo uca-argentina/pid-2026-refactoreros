@@ -4,11 +4,13 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import F, IntegerField, Q, Sum, Value
 from django.db.models.functions import Coalesce, Greatest
+from django.db.models import OuterRef, Subquery
 from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
 from django.db.models import Count
 from django.urls import reverse_lazy
 from django.utils import timezone
+
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -476,6 +478,15 @@ class FuncionesListView(GerenteListView):
     )
 
     def get_queryset(self):
+
+        capacidad_sala = (
+            Seat.objects.filter(sala=OuterRef("sala"))
+            .order_by()
+            .values("sala")
+            .annotate(total=Count("pk"))
+            .values("total")
+        )
+
         queryset = (
             Funcion.objects.select_related("pelicula", "sala")
             .annotate(
@@ -483,11 +494,16 @@ class FuncionesListView(GerenteListView):
                     Sum("compras_entradas__cantidad"),
                     Value(0),
                     output_field=IntegerField(),
+                ),
+                capacidad_sala=Coalesce(
+                    Subquery(capacidad_sala),
+                    Value(0),
+                    output_field=IntegerField()
                 )
             )
             .annotate(
                 entradas_disponibles=Greatest(
-                    F("sala__capacidad") - F("entradas_vendidas"),
+                    F("capacidad_sala") - F("entradas_vendidas"),
                     Value(0),
                     output_field=IntegerField(),
                 )
