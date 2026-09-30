@@ -33,10 +33,10 @@ function dibujarTabla() {
         cb.dataset.type = "none";
         cb.className = "seat_checkbox"
         cb.checked = !!estado[key];
-        cb.addEventListener("change", () => { estado[key] = {"checked":cb.checked,"type":selectedSeatType.dataset.nombre}; updateVisual(cb, label);});
+        cb.addEventListener("change", () => { paintSeatWithClick(cb,label,key);});
         
         label.addEventListener("mousedown",  () => {isMouseClicking = true;});
-        label.addEventListener("mouseenter", () => {paintSeatCb(cb,label,key)});
+        label.addEventListener("mouseenter", () => {paintSeatWithTool(cb,label,key)});
         label.addEventListener("mouseup",    () => {isMouseClicking = false;});
 
 
@@ -51,9 +51,40 @@ function dibujarTabla() {
 function updateVisual(cb, label) {
     label.classList.toggle("checked", cb.checked);
     label.style.setProperty("--checked-color",selectedSeatType.dataset.color);
+    deleteExistingIcon(label);
+    if (selectedSeatType.dataset.icon && cb.checked){
+        updateIcon(label);
+    }
 }
 
-function paintSeatCb(cb,label,key) {
+function updateIcon(label){
+    const icon = document.createElement("img");
+    icon.setAttribute("src",selectedSeatType.dataset.icon);
+    icon.setAttribute("style","max-width: 20px; -webkit-user-drag: none;");
+    label.appendChild(icon);
+}
+
+function deleteExistingIcon(label){
+    const existing_icon = label.querySelector("img");
+    if (existing_icon){
+        existing_icon.remove();
+    }
+}
+
+function paintSeatWithClick(cb,label,key) {
+    if(toolMode == "seat"){
+        cb.checked = true;
+        cb.dataset.type = selectedSeatType.dataset.nombre;
+        estado[key] = {"checked":cb.checked,"type":selectedSeatType.dataset.nombre};
+        updateVisual(cb, label);
+    }else if (toolMode == "eraser"){
+        cb.checked = false;
+        estado[key] = cb.checked;
+        updateVisual(cb, label);
+    }
+}
+
+function paintSeatWithTool(cb,label,key) {
     if (isMouseClicking) {
     if(toolMode == "seat"){
         cb.checked = true;
@@ -74,9 +105,11 @@ document.querySelectorAll("[data-color]").forEach(toolButton => {
     toolButton.style.background = toolButton.dataset.color;
 });
 
-function changeToolMode(mode) {
-    toolMode = mode;
-    console.log(estado);
+function changeToolMode(newMode) {
+    toolMode = newMode;
+    if(newMode == "eraser"){
+        selectedSeatType = "";
+    }
 }
 
 function changeSelectedSeatType(newSeatType){
@@ -91,7 +124,7 @@ for(let i =0;i<(seatModeButtons.length-1);i++ ){
 }
 let selectedSeatType = seatModeButtons[0];
 
-eraseModeButton.addEventListener("click",() => {changeToolMode("eraser");document.documentElement.style.setProperty('--seat-hover-color',"#cbd5e1");});
+eraseModeButton.addEventListener("click",() => {changeToolMode("eraser");changeSelectedSeatType(eraseModeButton);});
 
 
 

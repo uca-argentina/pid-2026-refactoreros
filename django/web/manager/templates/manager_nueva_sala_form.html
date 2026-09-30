@@ -44,12 +44,12 @@
 
       <div class="tool-selector">
         {% for seat_type in seat_types %}
-          <button type="button" id="tool-{{ seat_type.nombre }}-button" class="tool-btn seat" data-color="{{ seat_type.color }}" data-nombre="{{seat_type.nombre}}">
+          <button type="button" id="tool-{{ seat_type.nombre }}-button" class="tool-btn seat" data-color="{{ seat_type.color }}" data-nombre="{{seat_type.nombre}}" {% if seat_type.icono %}data-icon="{{ seat_type.icono.url }}"{% endif %}>
             <i data-lucide="armchair" aria-hidden="true"></i>
             <span>{{ seat_type.nombre }}</span>
           </button>
         {% endfor %}
-        <button type="button" id="tool-eraser-button" class="tool-btn erase">
+        <button type="button" id="tool-eraser-button" class="tool-btn erase" data-color="#cbd5e1" data-nombre="eraser">
           <i data-lucide="eraser" aria-hidden="true"></i>
           <span>Borrar</span>
         </button>
