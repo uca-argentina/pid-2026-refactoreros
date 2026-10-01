@@ -1,0 +1,155 @@
+{% extends "manager_base.html" %}
+{% block extra_css %}
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'manager_nueva_sala_form_style.css' %}">
+{% endblock %}
+{% block main_class %} manager-main-wide{% endblock %}
+{% block extra_scripts %}
+  {% load static %}
+  <script type="module" src="{% static './js/manager_nueva_sala_form_script.js'%}" ></script>
+{% endblock %}
+{% block content %}
+  <section class="page-heading">
+    <h1>{{ form_title }}</h1>
+  </section>
+
+  <div class="form-layout room-editor-layout">
+    <form class="manager-form room-editor-form" method="post"{% if enctype %} enctype="{{ enctype }}"{% endif %}>
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+
+      <div class="room-editor-fields">
+      {% for field in form %}
+        {% if field.is_hidden %}
+          {{ field }}
+          {{ field.errors }}
+        {% else %}
+          <label{% if field.field.widget.input_type == "checkbox" %} class="checkbox-field"{% endif %}>
+            <span>{{ field.label }}</span>
+            {% if field.name == "imagen" and object.imagen %}
+              <img class="image-preview" src="{{ object.imagen.url }}" alt="{{ object.titulo }}">
+            {% endif %}
+            {{ field }}
+            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+            {{ field.errors }}
+          </label>
+        {% endif %}
+      {% endfor %}
+
+
+      <div class="controles">
+        <label class="dimension-control">
+          <span>Filas</span>
+          <div class="number-stepper">
+            <button type="button" class="dimension-step-button" data-dimension-target="rows" data-dimension-step="-1" aria-label="Restar una fila">
+              <i data-lucide="minus" aria-hidden="true"></i>
+            </button>
+            <input type="number" id="rows" min="1" max="100" step="1" value="5" required>
+            <button type="button" class="dimension-step-button" data-dimension-target="rows" data-dimension-step="1" aria-label="Agregar una fila">
+              <i data-lucide="plus" aria-hidden="true"></i>
+            </button>
+          </div>
+        </label>
+        <label class="dimension-control">
+          <span>Asientos por fila</span>
+          <div class="number-stepper">
+            <button type="button" class="dimension-step-button" data-dimension-target="columns" data-dimension-step="-1" aria-label="Restar un asiento por fila">
+              <i data-lucide="minus" aria-hidden="true"></i>
+            </button>
+            <input type="number" id="columns" min="1" max="100" step="1" value="15" required>
+            <button type="button" class="dimension-step-button" data-dimension-target="columns" data-dimension-step="1" aria-label="Agregar un asiento por fila">
+              <i data-lucide="plus" aria-hidden="true"></i>
+            </button>
+          </div>
+        </label>
+      </div>
+      </div>
+
+
+
+      <div class="tool-selector">
+        {% for seat_type in seat_types %}
+          <button type="button" id="tool-{{ seat_type.nombre }}-button" class="tool-btn seat" data-type-id="{{ seat_type.pk }}" data-color="{{ seat_type.color }}" data-nombre="{{seat_type.nombre}}" {% if seat_type.icono %}data-icon="{{ seat_type.icono.url }}"{% endif %}>
+            <i data-lucide="armchair" aria-hidden="true"></i>
+            <span>{{ seat_type.nombre }}</span>
+          </button>
+        {% endfor %}
+        <button type="button" id="tool-eraser-button" class="tool-btn erase" data-color="#64748b" data-nombre="eraser">
+          <i data-lucide="x" aria-hidden="true"></i>
+          <span>Borrar / Pasillo</span>
+        </button>
+      </div>
+
+
+      <div class="layout-actions" aria-label="Acciones rápidas de plano">
+        <div class="layout-action-group">
+        <button type="button" id="undo-layout" class="layout-action-btn icon-only" aria-label="Deshacer" title="Deshacer">
+          <i data-lucide="undo-2" aria-hidden="true"></i>
+        </button>
+        <button type="button" id="redo-layout" class="layout-action-btn icon-only" aria-label="Rehacer" title="Rehacer">
+          <i data-lucide="redo-2" aria-hidden="true"></i>
+        </button>
+        </div>
+        <div class="layout-action-group">
+        <button type="button" id="select-all-seats" class="layout-action-btn">
+          <i data-lucide="check-square" aria-hidden="true"></i>
+          <span>Seleccionar todo</span>
+        </button>
+        <button type="button" id="clear-all-seats" class="layout-action-btn danger">
+          <i data-lucide="trash-2" aria-hidden="true"></i>
+          <span>Borrar todo</span>
+        </button>
+        </div>
+      </div>
+
+      <div class="room-design-workspace">
+        <section class="room-default-prices" aria-label="Precios por defecto por tipo de asiento">
+          <h2>Precios por defecto</h2>
+          <div class="room-default-price-grid">
+            {% for seat_type in seat_types %}
+              <label class="seat-price-field">
+                <span class="seat-price-swatch" style="background: {{ seat_type.color }};"></span>
+                <span>{{ seat_type.nombre }}</span>
+                <span class="price-input-shell">
+                  <span aria-hidden="true">$</span>
+                  <input type="number" min="1" step="0.01" data-room-seat-price data-seat-type-id="{{ seat_type.pk }}" data-default-price="{{ seat_type.precio_base }}" value="{{ seat_type.precio_base }}" required>
+                </span>
+              </label>
+            {% endfor %}
+          </div>
+        </section>
+
+        <div class="room-layout-scroll" aria-label="Plano de sala">
+          <div class="room-layout-stage">
+            <div class="screen-marker" aria-hidden="true">
+              <span>Pantalla</span>
+            </div>
+            <table id="room_layout_table"></table>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions room-form-actions">
+        <div class="submit-actions">
+          <button type="submit">
+            <i data-lucide="save" aria-hidden="true"></i>
+            <span>{{ submit_label }}</span>
+          </button>
+          <a href="{{ request.META.HTTP_REFERER|default:'../' }}">Cancelar</a>
+        </div>
+        <div class="backup-actions">
+          <button type="button" id="export-layout-backup" class="layout-action-btn">
+            <i data-lucide="download" aria-hidden="true"></i>
+            <span>Exportar backup</span>
+          </button>
+          <button type="button" id="import-layout-backup" class="layout-action-btn">
+            <i data-lucide="upload" aria-hidden="true"></i>
+            <span>Importar backup</span>
+          </button>
+          <input type="file" id="layout-backup-file" accept="application/json,.json" hidden>
+        </div>
+      </div>
+    </form>
+
+  </div>
+{% endblock %}

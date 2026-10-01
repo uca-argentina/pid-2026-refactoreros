@@ -6,6 +6,8 @@ class ConfiguracionCine(models.Model):
     slogan = models.CharField(max_length=160, default="Tu entrada al cine")
     logo = models.ImageField(upload_to="branding/", blank=True)
     imagen_login = models.ImageField(upload_to="branding/", blank=True)
+    reserva_asientos_minutos = models.PositiveIntegerField(default=5)
+    recarga_asientos_segundos = models.PositiveIntegerField(default=5)
     actualizado_en = models.DateTimeField(auto_now=True)
 
     class Meta:

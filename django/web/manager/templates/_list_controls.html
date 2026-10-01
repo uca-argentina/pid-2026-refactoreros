@@ -1,6 +1,7 @@
-<form class="list-controls" method="get">
-  <label>
+<form class="list-controls" method="get" data-auto-filter-form>
+  <label class="search-field">
     <span>Buscar</span>
+    <i data-lucide="search" aria-hidden="true"></i>
     <input type="search" name="q" value="{{ search_query }}" placeholder="{{ search_placeholder }}">
   </label>
 
@@ -24,8 +25,38 @@
     </label>
   {% endif %}
 
-  <button type="submit">Aplicar</button>
   {% if has_list_filters %}
-    <a href="{{ request.path }}">Limpiar filtro</a>
+    <a href="{{ request.path }}" class="ghost-link">
+      <i data-lucide="x" aria-hidden="true"></i>
+      <span>Limpiar</span>
+    </a>
   {% endif %}
 </form>
+<script>
+  (function () {
+    var form = document.querySelector("[data-auto-filter-form]");
+    if (!form) {
+      return;
+    }
+    form.querySelectorAll("select").forEach(function (select) {
+      select.addEventListener("change", function () {
+        form.submit();
+      });
+    });
+    var searchInput = form.querySelector('input[type="search"]');
+    var searchTimeout = null;
+    var lastSubmittedSearch = searchInput ? searchInput.value : "";
+    if (searchInput) {
+      searchInput.addEventListener("input", function () {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function () {
+          if (searchInput.value === lastSubmittedSearch) {
+            return;
+          }
+          lastSubmittedSearch = searchInput.value;
+          form.submit();
+        }, 450);
+      });
+    }
+  })();
+</script>

@@ -6,6 +6,7 @@ app_name = "manager"
 
 urlpatterns = [
     path("", views.GestionHomeView.as_view(), name="home"),
+    path("configuracion/", views.ConfiguracionCineUpdateView.as_view(), name="configuracion"),
     path("usuarios/", views.UsuariosListView.as_view(), name="usuarios_list"),
     path("usuarios/<int:pk>/editar/", views.UsuarioUpdateView.as_view(), name="usuarios_update"),
     path("usuarios/<int:pk>/estado/", views.UsuarioToggleActiveView.as_view(), name="usuarios_toggle"),
@@ -20,6 +21,7 @@ urlpatterns = [
     path("funciones/", views.FuncionesListView.as_view(), name="funciones_list"),
     path("funciones/nueva/", views.FuncionCreateView.as_view(), name="funciones_create"),
     path("funciones/<int:pk>/editar/", views.FuncionUpdateView.as_view(), name="funciones_update"),
-    path("funciones/<int:pk>/publicacion/", views.FuncionTogglePublicadaView.as_view(), name="funciones_toggle"),
+    path("funciones/<int:pk>/estado/", views.FuncionCambiarEstadoView.as_view(), name="funciones_estado"),
+    path("funciones/<int:pk>/cancelar/", views.FuncionCancelarView.as_view(), name="funciones_cancelar"),
     path("funciones/<int:pk>/eliminar/", views.FuncionDeleteView.as_view(), name="funciones_delete"),
 ]
