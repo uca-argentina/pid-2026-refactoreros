@@ -12,6 +12,16 @@ from domain.tickets.models import CompraEntrada
 from domain.users.models import Cliente, Gerente
 
 
+def crear_sala_con_butacas(nombre, capacidad):
+    sala = Sala.objects.create(nombre=nombre)
+    tipo = SeatType.objects.order_by("pk").first()
+    Seat.objects.bulk_create(
+        Seat(sala=sala, fila=index // 20, columna=index % 20, tipo=tipo)
+        for index in range(capacidad)
+    )
+    return sala
+
+
 def crear_funcion(
     estado=Funcion.Estado.PUBLICADA, titulo="Pelicula", capacidad=100, pelicula=None
 ):
@@ -23,7 +33,7 @@ def crear_funcion(
         duracion_minutos=120,
         imagen="peliculas/test.jpg",
     )
-    sala = Sala.objects.create(nombre=f"Sala {titulo}", capacidad=capacidad)
+    sala = crear_sala_con_butacas(f"Sala {titulo}", capacidad)
     return Funcion.objects.create(
         pelicula=pelicula,
         sala=sala,
@@ -136,7 +146,7 @@ class CatalogFlowTests(TestCase):
             duracion_minutos=120,
             imagen="peliculas/test.jpg",
         )
-        sala = Sala.objects.create(nombre="Sala mapa", capacidad=2)
+        sala = Sala.objects.create(nombre="Sala mapa")
         tipo = SeatType.objects.get(nombre="Estándar")
         Seat.objects.create(sala=sala, fila=0, columna=0, tipo=tipo)
         Seat.objects.create(sala=sala, fila=0, columna=1, tipo=tipo)
@@ -171,7 +181,7 @@ class CatalogFlowTests(TestCase):
             duracion_minutos=120,
             imagen="peliculas/test.jpg",
         )
-        sala = Sala.objects.create(nombre="Sala pasillos", capacidad=2)
+        sala = Sala.objects.create(nombre="Sala pasillos")
         tipo = SeatType.objects.get(nombre="Estándar")
         funcion = Funcion.objects.create(
             pelicula=pelicula,

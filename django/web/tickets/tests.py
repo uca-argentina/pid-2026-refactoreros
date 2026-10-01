@@ -17,6 +17,16 @@ from domain.seat_types.models import SeatType
 from domain.tickets.models import CompraAsiento, CompraEntrada, ReservaAsiento
 
 
+def crear_sala_con_butacas(nombre, capacidad):
+    sala = Sala.objects.create(nombre=nombre)
+    tipo = SeatType.objects.order_by("pk").first()
+    Seat.objects.bulk_create(
+        Seat(sala=sala, fila=index // 20, columna=index % 20, tipo=tipo)
+        for index in range(capacidad)
+    )
+    return sala
+
+
 def crear_funcion(estado=Funcion.Estado.PUBLICADA, titulo="Pelicula", capacidad=100):
     pelicula = Pelicula.objects.create(
         titulo=titulo,
@@ -26,7 +36,7 @@ def crear_funcion(estado=Funcion.Estado.PUBLICADA, titulo="Pelicula", capacidad=
         duracion_minutos=120,
         imagen="peliculas/test.jpg",
     )
-    sala = Sala.objects.create(nombre=f"Sala {titulo}", capacidad=capacidad)
+    sala = crear_sala_con_butacas(f"Sala {titulo}", capacidad)
     return Funcion.objects.create(
         pelicula=pelicula,
         sala=sala,
@@ -45,7 +55,7 @@ def crear_funcion_con_butacas(titulo="Con butacas"):
         duracion_minutos=120,
         imagen="peliculas/test.jpg",
     )
-    sala = Sala.objects.create(nombre=f"Sala {titulo}", capacidad=2)
+    sala = Sala.objects.create(nombre=f"Sala {titulo}")
     tipo = SeatType.objects.get(nombre="Estándar")
     Seat.objects.create(sala=sala, fila=0, columna=0, tipo=tipo)
     Seat.objects.create(sala=sala, fila=0, columna=1, tipo=tipo)

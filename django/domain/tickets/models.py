@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
-from django.db.models import Sum
 from django.utils import timezone
 from datetime import timedelta
 
@@ -51,11 +50,12 @@ class CompraEntrada(models.Model):
     def cantidad_vendida(cls, funcion):
         cls.sincronizar_asientos_vendidos(funcion)
         sold_seats = CompraAsiento.objects.filter(funcion=funcion).count()
-        legacy_total = (
-            cls.objects.filter(funcion=funcion, asientos_seleccionados=[])
-            .aggregate(total=Sum("cantidad"))["total"]
-            or 0
+        legacy_total = 0
+        legacy_compras = cls.objects.filter(funcion=funcion, asientos_seleccionados=[]).prefetch_related(
+            "asientos_vendidos"
         )
+        for compra in legacy_compras:
+            legacy_total += max(compra.cantidad - compra.asientos_vendidos.count(), 0)
         return sold_seats + legacy_total
 
     @classmethod

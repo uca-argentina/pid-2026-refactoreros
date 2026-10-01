@@ -59,11 +59,6 @@ class SalaForm(forms.ModelForm):
 
     MAX_ROW, MAX_COLUMN = 100,100
 
-    capacidad = forms.IntegerField(
-        min_value=1,
-        required=False,
-        widget=forms.HiddenInput(),
-    )
     layout_sala = forms.CharField(
         required=False,
         widget=forms.HiddenInput(attrs={"id": "id_layout_sala"}),
@@ -75,7 +70,7 @@ class SalaForm(forms.ModelForm):
 
     class Meta:
         model = Sala
-        fields = ("nombre", "capacidad", "precio_configuracion")
+        fields = ("nombre", "layout_sala", "precio_configuracion")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -271,15 +266,13 @@ class SalaForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         layout_sala = cleaned_data.get("layout_sala")
-        capacidad = cleaned_data.get("capacidad")
 
         if layout_sala and layout_sala["seats"]:
-            cleaned_data["capacidad"] = len(layout_sala["seats"])
             cleaned_data["layout_configuracion"] = layout_sala["display"]
         elif layout_sala:
             self.add_error("layout_sala", "Dibujá al menos un asiento.")
-        elif capacidad is None:
-            self.add_error("capacidad", "Indica la capacidad o dibuja al menos un asiento.")
+        else:
+            self.add_error("layout_sala", "DibujÃ¡ al menos un asiento.")
 
         return cleaned_data
 

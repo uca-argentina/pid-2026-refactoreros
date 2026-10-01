@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Case, F, IntegerField, Q, Sum, Value, When
+from django.db.models import Case, Count, F, IntegerField, OuterRef, Q, Subquery, Sum, Value, When
 from django.db.models.functions import Coalesce, Greatest
 from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
@@ -126,9 +126,7 @@ class GestionHomeView(ManagerAccessMixin, TemplateView):
         context["published_upcoming_count"] = proximas_funciones.filter(
             estado=Funcion.Estado.PUBLICADA
         ).count()
-        context["total_room_capacity"] = Sala.objects.aggregate(
-            total=Coalesce(Sum("capacidad"), Value(0), output_field=IntegerField())
-        )["total"]
+        context["total_room_capacity"] = Seat.objects.count()
         return context
 
 
@@ -383,9 +381,16 @@ class SalasListView(GerenteListView):
     ordering_options = (
         ("nombre_asc", "Nombre A-Z", ("nombre",)),
         ("nombre_desc", "Nombre Z-A", ("-nombre",)),
-        ("capacidad_desc", "Mayor capacidad", ("-capacidad", "nombre")),
-        ("capacidad_asc", "Menor capacidad", ("capacidad", "nombre")),
+        ("capacidad_desc", "Mayor capacidad", ("-_capacidad", "nombre")),
+        ("capacidad_asc", "Menor capacidad", ("_capacidad", "nombre")),
     )
+
+    def get_queryset(self):
+        queryset = Sala.objects.annotate(_capacidad=Count("seats"))
+        search_query = self.get_search_query()
+        if search_query:
+            queryset = self.apply_search(queryset, search_query)
+        return self.apply_ordering(queryset)
 
     def apply_search(self, queryset, search_query):
         return queryset.filter(nombre__icontains=search_query)
@@ -561,6 +566,11 @@ class FuncionesListView(GerenteListView):
 
     def get_annotated_queryset(self):
         Funcion.finalizar_vencidas()
+        current_room_capacity = (
+            Sala.objects.filter(pk=OuterRef("sala_id"))
+            .annotate(total=Count("seats"))
+            .values("total")[:1]
+        )
         return (
             Funcion.objects.select_related("pelicula", "sala")
             .annotate(
@@ -569,8 +579,13 @@ class FuncionesListView(GerenteListView):
                     Value(0),
                     output_field=IntegerField(),
                 ),
+                sala_capacidad_actual=Coalesce(
+                    Subquery(current_room_capacity),
+                    Value(0),
+                    output_field=IntegerField(),
+                ),
                 capacidad_sala=Case(
-                    When(capacidad_snapshot=0, then=F("sala__capacidad")),
+                    When(capacidad_snapshot=0, then=F("sala_capacidad_actual")),
                     default=F("capacidad_snapshot"),
                     output_field=IntegerField(),
                 ),

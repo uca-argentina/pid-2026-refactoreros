@@ -23,6 +23,16 @@ from domain.users.models import Acomodador, Cliente, Gerente
 from .forms import PeliculaForm
 
 
+def crear_sala_con_butacas(nombre, capacidad):
+    sala = Sala.objects.create(nombre=nombre)
+    tipo = SeatType.objects.order_by("pk").first()
+    Seat.objects.bulk_create(
+        Seat(sala=sala, fila=index // 20, columna=index % 20, tipo=tipo)
+        for index in range(capacidad)
+    )
+    return sala
+
+
 class ManagerAccessTests(TestCase):
     def setUp(self):
         self.password = "PasswordSegura123!"
@@ -221,19 +231,29 @@ class ManagerSalasTests(TestCase):
         self.client.force_login(self.gerente)
 
     def test_gerente_crea_sala(self):
+        tipo = SeatType.objects.order_by("pk").first()
+        layout = {
+            "rows": 1,
+            "columns": 2,
+            "seats": [
+                {"row": 0, "column": 0, "type": tipo.nombre},
+                {"row": 0, "column": 1, "type": tipo.nombre},
+            ],
+        }
         response = self.client.post(
             reverse("manager:salas_create"),
             data={
                 "nombre": "Sala 1",
-                "capacidad": 120,
+                "layout_sala": json.dumps(layout),
             },
         )
 
         self.assertRedirects(response, reverse("manager:salas_list"))
-        self.assertTrue(Sala.objects.filter(nombre="Sala 1", capacidad=120).exists())
+        sala = Sala.objects.get(nombre="Sala 1")
+        self.assertEqual(sala.capacidad, 2)
 
     def test_sala_duplicada_mantiene_layout_en_formulario(self):
-        Sala.objects.create(nombre="Sala 1", capacidad=120)
+        crear_sala_con_butacas("Sala 1", 120)
         layout = {
             "rows": 8,
             "columns": 12,
@@ -281,8 +301,8 @@ class ManagerSalasTests(TestCase):
 
     def test_gerente_busca_salas_y_limita_items_por_pagina(self):
         for index in range(12):
-            Sala.objects.create(nombre=f"Sala {index:02d}", capacidad=80)
-        Sala.objects.create(nombre="Microcine", capacidad=30)
+            crear_sala_con_butacas(f"Sala {index:02d}", 80)
+        crear_sala_con_butacas("Microcine", 30)
 
         response = self.client.get(
             reverse("manager:salas_list"),
@@ -295,8 +315,8 @@ class ManagerSalasTests(TestCase):
         self.assertNotContains(response, "Microcine")
 
     def test_gerente_ordena_salas_por_capacidad(self):
-        chica = Sala.objects.create(nombre="Sala chica", capacidad=80)
-        grande = Sala.objects.create(nombre="Sala grande", capacidad=180)
+        chica = crear_sala_con_butacas("Sala chica", 80)
+        grande = crear_sala_con_butacas("Sala grande", 180)
 
         response = self.client.get(
             reverse("manager:salas_list"),
@@ -309,7 +329,7 @@ class ManagerSalasTests(TestCase):
         self.assertEqual(object_list[1], chica)
 
     def test_formulario_edicion_sala_muestra_titulo_especifico(self):
-        sala = Sala.objects.create(nombre="Sala 1", capacidad=120)
+        sala = crear_sala_con_butacas("Sala 1", 120)
 
         response = self.client.get(reverse("manager:salas_update", args=[sala.pk]))
 
@@ -317,7 +337,7 @@ class ManagerSalasTests(TestCase):
         self.assertNotContains(response, "Guardar registro")
 
     def test_formulario_edicion_sala_precarga_layout_existente(self):
-        sala = Sala.objects.create(nombre="Sala 1", capacidad=2)
+        sala = Sala.objects.create(nombre="Sala 1")
         tipo_estandar = SeatType.objects.get(nombre="Estándar")
         tipo_preferencial = SeatType.objects.get(nombre="Preferencial")
         Seat.objects.create(sala=sala, fila=0, columna=0, tipo=tipo_estandar)
@@ -336,7 +356,6 @@ class ManagerSalasTests(TestCase):
         tipo_estandar = SeatType.objects.get(nombre="Estándar")
         sala = Sala.objects.create(
             nombre="Sala con layout viejo",
-            capacidad=1,
             layout_configuracion={
                 "rows": 4,
                 "columns": 6,
@@ -353,7 +372,7 @@ class ManagerSalasTests(TestCase):
         self.assertEqual(layout["seats"], [{"row": 2, "column": 5, "type": "Estándar"}])
 
     def test_gerente_elimina_sala(self):
-        sala = Sala.objects.create(nombre="Sala 1", capacidad=120)
+        sala = crear_sala_con_butacas("Sala 1", 120)
 
         response = self.client.post(reverse("manager:salas_delete", args=[sala.pk]))
 
@@ -413,7 +432,7 @@ class ManagerFuncionesTests(TestCase):
         )
         Gerente.objects.create(usuario=self.gerente)
         self.client.force_login(self.gerente)
-        self.sala = Sala.objects.create(nombre="Sala 1", capacidad=120)
+        self.sala = crear_sala_con_butacas("Sala 1", 120)
         self.pelicula = Pelicula.objects.create(
             titulo="Pelicula",
             sinopsis="Sinopsis",
@@ -870,8 +889,7 @@ class ManagerFuncionesTests(TestCase):
             estado=Funcion.Estado.PUBLICADA,
         )
 
-        self.sala.capacidad = 1
-        self.sala.save(update_fields=["capacidad"])
+        self.sala.seats.exclude(pk=self.sala.seats.first().pk).delete()
 
         response = self.client.get(reverse("manager:funciones_list"))
 
@@ -940,7 +958,7 @@ class ManagerFuncionesTests(TestCase):
         self.assertEqual(Funcion.objects.count(), 2)
 
     def test_permite_funciones_solapadas_en_salas_distintas(self):
-        otra_sala = Sala.objects.create(nombre="Sala 2", capacidad=80)
+        otra_sala = crear_sala_con_butacas("Sala 2", 80)
         Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,

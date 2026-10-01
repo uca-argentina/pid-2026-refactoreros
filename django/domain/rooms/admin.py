@@ -6,7 +6,7 @@ from .models import Sala
 
 @admin.register(Sala)
 class SalaAdmin(admin.ModelAdmin):
-    list_display = ("nombre", "capacidad")
+    list_display = ("nombre", "capacidad_total")
     search_fields = ("nombre",)
     ordering = ("nombre",)
 
