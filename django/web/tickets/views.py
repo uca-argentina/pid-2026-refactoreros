@@ -21,6 +21,7 @@ def ticket_purchase_view(request, pk):
                     usuario=request.user,
                     funcion=funcion,
                     cantidad=form.cleaned_data["cantidad"],
+                    selected_seats=form.cleaned_data["selected_seats"],
                 )
             except ValidationError as error:
                 disponibles = CompraEntrada.disponibles_para(funcion)

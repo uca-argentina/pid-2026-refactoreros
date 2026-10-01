@@ -306,6 +306,142 @@ body {
   gap: 14px;
 }
 
+.client-seat-map {
+  flex: 1 1 100%;
+  max-width: 100%;
+  padding: 18px 0 4px;
+  overflow-x: auto;
+}
+
+.client-seat-map.is-hidden {
+  display: none;
+}
+
+.client-seat-stage {
+  display: grid;
+  gap: 12px;
+  width: max-content;
+  min-width: max-content;
+  margin: 0 auto;
+}
+
+.client-screen-marker {
+  display: grid;
+  place-items: center;
+  width: calc(100% - 30px);
+  min-width: 240px;
+  height: 58px;
+  margin: 0 0 2px 30px;
+  color: rgba(255, 255, 255, .88);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  perspective: 320px;
+}
+
+.client-screen-marker::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 22px;
+  border-radius: 0 0 50% 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .42), rgba(255, 255, 255, .08));
+  box-shadow: 0 12px 26px rgba(0, 0, 0, .38);
+  transform: rotateX(-48deg);
+}
+
+.client-screen-marker span {
+  margin-top: 2px;
+}
+
+.client-seat-grid {
+  display: grid;
+  gap: 5px;
+  width: fit-content;
+  min-width: 0;
+  margin: 0;
+}
+
+.client-seat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.client-seat-row-label {
+  width: 22px;
+  color: rgba(255, 255, 255, .58);
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.client-seat-column-row {
+  margin-bottom: 1px;
+}
+
+.client-seat-column-label {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, .50);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.client-seat-column-label.is-aisle {
+  color: transparent;
+}
+
+.client-seat-cells {
+  display: flex;
+  gap: 4px;
+}
+
+.client-seat,
+.client-seat.aisle {
+  width: 34px;
+  height: 28px;
+  flex: 0 0 auto;
+}
+
+.client-seat {
+  border: 1px solid rgba(255, 255, 255, .82);
+  border-radius: 5px;
+  color: #111827;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.client-seat:hover,
+.client-seat.is-selected {
+  border-color: var(--seat-color);
+  color: #fff;
+  background: var(--seat-color);
+}
+
+.client-seat.aisle {
+  display: block;
+}
+
+.client-seat-row.is-aisle-row {
+  margin: 5px 0;
+}
+
+.client-seat-row.is-aisle-row .client-seat-row-label {
+  color: transparent;
+}
+
+.client-seat-row.is-aisle-row .client-seat.aisle {
+  height: 18px;
+}
+
 .purchase-form label {
   display: grid;
   gap: 8px;

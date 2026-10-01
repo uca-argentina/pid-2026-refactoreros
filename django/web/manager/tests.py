@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+import json
 from datetime import timedelta
 from decimal import Decimal
 
@@ -12,6 +13,8 @@ from django.utils import timezone
 
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
+from domain.seats.models import Seat
+from domain.seat_types.models import SeatType
 from domain.screenings.models import Funcion
 from domain.tickets.models import CompraEntrada
 from domain.users.models import Acomodador, Cliente, Gerente
@@ -204,6 +207,53 @@ class ManagerSalasTests(TestCase):
         self.assertRedirects(response, reverse("manager:salas_list"))
         self.assertTrue(Sala.objects.filter(nombre="Sala 1", capacidad=120).exists())
 
+    def test_sala_duplicada_mantiene_layout_en_formulario(self):
+        Sala.objects.create(nombre="Sala 1", capacidad=120)
+        layout = {
+            "rows": 8,
+            "columns": 12,
+            "seats": [
+                {"row": 0, "column": 0, "type": "Estándar"},
+                {"row": 0, "column": 1, "type": "Preferencial"},
+            ],
+        }
+
+        response = self.client.post(
+            reverse("manager:salas_create"),
+            data={
+                "nombre": "Sala 1",
+                "layout_sala": json.dumps(layout),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["form"]["layout_sala"].value(), json.dumps(layout))
+
+    def test_gerente_crea_sala_con_pasillos_y_guarda_tamano_de_layout(self):
+        layout = {
+            "rows": 3,
+            "columns": 4,
+            "seats": [
+                {"row": 0, "column": 0, "type": "Estándar"},
+                {"row": 2, "column": 3, "type": "Preferencial"},
+            ],
+        }
+
+        response = self.client.post(
+            reverse("manager:salas_create"),
+            data={
+                "nombre": "Sala con pasillos",
+                "layout_sala": json.dumps(layout),
+            },
+        )
+
+        self.assertRedirects(response, reverse("manager:salas_list"))
+        sala = Sala.objects.get(nombre="Sala con pasillos")
+        self.assertEqual(sala.capacidad, 2)
+        self.assertEqual(sala.layout_configuracion["rows"], 3)
+        self.assertEqual(sala.layout_configuracion["columns"], 4)
+        self.assertEqual(sala.seats.count(), 2)
+
     def test_gerente_busca_salas_y_limita_items_por_pagina(self):
         for index in range(12):
             Sala.objects.create(nombre=f"Sala {index:02d}", capacidad=80)
@@ -240,6 +290,42 @@ class ManagerSalasTests(TestCase):
 
         self.assertContains(response, "Editar sala")
         self.assertNotContains(response, "Guardar registro")
+
+    def test_formulario_edicion_sala_precarga_layout_existente(self):
+        sala = Sala.objects.create(nombre="Sala 1", capacidad=2)
+        tipo_estandar = SeatType.objects.get(nombre="Estándar")
+        tipo_preferencial = SeatType.objects.get(nombre="Preferencial")
+        Seat.objects.create(sala=sala, fila=0, columna=0, tipo=tipo_estandar)
+        Seat.objects.create(sala=sala, fila=1, columna=2, tipo=tipo_preferencial)
+
+        response = self.client.get(reverse("manager:salas_update", args=[sala.pk]))
+
+        layout_value = response.context["form"]["layout_sala"].value()
+        layout = json.loads(layout_value)
+        self.assertEqual(layout["rows"], 2)
+        self.assertEqual(layout["columns"], 3)
+        self.assertIn({"row": 0, "column": 0, "type": "Estándar"}, layout["seats"])
+        self.assertIn({"row": 1, "column": 2, "type": "Preferencial"}, layout["seats"])
+
+    def test_formulario_edicion_sala_normaliza_layout_guardado_con_ids(self):
+        tipo_estandar = SeatType.objects.get(nombre="Estándar")
+        sala = Sala.objects.create(
+            nombre="Sala con layout viejo",
+            capacidad=1,
+            layout_configuracion={
+                "rows": 4,
+                "columns": 6,
+                "seats": [{"row": 2, "column": 5, "type": tipo_estandar.pk}],
+            },
+        )
+        Seat.objects.create(sala=sala, fila=2, columna=5, tipo=tipo_estandar)
+
+        response = self.client.get(reverse("manager:salas_update", args=[sala.pk]))
+
+        layout = json.loads(response.context["form"]["layout_sala"].value())
+        self.assertEqual(layout["rows"], 4)
+        self.assertEqual(layout["columns"], 6)
+        self.assertEqual(layout["seats"], [{"row": 2, "column": 5, "type": "Estándar"}])
 
     def test_gerente_elimina_sala(self):
         sala = Sala.objects.create(nombre="Sala 1", capacidad=120)
@@ -326,6 +412,12 @@ class ManagerFuncionesTests(TestCase):
         ).replace(hour=hora, minute=minuto)
         return timezone.make_aware(fecha)
 
+    def precios_por_tipo_form(self, precio="1500.00"):
+        return json.dumps({
+            str(seat_type.pk): precio
+            for seat_type in SeatType.objects.all()
+        })
+
     def test_gerente_crea_funcion_sin_publicarla(self):
         response = self.client.post(
             reverse("manager:funciones_create"),
@@ -333,7 +425,7 @@ class ManagerFuncionesTests(TestCase):
                 "pelicula": self.pelicula.pk,
                 "sala": self.sala.pk,
                 "fecha_horario": self.fecha_form(self.fecha_futura()),
-                "precio_entrada": "1500.00",
+                "precios_por_tipo": self.precios_por_tipo_form(),
             },
         )
 
@@ -348,14 +440,14 @@ class ManagerFuncionesTests(TestCase):
                 "pelicula": self.pelicula.pk,
                 "sala": self.sala.pk,
                 "fecha_horario": self.fecha_form(timezone.now() + timedelta(days=1)),
-                "precio_entrada": "0.00",
+                "precios_por_tipo": self.precios_por_tipo_form("0.00"),
             },
         )
 
         self.assertEqual(response.status_code, 200)
         form = response.context["form"]
-        self.assertIn("precio_entrada", form.errors)
-        self.assertIn("mayor a cero", form.errors["precio_entrada"][0])
+        self.assertIn("precios_por_tipo", form.errors)
+        self.assertIn("mayores a cero", form.errors["precios_por_tipo"][0])
         self.assertEqual(Funcion.objects.count(), 0)
 
     def test_no_permite_crear_funcion_con_precio_negativo(self):
@@ -365,14 +457,14 @@ class ManagerFuncionesTests(TestCase):
                 "pelicula": self.pelicula.pk,
                 "sala": self.sala.pk,
                 "fecha_horario": self.fecha_form(timezone.now() + timedelta(days=1)),
-                "precio_entrada": "-1500.00",
+                "precios_por_tipo": self.precios_por_tipo_form("-1500.00"),
             },
         )
 
         self.assertEqual(response.status_code, 200)
         form = response.context["form"]
-        self.assertIn("precio_entrada", form.errors)
-        self.assertIn("mayor a cero", form.errors["precio_entrada"][0])
+        self.assertIn("precios_por_tipo", form.errors)
+        self.assertIn("mayores a cero", form.errors["precios_por_tipo"][0])
         self.assertEqual(Funcion.objects.count(), 0)
 
     def test_no_permite_crear_funcion_con_fecha_pasada(self):
@@ -533,8 +625,8 @@ class ManagerFuncionesTests(TestCase):
             funcion.fecha_horario,
         )
         self.assertEqual(
-            response.context["form"].initial["precio_entrada"],
-            Decimal("1500.00"),
+            response.context["form"].initial["precios_por_tipo"],
+            funcion.precios_por_tipo,
         )
         self.assertContains(
             response,
@@ -562,6 +654,23 @@ class ManagerFuncionesTests(TestCase):
         self.assertContains(response, "Disponibles")
         self.assertContains(response, '<td data-label="Vendidas">35</td>', html=True)
         self.assertContains(response, '<td data-label="Disponibles">85</td>', html=True)
+
+    def test_funcion_publicada_mantiene_snapshot_de_capacidad_de_sala(self):
+        funcion = Funcion.objects.create(
+            pelicula=self.pelicula,
+            sala=self.sala,
+            fecha_horario=self.fecha_futura(),
+            precio_entrada="1500.00",
+            publicada=True,
+        )
+
+        self.sala.capacidad = 1
+        self.sala.save(update_fields=["capacidad"])
+
+        response = self.client.get(reverse("manager:funciones_list"))
+
+        self.assertEqual(funcion.capacidad_snapshot, 120)
+        self.assertContains(response, '<td data-label="Disponibles">120</td>', html=True)
 
     def test_fecha_de_funcion_se_precarga_al_editar(self):
         funcion = Funcion.objects.create(
@@ -662,7 +771,7 @@ class ManagerFuncionesTests(TestCase):
                 "pelicula": self.pelicula.pk,
                 "sala": self.sala.pk,
                 "fecha_horario": self.fecha_form(self.fecha_futura(20, 0)),
-                "precio_entrada": "1600.00",
+                "precios_por_tipo": self.precios_por_tipo_form("1600.00"),
             },
         )
 

@@ -6,6 +6,15 @@ from django.db.models import Sum
 from domain.screenings.models import Funcion
 
 
+def index_to_letters(index):
+    label = ""
+    value = index + 1
+    while value > 0:
+        value, remainder = divmod(value - 1, 26)
+        label = chr(65 + remainder) + label
+    return label
+
+
 class CompraEntrada(models.Model):
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -38,20 +47,74 @@ class CompraEntrada(models.Model):
 
     @classmethod
     def disponibles_para(cls, funcion):
-        return max(funcion.sala.capacidad - cls.cantidad_vendida(funcion), 0)
+        return max(funcion.capacidad_disponible - cls.cantidad_vendida(funcion), 0)
 
     @classmethod
-    def comprar(cls, usuario, funcion, cantidad):
+    @classmethod
+    def precios_por_asiento(cls, funcion):
+        snapshot = funcion.sala_configuracion_snapshot or {}
+        if isinstance(snapshot, dict):
+            seats = snapshot.get("seats", [])
+            columns_count = snapshot.get("columns") or max(
+                (seat["column"] for seat in seats), default=-1
+            ) + 1
+        else:
+            seats = snapshot
+            columns_count = max((seat["column"] for seat in seats), default=-1) + 1
+
+        occupied_columns = {seat["column"] for seat in seats}
+        column_labels = {}
+        next_column_label = 0
+        for column_index in range(columns_count):
+            if column_index in occupied_columns:
+                column_labels[column_index] = index_to_letters(next_column_label)
+                next_column_label += 1
+
+        prices = {}
+        for seat in seats:
+            column_label = column_labels.get(seat["column"], "")
+            if not column_label:
+                continue
+            label = f"{seat['row'] + 1}{column_label}"
+            prices[label] = funcion.precio_para_tipo(seat.get("type_id"))
+        return prices
+
+    @classmethod
+    def total_para_asientos(cls, funcion, selected_seats):
+        seat_prices = cls.precios_por_asiento(funcion)
+        labels = []
+        for seat in selected_seats or []:
+            label = seat.get("label") if isinstance(seat, dict) else str(seat)
+            if label and label not in labels:
+                labels.append(label)
+
+        if not labels:
+            return None, 0
+
+        invalid_labels = [label for label in labels if label not in seat_prices]
+        if invalid_labels:
+            raise ValidationError({"cantidad": "La seleccion de asientos no es valida."})
+
+        return sum(seat_prices[label] for label in labels), len(labels)
+
+    @classmethod
+    def comprar(cls, usuario, funcion, cantidad, selected_seats=None):
         with transaction.atomic():
             cantidad = int(cantidad)
             funcion = Funcion.objects.select_for_update().select_related("sala").get(
                 pk=funcion.pk
             )
+            total_asientos, cantidad_asientos = cls.total_para_asientos(
+                funcion, selected_seats
+            )
+            if cantidad_asientos:
+                cantidad = cantidad_asientos
+            total = total_asientos if total_asientos is not None else funcion.precio_desde * cantidad
             compra = cls(
                 usuario=usuario,
                 funcion=funcion,
                 cantidad=cantidad,
-                total=funcion.precio_entrada * cantidad,
+                total=total,
             )
             compra.full_clean()
             compra.save()
@@ -76,6 +139,6 @@ class CompraEntrada(models.Model):
             )
 
     def save(self, *args, **kwargs):
-        if self.funcion_id and self.cantidad:
-            self.total = self.funcion.precio_entrada * self.cantidad
+        if self.funcion_id and self.cantidad and self.total in (None, ""):
+            self.total = self.funcion.precio_desde * self.cantidad
         super().save(*args, **kwargs)

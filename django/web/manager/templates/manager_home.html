@@ -3,7 +3,6 @@
 {% block content %}
   <section class="page-heading dashboard-heading">
     <div>
-      <p>Centro de control</p>
       <h1>Gestión del cine</h1>
     </div>
     {% if manager_role == "gerente" %}
@@ -32,8 +31,7 @@
         <section class="panel-section">
           <div class="section-title">
             <div>
-              <p>Próximas funciones</p>
-              <h2>Agenda inmediata</h2>
+              <h2>Próximas funciones</h2>
             </div>
             <a href="{% url 'manager:funciones_list' %}">Ver todo</a>
           </div>
@@ -94,7 +92,6 @@
       <aside class="ops-panel">
         <div class="section-title">
           <div>
-            <p>Estado</p>
             <h2>Operación</h2>
           </div>
         </div>

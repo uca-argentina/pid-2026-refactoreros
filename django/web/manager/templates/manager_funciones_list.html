@@ -3,7 +3,6 @@
 {% block content %}
   <section class="page-heading page-heading-row">
     <div>
-      <p>Agenda, ventas y publicación</p>
       <h1>Funciones</h1>
     </div>
     {% if create_url_name %}
@@ -24,7 +23,7 @@
           <th>Sala</th>
           <th>Fecha</th>
           <th>Publicación</th>
-          <th>Precio</th>
+          <th>Desde</th>
           <th>Vendidas</th>
           <th>Disponibles</th>
           <th>Acciones</th>
@@ -43,7 +42,7 @@
                 <span class="status-pill status-draft">Oculta</span>
               {% endif %}
             </td>
-            <td data-label="Precio">${{ funcion.precio_entrada }}</td>
+            <td data-label="Desde">${{ funcion.precio_desde }}</td>
             <td data-label="Vendidas">{{ funcion.entradas_vendidas }}</td>
             <td data-label="Disponibles">{{ funcion.entradas_disponibles }}</td>
             <td class="table-actions" data-label="Acciones">

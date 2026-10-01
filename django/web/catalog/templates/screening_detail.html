@@ -60,7 +60,7 @@
           </div>
           <div>
             <dt>Desde</dt>
-            <dd>${{ funcion.precio_entrada }}</dd>
+            <dd>${{ funcion.precio_desde }}</dd>
           </div>
           <div>
             <dt>Funciones</dt>
@@ -87,7 +87,7 @@
                   {% if item.entradas_disponibles <= 0 %}
                     <strong class="sold-out-badge">Función agotada</strong>
                   {% else %}
-                    {{ item.sala.nombre }} - ${{ item.precio_entrada }}
+                    {{ item.sala.nombre }} - desde ${{ item.precio_desde }}
                   {% endif %}
                 </small>
               </label>
@@ -97,6 +97,44 @@
 
         <form class="purchase-form" method="post" action="{% url 'ticket_purchase' funcion.pk %}">
           {% csrf_token %}
+          <input type="hidden" name="selected_seats" value="">
+          {% for item in funciones %}
+            {% if item.seat_map %}
+              <section class="client-seat-map{% if item.pk != funcion.pk %} is-hidden{% endif %}" data-funcion-id="{{ item.pk }}" aria-label="Seleccionar asientos">
+                <div class="client-seat-stage">
+                  <div class="client-screen-marker" aria-hidden="true">
+                    <span>Pantalla</span>
+                  </div>
+                  <div class="client-seat-grid">
+                    <div class="client-seat-row client-seat-column-row" aria-hidden="true">
+                      <span class="client-seat-row-label"></span>
+                      <div class="client-seat-cells">
+                        {% for column in item.seat_map.columns %}
+                          <span class="client-seat-column-label{% if column.is_aisle %} is-aisle{% endif %}">{{ column.label }}</span>
+                        {% endfor %}
+                      </div>
+                    </div>
+                    {% for row in item.seat_map.rows %}
+                      <div class="client-seat-row{% if row.is_aisle %} is-aisle-row{% endif %}">
+                        <span class="client-seat-row-label">{{ row.label }}</span>
+                        <div class="client-seat-cells">
+                          {% for cell in row.cells %}
+                            {% if cell.is_seat %}
+                              <button type="button" class="client-seat" style="--seat-color: {{ cell.color }};" data-seat-label="{{ cell.label }}" data-seat-type-id="{{ cell.type_id }}" data-seat-price="{{ cell.price }}" title="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}" aria-label="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}">
+                                {{ cell.label }}
+                              </button>
+                            {% else %}
+                              <span class="client-seat aisle" aria-hidden="true"></span>
+                            {% endif %}
+                          {% endfor %}
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </section>
+            {% endif %}
+          {% endfor %}
           <label class="quantity-field"{% if entradas_disponibles <= 0 %} hidden{% endif %}>
             <span>Cantidad de entradas</span>
             <input type="number" name="cantidad" value="1" min="1">

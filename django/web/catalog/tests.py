@@ -5,6 +5,8 @@ from django.utils import timezone
 
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
+from domain.seats.models import Seat
+from domain.seat_types.models import SeatType
 from domain.screenings.models import Funcion
 from domain.tickets.models import CompraEntrada
 from domain.users.models import Cliente, Gerente
@@ -103,6 +105,95 @@ class CatalogFlowTests(TestCase):
         self.assertContains(response, "Comprar entrada")
         self.assertContains(response, "Elegí tu función")
         self.assertNotContains(response, "Disponibles")
+
+    def test_detalle_muestra_pantalla_y_mapa_de_asientos_si_hay_snapshot(self):
+        pelicula = Pelicula.objects.create(
+            titulo="Con butacas",
+            sinopsis="Una pelicula de prueba.",
+            genero=Pelicula.Genero.ACCION,
+            clasificacion=Pelicula.Clasificacion.MAS_13,
+            duracion_minutos=120,
+            imagen="peliculas/test.jpg",
+        )
+        sala = Sala.objects.create(nombre="Sala mapa", capacidad=2)
+        tipo = SeatType.objects.get(nombre="Estándar")
+        Seat.objects.create(sala=sala, fila=0, columna=0, tipo=tipo)
+        Seat.objects.create(sala=sala, fila=0, columna=1, tipo=tipo)
+        funcion = Funcion.objects.create(
+            pelicula=pelicula,
+            sala=sala,
+            fecha_horario=timezone.now(),
+            precio_entrada="1500.00",
+            publicada=True,
+        )
+        usuario = get_user_model().objects.create_user(
+            username="ana@mail.com",
+            email="ana@mail.com",
+            password="PasswordSegura123!",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("movie_detail", args=[funcion.pelicula.pk]))
+
+        self.assertContains(response, "Pantalla")
+        self.assertContains(response, "1A")
+        self.assertContains(response, "1B")
+        self.assertContains(response, "Fila 1, columna A")
+
+    def test_detalle_muestra_pasillos_sin_saltar_letras_de_columnas(self):
+        pelicula = Pelicula.objects.create(
+            titulo="Con pasillos",
+            sinopsis="Una pelicula de prueba.",
+            genero=Pelicula.Genero.ACCION,
+            clasificacion=Pelicula.Clasificacion.MAS_13,
+            duracion_minutos=120,
+            imagen="peliculas/test.jpg",
+        )
+        sala = Sala.objects.create(nombre="Sala pasillos", capacidad=2)
+        tipo = SeatType.objects.get(nombre="Estándar")
+        funcion = Funcion.objects.create(
+            pelicula=pelicula,
+            sala=sala,
+            fecha_horario=timezone.now(),
+            precio_entrada="1500.00",
+            publicada=True,
+            capacidad_snapshot=2,
+            sala_configuracion_snapshot={
+                "rows": 3,
+                "columns": 3,
+                "seats": [
+                    {
+                        "row": 0,
+                        "column": 0,
+                        "type": tipo.nombre,
+                        "type_id": tipo.pk,
+                        "price": str(tipo.precio_base),
+                        "color": tipo.color,
+                    },
+                    {
+                        "row": 0,
+                        "column": 2,
+                        "type": tipo.nombre,
+                        "type_id": tipo.pk,
+                        "price": str(tipo.precio_base),
+                        "color": tipo.color,
+                    },
+                ],
+            },
+        )
+        usuario = get_user_model().objects.create_user(
+            username="ana2@mail.com",
+            email="ana2@mail.com",
+            password="PasswordSegura123!",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("movie_detail", args=[funcion.pelicula.pk]))
+
+        self.assertContains(response, "1A")
+        self.assertContains(response, "1B")
+        self.assertNotContains(response, "1C")
+        self.assertContains(response, "client-seat-row is-aisle-row")
 
     def test_detalle_muestra_entradas_agotadas_solo_para_funcion_seleccionada(self):
         pelicula = Pelicula.objects.create(
