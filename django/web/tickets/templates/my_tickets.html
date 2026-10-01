@@ -52,6 +52,10 @@
                 <dd>{{ compra.cantidad }}</dd>
               </div>
               <div>
+                <dt>Butacas</dt>
+                <dd>{{ compra.asientos_label|default:"Sin asignar" }}</dd>
+              </div>
+              <div>
                 <dt>Total</dt>
                 <dd>${{ compra.total }}</dd>
               </div>

@@ -102,8 +102,8 @@ class CatalogFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "screening_detail.html")
-        self.assertContains(response, "Comprar entrada")
-        self.assertContains(response, "Elegí tu función")
+        self.assertContains(response, "Elegi tu funcion")
+        self.assertContains(response, reverse("seat_selection", args=[funcion.pk]))
         self.assertNotContains(response, "Disponibles")
 
     def test_detalle_muestra_pantalla_y_mapa_de_asientos_si_hay_snapshot(self):
@@ -133,8 +133,9 @@ class CatalogFlowTests(TestCase):
         )
         self.client.force_login(usuario)
 
-        response = self.client.get(reverse("movie_detail", args=[funcion.pelicula.pk]))
+        response = self.client.get(reverse("seat_selection", args=[funcion.pk]))
 
+        self.assertTemplateUsed(response, "seat_selection.html")
         self.assertContains(response, "Pantalla")
         self.assertContains(response, "1A")
         self.assertContains(response, "1B")
@@ -188,7 +189,7 @@ class CatalogFlowTests(TestCase):
         )
         self.client.force_login(usuario)
 
-        response = self.client.get(reverse("movie_detail", args=[funcion.pelicula.pk]))
+        response = self.client.get(reverse("seat_selection", args=[funcion.pk]))
 
         self.assertContains(response, "1A")
         self.assertContains(response, "1B")
@@ -224,16 +225,13 @@ class CatalogFlowTests(TestCase):
         CompraEntrada.comprar(usuario, agotada, 1)
         self.client.force_login(usuario)
 
-        response = self.client.get(reverse("screening_detail", args=[agotada.pk]), follow=True)
+        response = self.client.get(reverse("movie_detail", args=[pelicula.pk]))
 
-        self.assertContains(response, "Entradas agotadas para esta función")
-        self.assertContains(response, "disabled")
-        self.assertContains(response, f'value="{agotada.pk}"')
-        self.assertContains(response, 'data-available="0"')
-        self.assertContains(response, f'value="{disponible.pk}"')
-        self.assertContains(response, 'data-available="3"')
+        self.assertContains(response, "Funcion agotada")
+        self.assertContains(response, reverse("seat_selection", args=[disponible.pk]))
+        self.assertNotContains(response, reverse("seat_selection", args=[agotada.pk]))
 
-    def test_url_vieja_de_funcion_redirige_al_detalle_de_pelicula(self):
+    def test_url_vieja_de_funcion_redirige_a_seleccion_de_butacas(self):
         funcion = crear_funcion(publicada=True, titulo="Publicada")
         usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
@@ -244,7 +242,7 @@ class CatalogFlowTests(TestCase):
 
         response = self.client.get(reverse("screening_detail", args=[funcion.pk]))
 
-        self.assertRedirects(response, reverse("movie_detail", args=[funcion.pelicula.pk]))
+        self.assertRedirects(response, reverse("seat_selection", args=[funcion.pk]))
 
     def test_home_muestra_acceso_a_gestion_si_es_gerente(self):
         usuario = get_user_model().objects.create_user(

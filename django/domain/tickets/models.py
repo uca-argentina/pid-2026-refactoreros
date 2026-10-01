@@ -28,6 +28,7 @@ class CompraEntrada(models.Model):
     )
     cantidad = models.PositiveIntegerField()
     total = models.DecimalField(max_digits=10, decimal_places=2)
+    asientos_seleccionados = models.JSONField(default=list, blank=True)
     creada_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -37,6 +38,11 @@ class CompraEntrada(models.Model):
 
     def __str__(self):
         return f"{self.usuario} - {self.funcion} x{self.cantidad}"
+
+    @property
+    def asientos_label(self):
+        labels = self._labels_from_selected_seats(self.asientos_seleccionados)
+        return ", ".join(labels)
 
     @classmethod
     def cantidad_vendida(cls, funcion):
@@ -49,7 +55,6 @@ class CompraEntrada(models.Model):
     def disponibles_para(cls, funcion):
         return max(funcion.capacidad_disponible - cls.cantidad_vendida(funcion), 0)
 
-    @classmethod
     @classmethod
     def precios_por_asiento(cls, funcion):
         snapshot = funcion.sala_configuracion_snapshot or {}
@@ -80,22 +85,56 @@ class CompraEntrada(models.Model):
         return prices
 
     @classmethod
-    def total_para_asientos(cls, funcion, selected_seats):
-        seat_prices = cls.precios_por_asiento(funcion)
+    def _labels_from_selected_seats(cls, selected_seats):
         labels = []
         for seat in selected_seats or []:
             label = seat.get("label") if isinstance(seat, dict) else str(seat)
             if label and label not in labels:
                 labels.append(label)
+        return labels
+
+    @classmethod
+    def asientos_ocupados(cls, funcion):
+        compras = cls.objects.filter(funcion=funcion)
+        occupied_labels = []
+        legacy_sold_count = 0
+        for compra in compras:
+            labels = cls._labels_from_selected_seats(compra.asientos_seleccionados)
+            if labels:
+                for label in labels:
+                    if label not in occupied_labels:
+                        occupied_labels.append(label)
+            else:
+                legacy_sold_count += compra.cantidad
+
+        if legacy_sold_count:
+            for label in cls.precios_por_asiento(funcion):
+                if label in occupied_labels:
+                    continue
+                occupied_labels.append(label)
+                legacy_sold_count -= 1
+                if legacy_sold_count <= 0:
+                    break
+
+        return set(occupied_labels)
+
+    @classmethod
+    def total_para_asientos(cls, funcion, selected_seats):
+        seat_prices = cls.precios_por_asiento(funcion)
+        labels = cls._labels_from_selected_seats(selected_seats)
 
         if not labels:
-            return None, 0
+            return None, 0, []
 
         invalid_labels = [label for label in labels if label not in seat_prices]
         if invalid_labels:
             raise ValidationError({"cantidad": "La seleccion de asientos no es valida."})
 
-        return sum(seat_prices[label] for label in labels), len(labels)
+        selected_payload = [
+            {"label": label, "price": str(seat_prices[label])}
+            for label in labels
+        ]
+        return sum(seat_prices[label] for label in labels), len(labels), selected_payload
 
     @classmethod
     def comprar(cls, usuario, funcion, cantidad, selected_seats=None):
@@ -104,9 +143,21 @@ class CompraEntrada(models.Model):
             funcion = Funcion.objects.select_for_update().select_related("sala").get(
                 pk=funcion.pk
             )
-            total_asientos, cantidad_asientos = cls.total_para_asientos(
+            list(cls.objects.select_for_update().filter(funcion=funcion))
+            total_asientos, cantidad_asientos, selected_payload = cls.total_para_asientos(
                 funcion, selected_seats
             )
+            if selected_payload:
+                occupied_labels = cls.asientos_ocupados(funcion)
+                already_taken = [
+                    seat["label"]
+                    for seat in selected_payload
+                    if seat["label"] in occupied_labels
+                ]
+                if already_taken:
+                    raise ValidationError(
+                        {"cantidad": "Algunos asientos seleccionados ya no estan disponibles."}
+                    )
             if cantidad_asientos:
                 cantidad = cantidad_asientos
             total = total_asientos if total_asientos is not None else funcion.precio_desde * cantidad
@@ -115,6 +166,7 @@ class CompraEntrada(models.Model):
                 funcion=funcion,
                 cantidad=cantidad,
                 total=total,
+                asientos_seleccionados=selected_payload,
             )
             compra.full_clean()
             compra.save()

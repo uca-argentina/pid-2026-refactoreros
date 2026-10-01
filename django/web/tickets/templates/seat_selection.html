@@ -1,0 +1,143 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Butacas | {{ funcion.pelicula.titulo }} | {{ cinema.nombre }}</title>
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+  <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
+  <link rel="stylesheet" href="{% static 'catalog.css' %}">
+  <script src="{% static 'catalog.js' %}" defer></script>
+</head>
+<body class="client-page">
+  <header class="client-header">
+    <a class="client-brand" href="{% url 'home' %}">
+      {% if cinema.logo %}
+        <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="client-logo">
+      {% else %}
+        <strong>{{ cinema.nombre }}</strong>
+      {% endif %}
+    </a>
+    <nav>
+      <a href="{% url 'home' %}">Peliculas</a>
+      <a href="{% url 'my_tickets' %}">Mis entradas</a>
+      {% if manager_role %}
+        <a href="{% url 'manager:home' %}">Gestion</a>
+      {% endif %}
+      <a href="{% url 'logout' %}">Cerrar sesion</a>
+    </nav>
+  </header>
+
+  <main class="client-main seat-selection-main">
+    <section class="seat-selection-header">
+      <a class="back-to-functions" href="{% url 'movie_detail' funcion.pelicula.pk %}"><span aria-hidden="true">&larr;</span> Volver a funciones</a>
+      <h1>{{ funcion.pelicula.titulo }}</h1>
+      <p>
+        {{ funcion.fecha_horario|date:"l d/m H:i"|capfirst }}
+        |
+        {{ funcion.sala.nombre }}
+        |
+        desde ${{ funcion.precio_desde }}
+      </p>
+    </section>
+
+    <form class="purchase-form seat-selection-form" method="post" action="{% url 'ticket_purchase' funcion.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="selected_seats" value="">
+      <input type="hidden" name="cantidad" value="1" min="1">
+
+      <div class="seat-selection-layout">
+      {% if funcion.seat_map %}
+        <section class="client-seat-map" data-funcion-id="{{ funcion.pk }}" data-available="{{ funcion.entradas_disponibles }}" aria-label="Seleccionar asientos">
+          <div class="seat-reference-line" aria-label="Referencias de asientos">
+            {% for tier in funcion.seat_map.legend %}
+              <span><i style="--seat-color: {{ tier.color }};"></i>{{ tier.type }} ${{ tier.price }}</span>
+              {% if not forloop.last %}<b>|</b>{% endif %}
+            {% endfor %}
+            <b>|</b>
+            <span><i class="legend-selected"></i>Seleccionado</span>
+            <b>|</b>
+            <span><i class="legend-unavailable"></i>No disponible</span>
+          </div>
+
+          <div class="client-seat-stage">
+            <div class="client-screen-marker" aria-hidden="true">
+              <span>Pantalla</span>
+            </div>
+            <div class="client-seat-grid">
+              <div class="client-seat-row client-seat-column-row" aria-hidden="true">
+                <span class="client-seat-row-label"></span>
+                <div class="client-seat-cells">
+                  {% for column in funcion.seat_map.columns %}
+                    <span class="client-seat-column-label{% if column.is_aisle %} is-aisle{% endif %}">{{ column.label }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+              {% for row in funcion.seat_map.rows %}
+                <div class="client-seat-row{% if row.is_aisle %} is-aisle-row{% endif %}">
+                  <span class="client-seat-row-label">{{ row.label }}</span>
+                  <div class="client-seat-cells">
+                    {% for cell in row.cells %}
+                      {% if cell.is_seat %}
+                        <button type="button" class="client-seat{% if cell.is_unavailable %} is-unavailable{% endif %}" style="--seat-color: {{ cell.color }};" data-seat-label="{{ cell.label }}" data-seat-type-id="{{ cell.type_id }}" data-seat-price="{{ cell.price }}" title="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.is_unavailable %} - No disponible{% endif %}" aria-label="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.is_unavailable %} - No disponible{% endif %}"{% if cell.is_unavailable %} disabled aria-disabled="true"{% endif %}>
+                          {{ cell.label }}
+                        </button>
+                      {% else %}
+                        <span class="client-seat aisle" aria-hidden="true"></span>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </section>
+      {% endif %}
+
+        <aside class="purchase-cart" aria-label="Detalle de compra">
+          <h2>Tu compra</h2>
+          <dl>
+            <div>
+              <dt>Funcion</dt>
+              <dd>{{ funcion.fecha_horario|date:"d/m H:i" }}</dd>
+            </div>
+            <div>
+              <dt>Sala</dt>
+              <dd>{{ funcion.sala.nombre }}</dd>
+            </div>
+            <div>
+              <dt>Butacas</dt>
+              <dd>
+                <ul class="cart-seat-lines" data-cart-seat-lines>
+                  <li>Sin seleccionar</li>
+                </ul>
+              </dd>
+            </div>
+            <div>
+              <dt>Total</dt>
+              <dd data-cart-total>$0,00</dd>
+            </div>
+          </dl>
+          <p class="purchase-summary" data-purchase-summary>Selecciona una butaca para continuar.</p>
+          <div class="purchase-action">
+            <button
+              type="submit"
+              data-singular-label="Comprar entrada"
+              data-plural-label="Comprar entradas"
+              data-select-seat-label="Selecciona tus butacas"
+              data-sold-out-label="Entradas agotadas para esta funcion"
+              {% if funcion.entradas_disponibles <= 0 or funcion.seat_map %}disabled{% endif %}
+            >
+              {% if funcion.entradas_disponibles > 0 %}Selecciona tus butacas{% else %}Entradas agotadas para esta funcion{% endif %}
+            </button>
+            {% if purchase_error and funcion.entradas_disponibles > 0 %}
+              <p class="purchase-error">{{ purchase_error }}</p>
+            {% endif %}
+          </div>
+        </aside>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

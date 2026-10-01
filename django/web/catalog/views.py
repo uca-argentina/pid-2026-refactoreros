@@ -52,6 +52,8 @@ def build_seat_map(funcion):
         (seat["row"], seat["column"]): seat
         for seat in seats
     }
+    unavailable_labels = CompraEntrada.asientos_ocupados(funcion)
+    legend_by_type = {}
     rows = []
     for row_index in range(rows_count):
         has_seats = any(
@@ -68,21 +70,30 @@ def build_seat_map(funcion):
             seat = seats_by_position.get((row_index, column_index))
             column_label = column_labels[column_index] or ""
             if seat:
+                label = f"{row_label}{column_label}"
+                type_key = str(seat.get("type_id") or seat["type"])
+                if type_key not in legend_by_type:
+                    legend_by_type[type_key] = {
+                        "type": seat["type"],
+                        "color": seat["color"],
+                        "price": seat.get("price"),
+                    }
                 row["cells"].append(
                     {
                         "is_seat": True,
-                        "label": f"{row_label}{column_label}",
+                        "label": label,
                         "accessibility_label": f"Fila {row_label}, columna {column_label}",
                         "type": seat["type"],
                         "type_id": seat.get("type_id"),
                         "price": seat.get("price"),
                         "color": seat["color"],
+                        "is_unavailable": label in unavailable_labels,
                     }
                 )
             else:
                 row["cells"].append({"is_seat": False})
         rows.append(row)
-    return {"columns": columns, "rows": rows}
+    return {"columns": columns, "rows": rows, "legend": list(legend_by_type.values())}
 
 
 @login_required
@@ -142,5 +153,4 @@ def movie_detail_view(request, pk):
 @login_required
 def screening_detail_view(request, pk):
     funcion = get_object_or_404(Funcion.funciones_publicadas(), pk=pk)
-    request.session["selected_funcion_id"] = funcion.pk
-    return redirect("movie_detail", pk=funcion.pelicula_id)
+    return redirect("seat_selection", pk=funcion.pk)

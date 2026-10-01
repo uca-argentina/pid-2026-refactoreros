@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -6,6 +7,8 @@ from decimal import Decimal
 
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
+from domain.seats.models import Seat
+from domain.seat_types.models import SeatType
 from domain.screenings.models import Funcion
 from domain.tickets.models import CompraEntrada
 
@@ -92,6 +95,50 @@ class TicketPurchaseTests(TestCase):
             "Pago aprobado. Compraste 1 entrada para Publicada. ¡Te esperamos!",
         )
 
+    def test_compra_con_butacas_guarda_seleccion_y_bloquea_repetidas(self):
+        pelicula = Pelicula.objects.create(
+            titulo="Con butacas",
+            sinopsis="Una pelicula de prueba.",
+            genero=Pelicula.Genero.ACCION,
+            clasificacion=Pelicula.Clasificacion.MAS_13,
+            duracion_minutos=120,
+            imagen="peliculas/test.jpg",
+        )
+        sala = Sala.objects.create(nombre="Sala mapa", capacidad=2)
+        tipo = SeatType.objects.get(nombre="Estándar")
+        Seat.objects.create(sala=sala, fila=0, columna=0, tipo=tipo)
+        Seat.objects.create(sala=sala, fila=0, columna=1, tipo=tipo)
+        funcion = Funcion.objects.create(
+            pelicula=pelicula,
+            sala=sala,
+            fecha_horario=timezone.now(),
+            precio_entrada="1500.00",
+            publicada=True,
+        )
+        usuario = get_user_model().objects.create_user(
+            username="ana2@mail.com",
+            email="ana2@mail.com",
+            password="PasswordSegura123!",
+        )
+
+        compra = CompraEntrada.comprar(
+            usuario,
+            funcion,
+            1,
+            selected_seats=[{"label": "1A"}],
+        )
+
+        self.assertEqual(compra.cantidad, 1)
+        self.assertEqual(compra.asientos_seleccionados[0]["label"], "1A")
+        self.assertIn("1A", CompraEntrada.asientos_ocupados(funcion))
+        with self.assertRaises(ValidationError):
+            CompraEntrada.comprar(
+                usuario,
+                funcion,
+                1,
+                selected_seats=[{"label": "1A"}],
+            )
+
     def test_compra_falla_si_supera_disponibilidad(self):
         funcion = crear_funcion(publicada=True, titulo="Publicada", capacidad=2)
         usuario = get_user_model().objects.create_user(
@@ -107,7 +154,7 @@ class TicketPurchaseTests(TestCase):
             follow=True,
         )
 
-        self.assertRedirects(response, reverse("movie_detail", args=[funcion.pelicula.pk]))
+        self.assertRedirects(response, reverse("seat_selection", args=[funcion.pk]))
         self.assertContains(
             response,
             "Solo tenemos disponibles 2 entradas para esta función.",
@@ -126,7 +173,9 @@ class TicketPurchaseTests(TestCase):
             email="otro@mail.com",
             password="PasswordSegura123!",
         )
-        CompraEntrada.comprar(usuario, funcion, 2)
+        compra = CompraEntrada.comprar(usuario, funcion, 2)
+        compra.asientos_seleccionados = [{"label": "1A"}, {"label": "1B"}]
+        compra.save(update_fields=["asientos_seleccionados"])
         CompraEntrada.comprar(otro_usuario, funcion, 1)
         self.client.force_login(usuario)
 
@@ -134,4 +183,5 @@ class TicketPurchaseTests(TestCase):
 
         self.assertContains(response, "Publicada")
         self.assertContains(response, "2")
+        self.assertContains(response, "1A, 1B")
         self.assertNotContains(response, "otro@mail.com")
