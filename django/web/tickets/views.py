@@ -16,6 +16,20 @@ from web.catalog.views import build_seat_map, manager_role
 from .forms import TicketPurchaseForm
 
 
+def purchase_error_message(error, fallback):
+    if hasattr(error, "message_dict"):
+        for messages_for_field in error.message_dict.values():
+            if messages_for_field:
+                return messages_for_field[0]
+    if isinstance(error, dict):
+        for messages_for_field in error.values():
+            if messages_for_field:
+                return messages_for_field[0]
+    if getattr(error, "messages", None):
+        return error.messages[0]
+    return fallback
+
+
 @login_required
 def seat_selection_view(request, pk):
     funcion = get_object_or_404(Funcion.funciones_publicadas(), pk=pk)
@@ -41,22 +55,21 @@ def ticket_purchase_view(request, pk):
     if request.method == "POST":
         form = TicketPurchaseForm(request.POST)
         if form.is_valid():
+            selected_seats = form.cleaned_data["selected_seats"]
             try:
                 compra = CompraEntrada.comprar(
                     usuario=request.user,
                     funcion=funcion,
-                    cantidad=form.cleaned_data["cantidad"],
-                    selected_seats=form.cleaned_data["selected_seats"],
-                    require_reservation=bool(form.cleaned_data["selected_seats"]),
+                    cantidad=len(selected_seats),
+                    selected_seats=selected_seats,
+                    require_reservation=True,
                 )
             except ValidationError as error:
                 disponibles = CompraEntrada.disponibles_para(funcion)
-                if hasattr(error, "message_dict") and error.message_dict.get("cantidad"):
-                    request.session["purchase_error"] = error.message_dict["cantidad"][0]
-                else:
-                    request.session["purchase_error"] = (
-                        f"Solo tenemos disponibles {disponibles} entradas para esta función."
-                    )
+                request.session["purchase_error"] = purchase_error_message(
+                    error,
+                    f"Solo tenemos disponibles {disponibles} entradas para esta función.",
+                )
             else:
                 entrada_label = "entrada" if compra.cantidad == 1 else "entradas"
                 messages.success(
@@ -69,7 +82,10 @@ def ticket_purchase_view(request, pk):
                 )
                 return redirect("my_tickets")
         else:
-            request.session["purchase_error"] = "Elegí al menos una entrada."
+            request.session["purchase_error"] = purchase_error_message(
+                form.errors,
+                "Seleccioná al menos una butaca.",
+            )
     return redirect("seat_selection", pk=funcion.pk)
 
 
@@ -108,7 +124,9 @@ def seat_reservation_view(request, pk):
                 "ok": False,
                 "label": label,
                 "error": "; ".join(error.messages),
-                "unavailable": list(CompraEntrada.asientos_bloqueados(funcion, usuario=request.user)),
+                "unavailable": list(
+                    CompraEntrada.asientos_bloqueados(funcion, usuario=request.user)
+                ),
             },
             status=409,
         )
@@ -123,7 +141,9 @@ def seat_reservation_status_view(request, pk):
     return JsonResponse(
         {
             "ok": True,
-            "unavailable": list(CompraEntrada.asientos_bloqueados(funcion, usuario=request.user)),
+            "unavailable": list(
+                CompraEntrada.asientos_bloqueados(funcion, usuario=request.user)
+            ),
             "reserved": [reservation_payload(reserva) for reserva in own_reservations],
         }
     )

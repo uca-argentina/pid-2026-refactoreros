@@ -1,7 +1,5 @@
 const purchaseForm = document.querySelector(".purchase-form");
-const quantityInput = purchaseForm?.querySelector('input[name="cantidad"]');
 const selectedSeatsInput = purchaseForm?.querySelector('input[name="selected_seats"]');
-const quantityField = document.querySelector(".quantity-field");
 const purchaseButton = purchaseForm?.querySelector('.purchase-action button[type="submit"]');
 const purchaseError = document.querySelector(".purchase-error");
 const purchaseSummary = document.querySelector("[data-purchase-summary]");
@@ -179,15 +177,6 @@ function updateSeatDrivenPurchaseState() {
     0,
   );
 
-  if (quantityField && requiresSeatSelection) {
-    quantityField.hidden = true;
-  }
-
-  if (quantityInput && requiresSeatSelection) {
-    quantityInput.value = selectedCount || 1;
-    quantityInput.dispatchEvent(new Event("input"));
-  }
-
   if (purchaseSummary) {
     purchaseSummary.hidden = !requiresSeatSelection || selectedCount > 0;
     if (!requiresSeatSelection) {
@@ -234,23 +223,6 @@ function updateSeatDrivenPurchaseState() {
   }
 }
 
-if (quantityInput && purchaseButton) {
-  function updatePurchaseLabel() {
-    if (purchaseButton.disabled) {
-      purchaseButton.textContent = purchaseButton.dataset.soldOutLabel;
-      return;
-    }
-
-    const quantity = Number(quantityInput.value);
-    purchaseButton.textContent = quantity >= 2
-      ? purchaseButton.dataset.pluralLabel
-      : purchaseButton.dataset.singularLabel;
-  }
-
-  quantityInput.addEventListener("input", updatePurchaseLabel);
-  updatePurchaseLabel();
-}
-
 function updatePurchaseState(input) {
   const available = Number(input.dataset.available || 0);
   let activeSeatMap = null;
@@ -271,27 +243,12 @@ function updatePurchaseState(input) {
   });
   serializeSelectedSeats(null);
 
-  if (quantityField) {
-    quantityField.hidden = available <= 0 || Boolean(activeSeatMap);
-  }
-
-  if (quantityInput) {
-    quantityInput.value = available > 0 ? 1 : 0;
-    quantityInput.max = available;
-    quantityInput.dispatchEvent(new Event("input"));
-  }
-
   if (purchaseButton) {
     purchaseButton.disabled = available <= 0 || Boolean(activeSeatMap);
     if (available <= 0) {
       purchaseButton.textContent = purchaseButton.dataset.soldOutLabel;
     } else if (activeSeatMap) {
       purchaseButton.textContent = purchaseButton.dataset.selectSeatLabel;
-    } else if (quantityInput) {
-      const quantity = Number(quantityInput.value);
-      purchaseButton.textContent = quantity >= 2
-        ? purchaseButton.dataset.pluralLabel
-        : purchaseButton.dataset.singularLabel;
     }
   }
   updateSeatDrivenPurchaseState();

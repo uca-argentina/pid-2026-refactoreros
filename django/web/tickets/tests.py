@@ -68,51 +68,38 @@ class TicketPurchaseTests(TestCase):
         )
         self.client.force_login(usuario)
 
-        response = self.client.post(
-            reverse("ticket_purchase", args=[funcion.pk]),
-            data={"cantidad": 1},
-        )
+        response = self.client.post(reverse("ticket_purchase", args=[funcion.pk]), data={})
 
         self.assertEqual(response.status_code, 404)
 
-    def test_compra_funcion_publicada_guarda_cantidad_y_total(self):
+    def test_modelo_compra_legacy_por_cantidad_guarda_total(self):
         funcion = crear_funcion(estado=Funcion.Estado.PUBLICADA, titulo="Publicada")
         usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
             email="ana@mail.com",
             password="PasswordSegura123!",
         )
-        self.client.force_login(usuario)
 
-        response = self.client.post(
-            reverse("ticket_purchase", args=[funcion.pk]),
-            data={"cantidad": 3},
-            follow=True,
-        )
+        compra = CompraEntrada.comprar(usuario, funcion, 3)
 
-        self.assertRedirects(response, reverse("my_tickets"))
-        self.assertContains(
-            response,
-            "Pago aprobado. Compraste 3 entradas para Publicada. ¡Te esperamos!",
-        )
-        compra = CompraEntrada.objects.get()
         self.assertEqual(compra.usuario, usuario)
         self.assertEqual(compra.funcion, funcion)
         self.assertEqual(compra.cantidad, 3)
         self.assertEqual(compra.total, Decimal("4500.00"))
 
-    def test_compra_funcion_publicada_muestra_mensaje_singular(self):
-        funcion = crear_funcion(estado=Funcion.Estado.PUBLICADA, titulo="Publicada")
+    def test_compra_web_con_butaca_muestra_mensaje_singular(self):
+        funcion = crear_funcion_con_butacas(titulo="Publicada")
         usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
             email="ana@mail.com",
             password="PasswordSegura123!",
         )
+        ReservaAsiento.reservar(usuario, funcion, "1A")
         self.client.force_login(usuario)
 
         response = self.client.post(
             reverse("ticket_purchase", args=[funcion.pk]),
-            data={"cantidad": 1},
+            data={"selected_seats": json.dumps([{"label": "1A"}])},
             follow=True,
         )
 
@@ -120,6 +107,25 @@ class TicketPurchaseTests(TestCase):
             response,
             "Pago aprobado. Compraste 1 entrada para Publicada. ¡Te esperamos!",
         )
+
+    def test_compra_web_rechaza_confirmacion_sin_butacas(self):
+        funcion = crear_funcion_con_butacas()
+        usuario = get_user_model().objects.create_user(
+            username="sinbutaca@mail.com",
+            email="sinbutaca@mail.com",
+            password="PasswordSegura123!",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.post(
+            reverse("ticket_purchase", args=[funcion.pk]),
+            data={},
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse("seat_selection", args=[funcion.pk]))
+        self.assertContains(response, "Seleccioná al menos una butaca.")
+        self.assertFalse(CompraEntrada.objects.exists())
 
     def test_compra_con_butacas_guarda_seleccion_y_bloquea_repetidas(self):
         funcion = crear_funcion_con_butacas()
@@ -147,26 +153,17 @@ class TicketPurchaseTests(TestCase):
                 selected_seats=[{"label": "1A"}],
             )
 
-    def test_compra_falla_si_supera_disponibilidad(self):
+    def test_modelo_compra_legacy_falla_si_supera_disponibilidad(self):
         funcion = crear_funcion(estado=Funcion.Estado.PUBLICADA, titulo="Publicada", capacidad=2)
         usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
             email="ana@mail.com",
             password="PasswordSegura123!",
         )
-        self.client.force_login(usuario)
 
-        response = self.client.post(
-            reverse("ticket_purchase", args=[funcion.pk]),
-            data={"cantidad": 3},
-            follow=True,
-        )
+        with self.assertRaises(ValidationError):
+            CompraEntrada.comprar(usuario, funcion, 3)
 
-        self.assertRedirects(response, reverse("seat_selection", args=[funcion.pk]))
-        self.assertContains(
-            response,
-            "Solo tenemos disponibles 2 entradas para esta función.",
-        )
         self.assertFalse(CompraEntrada.objects.exists())
 
     def test_mis_entradas_muestra_compras_del_usuario(self):
@@ -203,10 +200,7 @@ class TicketPurchaseTests(TestCase):
         )
         self.client.force_login(usuario)
 
-        response = self.client.post(
-            reverse("ticket_purchase", args=[funcion.pk]),
-            data={"cantidad": 1},
-        )
+        response = self.client.post(reverse("ticket_purchase", args=[funcion.pk]), data={})
 
         self.assertEqual(response.status_code, 404)
         self.assertFalse(CompraEntrada.objects.exists())
@@ -223,10 +217,7 @@ class TicketPurchaseTests(TestCase):
         )
         self.client.force_login(usuario)
 
-        response = self.client.post(
-            reverse("ticket_purchase", args=[funcion.pk]),
-            data={"cantidad": 1},
-        )
+        response = self.client.post(reverse("ticket_purchase", args=[funcion.pk]), data={})
 
         self.assertEqual(response.status_code, 404)
         funcion.refresh_from_db()
@@ -305,10 +296,7 @@ class TicketPurchaseTests(TestCase):
 
         response = self.client.post(
             reverse("ticket_purchase", args=[funcion.pk]),
-            data={
-                "cantidad": 1,
-                "selected_seats": json.dumps([{"label": "1A"}]),
-            },
+            data={"selected_seats": json.dumps([{"label": "1A"}])},
             follow=True,
         )
 
@@ -328,10 +316,7 @@ class TicketPurchaseTests(TestCase):
 
         response = self.client.post(
             reverse("ticket_purchase", args=[funcion.pk]),
-            data={
-                "cantidad": 1,
-                "selected_seats": json.dumps([{"label": "1A"}]),
-            },
+            data={"selected_seats": json.dumps([{"label": "1A"}])},
             follow=True,
         )
 

@@ -45,7 +45,6 @@
     <form class="purchase-form seat-selection-form" method="post" action="{% url 'ticket_purchase' funcion.pk %}">
       {% csrf_token %}
       <input type="hidden" name="selected_seats" value="">
-      <input type="hidden" name="cantidad" value="1" min="1">
 
       {% if funcion.seat_map %}
         <div class="seat-reference-line" aria-label="Referencias de asientos">

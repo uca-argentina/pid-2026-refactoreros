@@ -128,19 +128,10 @@ def movie_detail_view(request, pk):
         ).distinct(),
         pk=pk,
     )
-    selected_funcion_id = request.session.pop("selected_funcion_id", None)
-    funcion = next(
-        (
-            item
-            for item in pelicula.publicadas
-            if str(item.pk) == str(selected_funcion_id)
-        ),
-        pelicula.publicadas[0],
-    )
+    funcion = pelicula.publicadas[0]
     for item in pelicula.publicadas:
         item.entradas_disponibles = CompraEntrada.disponibles_para(item)
         item.seat_map = build_seat_map(item, usuario=request.user)
-    purchase_error = request.session.pop("purchase_error", "")
     return render(
         request,
         "screening_detail.html",
@@ -150,7 +141,6 @@ def movie_detail_view(request, pk):
             "funcion": funcion,
             "funciones": pelicula.publicadas,
             "entradas_disponibles": funcion.entradas_disponibles,
-            "purchase_error": purchase_error,
             "manager_role": manager_role(request.user),
         },
     )
