@@ -47,11 +47,7 @@
                   <h3>{{ funcion.pelicula.titulo }}</h3>
                   <span>{{ funcion.sala.nombre }} · {{ funcion.fecha_horario|date:"H:i" }} · {{ funcion.entradas_vendidas }} vendidas</span>
                 </div>
-                {% if funcion.publicada %}
-                  <span class="status-pill status-live">Publicada</span>
-                {% else %}
-                  <span class="status-pill status-draft">Oculta</span>
-                {% endif %}
+                <span class="status-pill status-{{ funcion.estado }}">{{ funcion.get_estado_display }}</span>
               </article>
             {% empty %}
               <div class="empty-state compact">
@@ -100,7 +96,7 @@
           <strong>{{ published_upcoming_count }}</strong>
         </div>
         <div class="ops-metric warning">
-          <span>Próximas ocultas</span>
+          <span>Próximas sin publicar</span>
           <strong>{{ hidden_upcoming_count }}</strong>
         </div>
         <a class="secondary-link" href="{% url 'manager:funciones_list' %}?order=fecha_asc">

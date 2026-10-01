@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("rooms", "0003_sala_capacidad"),
-        ("screenings", "0001_initial"),
+        ("screenings", "0002_funcion_estado"),
         ("seats", "0001_initial"),
     ]
 

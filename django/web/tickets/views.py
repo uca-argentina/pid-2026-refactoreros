@@ -36,6 +36,7 @@ def seat_selection_view(request, pk):
 
 @login_required
 def ticket_purchase_view(request, pk):
+    Funcion.finalizar_vencidas()
     funcion = get_object_or_404(Funcion.funciones_publicadas(), pk=pk)
     if request.method == "POST":
         form = TicketPurchaseForm(request.POST)

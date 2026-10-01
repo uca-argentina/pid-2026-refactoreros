@@ -22,7 +22,7 @@ def populate_screening_type_prices(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("screenings", "0002_funcion_sala_snapshot"),
+        ("screenings", "0003_funcion_sala_snapshot"),
     ]
 
     operations = [

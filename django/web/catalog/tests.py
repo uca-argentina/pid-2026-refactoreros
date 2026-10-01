@@ -12,7 +12,9 @@ from domain.tickets.models import CompraEntrada
 from domain.users.models import Cliente, Gerente
 
 
-def crear_funcion(publicada=True, titulo="Pelicula", capacidad=100, pelicula=None):
+def crear_funcion(
+    estado=Funcion.Estado.PUBLICADA, titulo="Pelicula", capacidad=100, pelicula=None
+):
     pelicula = pelicula or Pelicula.objects.create(
         titulo=titulo,
         sinopsis="Una película de prueba.",
@@ -27,7 +29,7 @@ def crear_funcion(publicada=True, titulo="Pelicula", capacidad=100, pelicula=Non
         sala=sala,
         fecha_horario=timezone.now(),
         precio_entrada="1500.00",
-        publicada=publicada,
+        estado=estado,
     )
 
 
@@ -51,8 +53,8 @@ class CatalogFlowTests(TestCase):
         self.assertTemplateUsed(response, "home.html")
 
     def test_home_muestra_cartelera_publicada(self):
-        crear_funcion(publicada=True, titulo="Publicada")
-        crear_funcion(publicada=False, titulo="Oculta")
+        crear_funcion(estado=Funcion.Estado.PUBLICADA, titulo="Publicada")
+        crear_funcion(estado=Funcion.Estado.BORRADOR, titulo="Oculta")
         usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
             email="ana@mail.com",
@@ -66,6 +68,25 @@ class CatalogFlowTests(TestCase):
         self.assertContains(response, "Publicada")
         self.assertNotContains(response, "Oculta")
 
+    def test_home_solo_muestra_funciones_publicadas(self):
+        crear_funcion(estado=Funcion.Estado.PUBLICADA, titulo="Visible")
+        crear_funcion(estado=Funcion.Estado.PROGRAMADA, titulo="Programada")
+        crear_funcion(estado=Funcion.Estado.CANCELADA, titulo="Cancelada")
+        crear_funcion(estado=Funcion.Estado.FINALIZADA, titulo="Finalizada")
+        usuario = get_user_model().objects.create_user(
+            username="ana@mail.com",
+            email="ana@mail.com",
+            password="PasswordSegura123!",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, "Visible")
+        self.assertNotContains(response, "Programada")
+        self.assertNotContains(response, "Cancelada")
+        self.assertNotContains(response, "Finalizada")
+
     def test_home_agrupa_funciones_por_pelicula(self):
         pelicula = Pelicula.objects.create(
             titulo="Misma película",
@@ -75,8 +96,8 @@ class CatalogFlowTests(TestCase):
             duracion_minutos=120,
             imagen="peliculas/test.jpg",
         )
-        crear_funcion(publicada=True, titulo="Funcion 1", pelicula=pelicula)
-        crear_funcion(publicada=True, titulo="Funcion 2", pelicula=pelicula)
+        crear_funcion(estado=Funcion.Estado.PUBLICADA, titulo="Funcion 1", pelicula=pelicula)
+        crear_funcion(estado=Funcion.Estado.PUBLICADA, titulo="Funcion 2", pelicula=pelicula)
         usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
             email="ana@mail.com",
@@ -89,7 +110,7 @@ class CatalogFlowTests(TestCase):
         self.assertContains(response, "<h2>Misma película</h2>", count=1, html=True)
 
     def test_detalle_funcion_publicada_permite_comprar(self):
-        funcion = crear_funcion(publicada=True, titulo="Publicada", capacidad=5)
+        funcion = crear_funcion(estado=Funcion.Estado.PUBLICADA, titulo="Publicada", capacidad=5)
         usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
             email="ana@mail.com",
@@ -124,7 +145,7 @@ class CatalogFlowTests(TestCase):
             sala=sala,
             fecha_horario=timezone.now(),
             precio_entrada="1500.00",
-            publicada=True,
+            estado=Funcion.Estado.PUBLICADA,
         )
         usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
@@ -157,7 +178,7 @@ class CatalogFlowTests(TestCase):
             sala=sala,
             fecha_horario=timezone.now(),
             precio_entrada="1500.00",
-            publicada=True,
+            estado=Funcion.Estado.PUBLICADA,
             capacidad_snapshot=2,
             sala_configuracion_snapshot={
                 "rows": 3,
@@ -206,13 +227,13 @@ class CatalogFlowTests(TestCase):
             imagen="peliculas/test.jpg",
         )
         agotada = crear_funcion(
-            publicada=True,
+            estado=Funcion.Estado.PUBLICADA,
             titulo="Agotada",
             capacidad=1,
             pelicula=pelicula,
         )
         disponible = crear_funcion(
-            publicada=True,
+            estado=Funcion.Estado.PUBLICADA,
             titulo="Disponible",
             capacidad=3,
             pelicula=pelicula,
@@ -232,7 +253,7 @@ class CatalogFlowTests(TestCase):
         self.assertNotContains(response, reverse("seat_selection", args=[agotada.pk]))
 
     def test_url_vieja_de_funcion_redirige_a_seleccion_de_butacas(self):
-        funcion = crear_funcion(publicada=True, titulo="Publicada")
+        funcion = crear_funcion(estado=Funcion.Estado.PUBLICADA, titulo="Publicada")
         usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
             email="ana@mail.com",

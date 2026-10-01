@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ("screenings", "0003_funcion_precios_por_tipo"),
+        ("screenings", "0004_funcion_precios_por_tipo"),
         ("tickets", "0002_compraentrada_asientos_seleccionados"),
     ]
 

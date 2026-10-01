@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Case, F, IntegerField, Q, Sum, Value, When
 from django.db.models.functions import Coalesce, Greatest
 from django.shortcuts import get_object_or_404, redirect
@@ -25,6 +25,7 @@ from domain.rooms.models import Sala
 from domain.screenings.models import Funcion
 from domain.seats.models import Seat
 from domain.seat_types.models import SeatType
+from domain.tickets.models import CompraEntrada
 
 from .forms import (
     ConfiguracionCineForm,
@@ -81,6 +82,7 @@ class GestionHomeView(ManagerAccessMixin, TemplateView):
         if self.manager_role != "gerente":
             return context
 
+        Funcion.finalizar_vencidas()
         now = timezone.now()
         today = timezone.localdate()
         funciones_base = Funcion.objects.select_related("pelicula", "sala").annotate(
@@ -119,10 +121,10 @@ class GestionHomeView(ManagerAccessMixin, TemplateView):
         ]
         context["next_screenings"] = proximas_funciones.order_by("fecha_horario")[:5]
         context["hidden_upcoming_count"] = proximas_funciones.filter(
-            publicada=False
+            estado__in=(Funcion.Estado.BORRADOR, Funcion.Estado.PROGRAMADA)
         ).count()
         context["published_upcoming_count"] = proximas_funciones.filter(
-            publicada=True
+            estado=Funcion.Estado.PUBLICADA
         ).count()
         context["total_room_capacity"] = Sala.objects.aggregate(
             total=Coalesce(Sum("capacidad"), Value(0), output_field=IntegerField())
@@ -542,7 +544,7 @@ class FuncionesListView(GerenteListView):
         "Pelicula",
         "Sala",
         "Fecha",
-        "Publicada",
+        "Estado",
         "Desde",
         "Vendidas",
         "Disponibles",
@@ -558,6 +560,7 @@ class FuncionesListView(GerenteListView):
     )
 
     def get_annotated_queryset(self):
+        Funcion.finalizar_vencidas()
         return (
             Funcion.objects.select_related("pelicula", "sala")
             .annotate(
@@ -592,7 +595,10 @@ class FuncionesListView(GerenteListView):
         context = super().get_context_data(**kwargs)
         hidden_queryset = (
             self.get_annotated_queryset()
-            .filter(publicada=False, fecha_horario__gte=timezone.now())
+            .filter(
+                estado__in=(Funcion.Estado.BORRADOR, Funcion.Estado.PROGRAMADA),
+                fecha_horario__gte=timezone.now(),
+            )
             .order_by("fecha_horario")
         )
         context["hidden_priority_functions"] = hidden_queryset[:6]
@@ -664,7 +670,7 @@ class FuncionCreateView(GerenteCreateView):
         return initial
 
     def form_valid(self, form):
-        form.instance.publicada = False
+        form.instance.estado = Funcion.Estado.BORRADOR
         form.instance.capturar_configuracion_sala()
         return super().form_valid(form)
 
@@ -678,6 +684,12 @@ class FuncionUpdateView(GerenteUpdateView):
     object_label = "La función"
     form_title = "Editar función"
 
+    def get_object(self, queryset=None):
+        funcion = super().get_object(queryset)
+        if not funcion.es_editable:
+            raise PermissionDenied
+        return funcion
+
     def get_price_matrix(self):
         return FuncionCreateView.get_price_matrix(self)
 
@@ -688,7 +700,7 @@ class FuncionUpdateView(GerenteUpdateView):
         return context
 
     def form_valid(self, form):
-        if not self.object.publicada:
+        if self.object.estado != Funcion.Estado.PUBLICADA:
             form.instance.capturar_configuracion_sala()
         return super().form_valid(form)
 
@@ -699,18 +711,50 @@ class FuncionDeleteView(GerenteDeleteView):
     section = "Funciones"
     object_label = "La función"
 
+    def get_object(self, queryset=None):
+        funcion = super().get_object(queryset)
+        if not funcion.es_eliminable:
+            raise PermissionDenied
+        return funcion
 
-class FuncionTogglePublicadaView(GerenteRequiredMixin, DetailView):
+
+class FuncionCambiarEstadoView(GerenteRequiredMixin, DetailView):
     model = Funcion
+    mensajes = {
+        Funcion.Estado.BORRADOR: "La función volvió a borrador.",
+        Funcion.Estado.PROGRAMADA: "Función programada correctamente.",
+        Funcion.Estado.PUBLICADA: "Función publicada correctamente.",
+        Funcion.Estado.CANCELADA: "Función cancelada correctamente.",
+    }
 
     def post(self, request, *args, **kwargs):
         funcion = self.get_object()
-        funcion.publicada = not funcion.publicada
-        update_fields = ["publicada"]
-        if funcion.publicada:
-            funcion.capturar_configuracion_sala()
-            update_fields.extend(["sala_configuracion_snapshot", "capacidad_snapshot"])
-        funcion.save(update_fields=update_fields)
-        estado = "publicada" if funcion.publicada else "oculta"
-        messages.success(request, f"La función ahora está {estado}.")
+        nuevo_estado = request.POST.get("estado", "")
+        if nuevo_estado not in self.mensajes:
+            messages.error(request, "Estado inválido.")
+            return redirect("manager:funciones_list")
+        try:
+            funcion.cambiar_estado(nuevo_estado)
+        except ValidationError as error:
+            messages.error(request, error.messages[0])
+        else:
+            messages.success(request, self.mensajes[nuevo_estado])
         return redirect("manager:funciones_list")
+
+
+class FuncionCancelarView(GerenteRequiredMixin, DetailView):
+    model = Funcion
+    template_name = "manager_confirm_cancel.html"
+
+    def get(self, request, *args, **kwargs):
+        funcion = self.get_object()
+        if not funcion.puede_pasar_a(Funcion.Estado.CANCELADA):
+            messages.error(request, "Esta función no se puede cancelar.")
+            return redirect("manager:funciones_list")
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["section"] = "Funciones"
+        context["entradas_vendidas"] = CompraEntrada.cantidad_vendida(self.object)
+        return context

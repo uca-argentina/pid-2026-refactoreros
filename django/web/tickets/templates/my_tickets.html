@@ -43,9 +43,14 @@
     {% if compras %}
       <section class="ticket-list" aria-label="Entradas compradas">
         {% for compra in compras %}
-          <article class="ticket-card">
+          <article class="ticket-card{% if compra.funcion.estado == 'cancelada' %} is-cancelled{% endif %}">
             <div class="ticket-main">
-              <span>{{ compra.funcion.fecha_horario|date:"l d/m H:i"|capfirst }}</span>
+              <div class="ticket-tags">
+                <span>{{ compra.funcion.fecha_horario|date:"l d/m H:i"|capfirst }}</span>
+                {% if compra.funcion.estado == 'cancelada' %}
+                  <span class="ticket-status">Función cancelada</span>
+                {% endif %}
+              </div>
               <h2>{{ compra.funcion.pelicula.titulo }}</h2>
               <p>{{ compra.funcion.sala.nombre }}</p>
             </div>
