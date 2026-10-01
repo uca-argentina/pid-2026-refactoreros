@@ -19,7 +19,7 @@ function serializeSelectedSeats(seatMap) {
   }
 
   const selectedSeats = seatMap
-    ? Array.from(seatMap.querySelectorAll(".client-seat.is-selected")).map((seat) => ({
+    ? Array.from(seatMap.querySelectorAll("button.client-seat.is-selected")).map((seat) => ({
       label: seat.dataset.seatLabel,
       type_id: seat.dataset.seatTypeId,
       price: seat.dataset.seatPrice,
@@ -29,7 +29,7 @@ function serializeSelectedSeats(seatMap) {
 }
 
 function selectedSeatsFor(seatMap) {
-  return seatMap ? Array.from(seatMap.querySelectorAll(".client-seat.is-selected")) : [];
+  return seatMap ? Array.from(seatMap.querySelectorAll("button.client-seat.is-selected")) : [];
 }
 
 function formatMoney(value) {
@@ -59,15 +59,11 @@ function updateSeatDrivenPurchaseState() {
   }
 
   if (purchaseSummary) {
-    purchaseSummary.hidden = !requiresSeatSelection;
+    purchaseSummary.hidden = !requiresSeatSelection || selectedCount > 0;
     if (!requiresSeatSelection) {
       purchaseSummary.textContent = "";
     } else if (selectedCount === 0) {
       purchaseSummary.textContent = "Seleccioná una butaca para continuar.";
-    } else {
-      const labels = selectedSeats.map((seat) => seat.dataset.seatLabel).join(", ");
-      const ticketLabel = selectedCount === 1 ? "butaca" : "butacas";
-      purchaseSummary.textContent = `${selectedCount} ${ticketLabel}: ${labels} · Total $${formatMoney(total)}`;
     }
   }
 
@@ -139,7 +135,7 @@ function updatePurchaseState(input) {
     if (isActive) {
       activeSeatMap = seatMap;
     }
-    seatMap.querySelectorAll(".client-seat.is-selected").forEach((seat) => {
+    seatMap.querySelectorAll("button.client-seat.is-selected").forEach((seat) => {
       seat.classList.remove("is-selected");
     });
   });
@@ -188,7 +184,7 @@ if (!document.querySelector('input[name="funcion"]')) {
   updateSeatDrivenPurchaseState();
 }
 
-document.querySelectorAll(".client-seat").forEach((seat) => {
+document.querySelectorAll("button.client-seat").forEach((seat) => {
   seat.addEventListener("click", () => {
     if (seat.disabled || seat.classList.contains("is-unavailable")) {
       return;

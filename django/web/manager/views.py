@@ -295,7 +295,7 @@ class UsuarioUpdateView(GerenteRequiredMixin, UpdateView):
     success_url = reverse_lazy("manager:usuarios_list")
     section = "Usuarios"
     enctype = ""
-    object_label = "Usuario"
+    object_label = "El usuario"
 
     def get_object(self, queryset=None):
         usuario = super().get_object(queryset)
@@ -360,7 +360,7 @@ class SalaCreateView(GerenteCreateView):
     success_url = reverse_lazy("manager:salas_list")
     section = "Salas"
     enctype = ""
-    object_label = "Sala"
+    object_label = "La sala"
     form_title = "Nueva sala"
 
     template_name = "manager_nueva_sala_form.html"
@@ -395,7 +395,7 @@ class SalaUpdateView(GerenteUpdateView):
     success_url = reverse_lazy("manager:salas_list")
     section = "Salas"
     enctype = ""
-    object_label = "Sala"
+    object_label = "La sala"
     form_title = "Editar sala"
 
     template_name = "manager_nueva_sala_form.html"
@@ -445,7 +445,7 @@ class SalaDeleteView(GerenteDeleteView):
     model = Sala
     success_url = reverse_lazy("manager:salas_list")
     section = "Salas"
-    object_label = "Sala"
+    object_label = "La sala"
 
 
 class PeliculasListView(GerenteListView):
@@ -477,7 +477,7 @@ class PeliculaCreateView(GerenteCreateView):
     success_url = reverse_lazy("manager:peliculas_list")
     section = "Peliculas"
     enctype = "multipart/form-data"
-    object_label = "Pelicula"
+    object_label = "La película"
     form_title = "Nueva pelicula"
 
 
@@ -487,7 +487,7 @@ class PeliculaUpdateView(GerenteUpdateView):
     success_url = reverse_lazy("manager:peliculas_list")
     section = "Peliculas"
     enctype = "multipart/form-data"
-    object_label = "Pelicula"
+    object_label = "La película"
     form_title = "Editar pelicula"
 
 
@@ -495,7 +495,7 @@ class PeliculaDeleteView(GerenteDeleteView):
     model = Pelicula
     success_url = reverse_lazy("manager:peliculas_list")
     section = "Peliculas"
-    object_label = "Pelicula"
+    object_label = "La película"
 
 
 class FuncionesListView(GerenteListView):
@@ -522,9 +522,8 @@ class FuncionesListView(GerenteListView):
         ("precio_asc", "Menor precio desde", ("precio_entrada", "fecha_horario")),
     )
 
-    def get_queryset(self):
-
-        queryset = (
+    def get_annotated_queryset(self):
+        return (
             Funcion.objects.select_related("pelicula", "sala")
             .annotate(
                 entradas_vendidas=Coalesce(
@@ -546,10 +545,24 @@ class FuncionesListView(GerenteListView):
                 )
             )
         )
+
+    def get_queryset(self):
+        queryset = self.get_annotated_queryset()
         search_query = self.get_search_query()
         if search_query:
             queryset = self.apply_search(queryset, search_query)
         return self.apply_ordering(queryset)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        hidden_queryset = (
+            self.get_annotated_queryset()
+            .filter(publicada=False, fecha_horario__gte=timezone.now())
+            .order_by("fecha_horario")
+        )
+        context["hidden_priority_functions"] = hidden_queryset[:6]
+        context["hidden_priority_count"] = hidden_queryset.count()
+        return context
 
     def apply_search(self, queryset, search_query):
         return queryset.filter(
@@ -564,7 +577,7 @@ class FuncionCreateView(GerenteCreateView):
     success_url = reverse_lazy("manager:funciones_list")
     section = "Funciones"
     enctype = ""
-    object_label = "Funcion"
+    object_label = "La función"
     form_title = "Nueva función"
 
     def get_price_matrix(self):
@@ -627,7 +640,7 @@ class FuncionUpdateView(GerenteUpdateView):
     success_url = reverse_lazy("manager:funciones_list")
     section = "Funciones"
     enctype = ""
-    object_label = "Funcion"
+    object_label = "La función"
     form_title = "Editar función"
 
     def get_price_matrix(self):
@@ -649,7 +662,7 @@ class FuncionDeleteView(GerenteDeleteView):
     model = Funcion
     success_url = reverse_lazy("manager:funciones_list")
     section = "Funciones"
-    object_label = "Funcion"
+    object_label = "La función"
 
 
 class FuncionTogglePublicadaView(GerenteRequiredMixin, DetailView):
@@ -664,5 +677,5 @@ class FuncionTogglePublicadaView(GerenteRequiredMixin, DetailView):
             update_fields.extend(["sala_configuracion_snapshot", "capacidad_snapshot"])
         funcion.save(update_fields=update_fields)
         estado = "publicada" if funcion.publicada else "oculta"
-        messages.success(request, f"Funcion {estado} correctamente.")
+        messages.success(request, f"La función ahora está {estado}.")
         return redirect("manager:funciones_list")

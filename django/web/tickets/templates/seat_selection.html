@@ -20,12 +20,12 @@
       {% endif %}
     </a>
     <nav>
-      <a href="{% url 'home' %}">Peliculas</a>
-      <a href="{% url 'my_tickets' %}">Mis entradas</a>
+      <a href="{% url 'home' %}"><i data-lucide="clapperboard" aria-hidden="true"></i><span>Películas</span></a>
+      <a href="{% url 'my_tickets' %}"><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>
       {% if manager_role %}
-        <a href="{% url 'manager:home' %}">Gestion</a>
+        <a class="client-manager-link" href="{% url 'manager:home' %}"><i data-lucide="settings-2" aria-hidden="true"></i><span>Gestión</span></a>
       {% endif %}
-      <a href="{% url 'logout' %}">Cerrar sesion</a>
+      <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesión</span></a>
     </nav>
   </header>
 
@@ -47,20 +47,22 @@
       <input type="hidden" name="selected_seats" value="">
       <input type="hidden" name="cantidad" value="1" min="1">
 
+      {% if funcion.seat_map %}
+        <div class="seat-reference-line" aria-label="Referencias de asientos">
+          {% for tier in funcion.seat_map.legend %}
+            <span><i style="--seat-color: {{ tier.color }};"></i>{{ tier.type }} ${{ tier.price }}</span>
+            {% if not forloop.last %}<b>|</b>{% endif %}
+          {% endfor %}
+          <b>|</b>
+          <span><i class="legend-selected"></i>Seleccionado</span>
+          <b>|</b>
+          <span><i class="legend-unavailable"></i>No disponible</span>
+        </div>
+      {% endif %}
+
       <div class="seat-selection-layout">
       {% if funcion.seat_map %}
         <section class="client-seat-map" data-funcion-id="{{ funcion.pk }}" data-available="{{ funcion.entradas_disponibles }}" aria-label="Seleccionar asientos">
-          <div class="seat-reference-line" aria-label="Referencias de asientos">
-            {% for tier in funcion.seat_map.legend %}
-              <span><i style="--seat-color: {{ tier.color }};"></i>{{ tier.type }} ${{ tier.price }}</span>
-              {% if not forloop.last %}<b>|</b>{% endif %}
-            {% endfor %}
-            <b>|</b>
-            <span><i class="legend-selected"></i>Seleccionado</span>
-            <b>|</b>
-            <span><i class="legend-unavailable"></i>No disponible</span>
-          </div>
-
           <div class="client-seat-stage">
             <div class="client-screen-marker" aria-hidden="true">
               <span>Pantalla</span>
@@ -99,7 +101,7 @@
           <h2>Tu compra</h2>
           <dl>
             <div>
-              <dt>Funcion</dt>
+              <dt>Función</dt>
               <dd>{{ funcion.fecha_horario|date:"d/m H:i" }}</dd>
             </div>
             <div>
@@ -108,18 +110,18 @@
             </div>
             <div>
               <dt>Butacas</dt>
-              <dd>
+              <dd class="cart-seat-list">
                 <ul class="cart-seat-lines" data-cart-seat-lines>
                   <li>Sin seleccionar</li>
                 </ul>
               </dd>
             </div>
-            <div>
+            <div class="cart-total-row">
               <dt>Total</dt>
               <dd data-cart-total>$0,00</dd>
             </div>
           </dl>
-          <p class="purchase-summary" data-purchase-summary>Selecciona una butaca para continuar.</p>
+          <p class="purchase-summary" data-purchase-summary>Seleccioná una butaca para continuar.</p>
           <div class="purchase-action">
             <button
               type="submit"
@@ -129,7 +131,7 @@
               data-sold-out-label="Entradas agotadas para esta funcion"
               {% if funcion.entradas_disponibles <= 0 or funcion.seat_map %}disabled{% endif %}
             >
-              {% if funcion.entradas_disponibles > 0 %}Selecciona tus butacas{% else %}Entradas agotadas para esta funcion{% endif %}
+              {% if funcion.entradas_disponibles > 0 %}Seleccioná tus butacas{% else %}Entradas agotadas para esta funcion{% endif %}
             </button>
             {% if purchase_error and funcion.entradas_disponibles > 0 %}
               <p class="purchase-error">{{ purchase_error }}</p>
@@ -139,5 +141,11 @@
       </div>
     </form>
   </main>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  </script>
 </body>
 </html>

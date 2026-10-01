@@ -1,7 +1,9 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db.models import Case, IntegerField, Value, When
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from domain.cinema.models import ConfiguracionCine
 from domain.screenings.models import Funcion
@@ -65,10 +67,18 @@ def ticket_purchase_view(request, pk):
 
 @login_required
 def my_tickets_view(request):
+    now = timezone.now()
     compras = (
         CompraEntrada.objects.filter(usuario=request.user)
         .select_related("funcion__pelicula", "funcion__sala")
-        .order_by("-creada_en")
+        .annotate(
+            fecha_bucket=Case(
+                When(funcion__fecha_horario__gte=now, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )
+        )
+        .order_by("fecha_bucket", "funcion__fecha_horario", "-creada_en")
     )
     return render(
         request,
@@ -76,5 +86,6 @@ def my_tickets_view(request):
         {
             "cinema": ConfiguracionCine.actual(),
             "compras": compras,
+            "manager_role": manager_role(request.user),
         },
     )

@@ -19,11 +19,11 @@
       {% endif %}
     </a>
     <nav>
-      <a href="{% url 'my_tickets' %}">Mis entradas</a>
+      <a href="{% url 'my_tickets' %}"><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>
       {% if manager_role %}
-        <a href="{% url 'manager:home' %}">Gestión</a>
+        <a class="client-manager-link" href="{% url 'manager:home' %}"><i data-lucide="settings-2" aria-hidden="true"></i><span>Gestión</span></a>
       {% endif %}
-      <a href="{% url 'logout' %}">Cerrar sesión</a>
+      <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesión</span></a>
     </nav>
   </header>
 
@@ -51,5 +51,11 @@
       </section>
     {% endif %}
   </main>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  </script>
 </body>
 </html>

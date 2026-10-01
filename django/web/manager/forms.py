@@ -314,6 +314,15 @@ class FuncionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["pelicula"].empty_label = "Seleccioná una película"
         self.fields["sala"].empty_label = "Seleccioná una sala"
+        if self.instance.pk:
+            self.fields["sala"].disabled = True
+            self.fields["sala"].help_text = (
+                "La sala queda bloqueada al crear la función para conservar la configuración de butacas publicada."
+            )
+            self.fields["sala"].widget.attrs.update({
+                "class": "is-locked-field",
+                "data-locked": "true",
+            })
         if self.instance.pk and self.instance.precios_por_tipo:
             self.initial["precios_por_tipo"] = json.dumps(self.instance.precios_por_tipo)
 

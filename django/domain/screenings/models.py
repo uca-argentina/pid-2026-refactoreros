@@ -11,7 +11,7 @@ from domain.rooms.models import Sala
 
 class Funcion(models.Model):
     pelicula = models.ForeignKey(
-        Pelicula, on_delete=models.CASCADE, related_name="funciones"
+        Pelicula, on_delete=models.CASCADE, related_name="funciones", verbose_name="Película"
     )
     sala = models.ForeignKey(Sala, on_delete=models.CASCADE, related_name="funciones")
     fecha_horario = models.DateTimeField()

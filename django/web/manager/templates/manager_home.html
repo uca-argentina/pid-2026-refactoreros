@@ -3,7 +3,7 @@
 {% block content %}
   <section class="page-heading dashboard-heading">
     <div>
-      <h1>Gestión del cine</h1>
+      <h1>Panel de gestión</h1>
     </div>
     {% if manager_role == "gerente" %}
       <a class="primary-link" href="{% url 'manager:funciones_create' %}">
@@ -92,7 +92,7 @@
       <aside class="ops-panel">
         <div class="section-title">
           <div>
-            <h2>Operación</h2>
+            <h2>Recuento funciones</h2>
           </div>
         </div>
         <div class="ops-metric">

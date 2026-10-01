@@ -19,12 +19,12 @@
       {% endif %}
     </a>
     <nav>
-      <a href="{% url 'home' %}">Películas</a>
-      <a href="{% url 'my_tickets' %}">Mis entradas</a>
+      <a href="{% url 'home' %}"><i data-lucide="clapperboard" aria-hidden="true"></i><span>Películas</span></a>
+      <a href="{% url 'my_tickets' %}"><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>
       {% if manager_role %}
-        <a href="{% url 'manager:home' %}">Gestion</a>
+        <a class="client-manager-link" href="{% url 'manager:home' %}"><i data-lucide="settings-2" aria-hidden="true"></i><span>Gestión</span></a>
       {% endif %}
-      <a href="{% url 'logout' %}">Cerrar sesion</a>
+      <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesión</span></a>
     </nav>
   </header>
 
@@ -40,42 +40,37 @@
     <article class="screening-detail">
       <img src="{{ funcion.pelicula.imagen.url }}" alt="{{ funcion.pelicula.titulo }}">
       <section class="screening-copy">
-        <p class="screening-kicker">{{ pelicula.get_genero_display }} - {{ pelicula.duracion_minutos }} min</p>
+        <p class="screening-kicker">{{ pelicula.get_genero_display }} - {{ pelicula.duracion_horas_minutos }}</p>
         <h1>{{ pelicula.titulo }}</h1>
-        <p>{{ pelicula.sinopsis }}</p>
 
         <dl class="screening-facts">
           <div>
-            <dt>Genero</dt>
+            <dt>Género</dt>
             <dd>{{ pelicula.get_genero_display }}</dd>
           </div>
           <div>
-            <dt>Clasificacion</dt>
+            <dt>Clasificación</dt>
             <dd>{{ pelicula.get_clasificacion_display }}</dd>
           </div>
           <div>
-            <dt>Duracion</dt>
-            <dd>{{ pelicula.duracion_minutos }} min</dd>
+            <dt>Duración</dt>
+            <dd>{{ pelicula.duracion_horas_minutos }}</dd>
           </div>
           <div>
             <dt>Desde</dt>
             <dd>${{ funcion.precio_desde }}</dd>
           </div>
-          <div>
-            <dt>Funciones</dt>
-            <dd>{{ funciones|length }}</dd>
-          </div>
         </dl>
 
         <section class="screening-options" aria-label="Funciones disponibles">
-          <h2>Elegi tu funcion</h2>
+          <h2>Elegí tu función</h2>
           <div>
             {% for item in funciones %}
               <a class="screening-option-link{% if item.entradas_disponibles <= 0 %} is-sold-out{% endif %}" {% if item.entradas_disponibles > 0 %}href="{% url 'seat_selection' item.pk %}"{% else %}aria-disabled="true"{% endif %}>
                 <span>{{ item.fecha_horario|date:"l d/m H:i"|capfirst }}</span>
                 <small>
                   {% if item.entradas_disponibles <= 0 %}
-                    Funcion agotada
+                    Función agotada
                   {% else %}
                     {{ item.sala.nombre }} | desde ${{ item.precio_desde }}
                   {% endif %}
@@ -84,8 +79,16 @@
             {% endfor %}
           </div>
         </section>
+
+        <p>{{ pelicula.sinopsis }}</p>
       </section>
     </article>
   </main>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  </script>
 </body>
 </html>

@@ -25,6 +25,9 @@ let dimensionRepeatTimeout;
 let dimensionRepeatInterval;
 let hasPendingDimensionHistoryEntry = false;
 let currentDimensions = {rows: 0, columns: 0};
+let suppressColumnLabelRefresh = false;
+let hasPendingColumnLabelRefresh = false;
+let columnLabelRefreshFrame = null;
 
 
 function limitSize(valor) {
@@ -189,6 +192,28 @@ function getColumnLabel(index) {
     return label;
 }
 
+function hasSeatAt(row, column) {
+    return Boolean(estado[`${row}-${column}`]?.checked);
+}
+
+function getVisibleColumnLabels(columns) {
+    const rows = normalizeDimensionInput(inputFilas);
+    const labels = {};
+    let nextLabelIndex = 0;
+    for (let column = 0; column < columns; column++) {
+        const hasSeats = Array.from({length: rows}).some((_item, row) => (
+            hasSeatAt(row, column)
+        ));
+        if (hasSeats) {
+            labels[column] = getColumnLabel(nextLabelIndex);
+            nextLabelIndex += 1;
+        } else {
+            labels[column] = "";
+        }
+    }
+    return labels;
+}
+
 function setColumnPreview(column, isActive) {
     tabla.querySelectorAll(`.seat_checkbox[data-column="${column}"]`).forEach((cb) => {
         cb.closest(".celda-checkbox")?.classList.toggle("is-column-preview", isActive);
@@ -196,9 +221,69 @@ function setColumnPreview(column, isActive) {
     tabla.querySelector(`.column-label-header[data-column="${column}"]`)?.classList.toggle("is-column-preview", isActive);
 }
 
+function refreshVisibleColumnLabels() {
+    const rows = normalizeDimensionInput(inputFilas);
+    const columns = normalizeDimensionInput(inputColumnas);
+    const visibleColumnLabels = getVisibleColumnLabels(columns);
+
+    for (let column = 0; column < columns; column++) {
+        const columnLabel = visibleColumnLabels[column];
+        const columnHeader = tabla.querySelector(`.column-label-header[data-column="${column}"]`);
+        if (columnHeader) {
+            columnHeader.textContent = columnLabel;
+            columnHeader.classList.toggle("is-aisle", !columnLabel);
+            columnHeader.title = columnLabel ? `Columna ${columnLabel}` : "Pasillo vertical";
+        }
+
+        const columnButton = tabla.querySelector(`.column-select-button[data-column="${column}"]`);
+        if (columnButton) {
+            columnButton.title = columnLabel ? `Aplicar herramienta a toda la columna ${columnLabel}` : "Aplicar herramienta a esta columna pasillo";
+            columnButton.setAttribute("aria-label", columnButton.title);
+        }
+
+        for (let row = 0; row < rows; row++) {
+            const cb = tabla.querySelector(`.seat_checkbox[data-row="${row}"][data-column="${column}"]`);
+            const label = cb?.closest(".celda-checkbox");
+            if (!label) {
+                continue;
+            }
+            label.title = columnLabel ? `Fila ${row + 1}, columna ${columnLabel}` : `Fila ${row + 1}, pasillo vertical`;
+            label.setAttribute("aria-label", label.title);
+        }
+    }
+}
+
+function requestColumnLabelRefresh() {
+    if (suppressColumnLabelRefresh) {
+        hasPendingColumnLabelRefresh = true;
+        return;
+    }
+    if (columnLabelRefreshFrame) {
+        return;
+    }
+    columnLabelRefreshFrame = window.requestAnimationFrame(() => {
+        columnLabelRefreshFrame = null;
+        refreshVisibleColumnLabels();
+    });
+}
+
+function flushColumnLabelRefresh() {
+    suppressColumnLabelRefresh = false;
+    if (!hasPendingColumnLabelRefresh) {
+        return;
+    }
+    hasPendingColumnLabelRefresh = false;
+    if (columnLabelRefreshFrame) {
+        window.cancelAnimationFrame(columnLabelRefreshFrame);
+        columnLabelRefreshFrame = null;
+    }
+    refreshVisibleColumnLabels();
+}
+
 function dibujarTabla() {
     const filas    = normalizeDimensionInput(inputFilas);
     const columnas = normalizeDimensionInput(inputColumnas);
+    const visibleColumnLabels = getVisibleColumnLabels(columnas);
 
     tabla.innerHTML = "";
     const headerRow = document.createElement("tr");
@@ -218,12 +303,13 @@ function dibujarTabla() {
 
     for (let c = 0; c < columnas; c++) {
         const columnHeader = document.createElement("th");
-        const columnLabel = getColumnLabel(c);
+        const columnLabel = visibleColumnLabels[c];
         columnHeader.className = "column-label-header";
         columnHeader.scope = "col";
         columnHeader.dataset.column = c;
         columnHeader.textContent = columnLabel;
-        columnHeader.title = `Columna ${columnLabel}`;
+        columnHeader.classList.toggle("is-aisle", !columnLabel);
+        columnHeader.title = columnLabel ? `Columna ${columnLabel}` : "Pasillo vertical";
         headerRow.appendChild(columnHeader);
     }
     tabla.appendChild(headerRow);
@@ -256,21 +342,21 @@ function dibujarTabla() {
 
     for (let c = 0; c < columnas; c++) {
         const key = `${f}-${c}`;
-        const columnLabel = getColumnLabel(c);
+        const columnLabel = visibleColumnLabels[c];
         const td    = document.createElement("td");
         const cb    = document.createElement("input");
         const label = document.createElement("label");
 
         label.className = "celda-checkbox";
-        label.title = `Fila ${f + 1}, columna ${columnLabel}`;
-        label.setAttribute("aria-label", `Fila ${f + 1}, columna ${columnLabel}`);
+        label.title = columnLabel ? `Fila ${f + 1}, columna ${columnLabel}` : `Fila ${f + 1}, pasillo vertical`;
+        label.setAttribute("aria-label", label.title);
 
         cb.type = "checkbox";
         cb.dataset.row = f;
         cb.dataset.column = c;
         cb.dataset.type = estado[key]?.type || "none";
         cb.className = "seat_checkbox"
-        cb.checked = !!estado[key];
+        cb.checked = hasSeatAt(f, c);
         
         label.addEventListener("pointerdown",  (event) => {
             event.preventDefault();
@@ -299,14 +385,14 @@ function dibujarTabla() {
     for (let c = 0; c < columnas; c++) {
         const columnControlCell = document.createElement("td");
         const columnButton = document.createElement("button");
-        const columnLabel = getColumnLabel(c);
+        const columnLabel = visibleColumnLabels[c];
 
         columnControlCell.className = "column-control-cell";
         columnButton.type = "button";
         columnButton.className = "column-select-button";
         columnButton.dataset.column = c;
-        columnButton.title = `Aplicar herramienta a toda la columna ${columnLabel}`;
-        columnButton.setAttribute("aria-label", `Aplicar herramienta a toda la columna ${columnLabel}`);
+        columnButton.title = columnLabel ? `Aplicar herramienta a toda la columna ${columnLabel}` : "Aplicar herramienta a esta columna pasillo";
+        columnButton.setAttribute("aria-label", columnButton.title);
         columnButton.innerHTML = '<i data-lucide="grip-vertical" aria-hidden="true"></i>';
         columnButton.addEventListener("mouseenter", () => {setColumnPreview(c, true);});
         columnButton.addEventListener("mouseleave", () => {setColumnPreview(c, false);});
@@ -368,6 +454,9 @@ function applyToolToSeat(cb,label,key) {
         estado[key] = {"checked":cb.checked,"type":selectedSeatType.dataset.nombre};
         updateVisual(cb, label);
         hasPendingHistoryEntry = hasPendingHistoryEntry || !wasChecked || previousType !== cb.dataset.type;
+        if (!wasChecked || previousType !== cb.dataset.type) {
+            requestColumnLabelRefresh();
+        }
     }else if (toolMode == "eraser"){
         const wasChecked = cb.checked;
         cb.checked = false;
@@ -375,11 +464,13 @@ function applyToolToSeat(cb,label,key) {
         delete estado[key];
         updateVisual(cb, label);
         hasPendingHistoryEntry = hasPendingHistoryEntry || wasChecked;
+        requestColumnLabelRefresh();
     }
 }
 
 function applyToolToRow(row, shouldRecordHistory = true) {
     hasPendingHistoryEntry = false;
+    suppressColumnLabelRefresh = true;
     const columns = normalizeDimensionInput(inputColumnas);
     for (let column = 0; column < columns; column++) {
         const key = `${row}-${column}`;
@@ -390,6 +481,7 @@ function applyToolToRow(row, shouldRecordHistory = true) {
         const label = cb.closest(".celda-checkbox");
         applyToolToSeat(cb, label, key);
     }
+    flushColumnLabelRefresh();
     if (shouldRecordHistory && hasPendingHistoryEntry) {
         recordHistory();
         hasPendingHistoryEntry = false;
@@ -398,6 +490,7 @@ function applyToolToRow(row, shouldRecordHistory = true) {
 
 function applyToolToColumn(column, shouldRecordHistory = true) {
     hasPendingHistoryEntry = false;
+    suppressColumnLabelRefresh = true;
     const rows = normalizeDimensionInput(inputFilas);
     for (let row = 0; row < rows; row++) {
         const key = `${row}-${column}`;
@@ -408,6 +501,7 @@ function applyToolToColumn(column, shouldRecordHistory = true) {
         const label = cb.closest(".celda-checkbox");
         applyToolToSeat(cb, label, key);
     }
+    flushColumnLabelRefresh();
     if (shouldRecordHistory && hasPendingHistoryEntry) {
         recordHistory();
         hasPendingHistoryEntry = false;

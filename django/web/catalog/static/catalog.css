@@ -55,10 +55,40 @@ body {
 }
 
 .client-header nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 2px;
   color: rgba(255, 255, 255, .82);
   font-size: 14px;
   font-weight: 700;
   text-decoration: none;
+  transition: color .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.client-header nav a:hover {
+  color: #fff;
+}
+
+.client-header nav a svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.4;
+}
+
+.client-header nav a.client-manager-link {
+  padding: 0 10px;
+  border: 1px solid rgba(251, 191, 36, .42);
+  border-radius: 6px;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, .12);
+}
+
+.client-header nav a.client-manager-link:hover {
+  border-color: rgba(251, 191, 36, .72);
+  color: #fde68a;
+  background: rgba(251, 191, 36, .18);
 }
 
 .client-main {
@@ -427,10 +457,25 @@ body {
   text-align: right;
 }
 
+.purchase-cart .cart-seat-list {
+  width: min(100%, 190px);
+  max-width: none;
+}
+
+.purchase-cart .cart-total-row {
+  margin-top: 2px;
+  border-top-color: rgba(255, 255, 255, .22);
+}
+
+.purchase-cart .cart-total-row dt,
+.purchase-cart .cart-total-row dd {
+  color: #fff;
+  font-size: 15px;
+}
+
 .cart-seat-lines {
   display: grid;
   gap: 6px;
-  min-width: 132px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -455,7 +500,6 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 7px;
-  min-width: max-content;
   margin-bottom: 14px;
   color: rgba(255, 255, 255, .70);
   font-size: 12px;
@@ -493,6 +537,9 @@ body {
 }
 
 .client-seat-stage {
+  --client-seat-width: 32px;
+  --client-seat-height: 30px;
+  --client-seat-gap: 4px;
   display: grid;
   gap: 12px;
   width: max-content;
@@ -559,7 +606,7 @@ body {
 .client-seat-column-label {
   display: grid;
   place-items: center;
-  width: 34px;
+  width: var(--client-seat-width);
   height: 16px;
   flex: 0 0 auto;
   color: rgba(255, 255, 255, .50);
@@ -574,13 +621,13 @@ body {
 
 .client-seat-cells {
   display: flex;
-  gap: 4px;
+  gap: var(--client-seat-gap);
 }
 
 .client-seat,
 .client-seat.aisle {
-  width: 32px;
-  height: 30px;
+  width: var(--client-seat-width);
+  height: var(--client-seat-height);
   flex: 0 0 auto;
 }
 
@@ -627,6 +674,15 @@ body {
 
 .client-seat.aisle {
   display: block;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+
+.client-seat.aisle:hover {
+  filter: none;
+  transform: none;
 }
 
 .client-seat-row.is-aisle-row {
@@ -696,13 +752,14 @@ body {
   width: 100%;
   max-width: 100%;
   margin: 0;
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, .12);
-  border-radius: 8px;
-  color: rgba(255, 255, 255, .82);
-  background: rgba(255, 255, 255, .06);
-  font-size: 14px;
-  font-weight: 800;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: rgba(255, 255, 255, .62);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .purchase-error {
@@ -833,11 +890,30 @@ body {
   .client-header {
     align-items: flex-start;
     flex-direction: column;
-    padding: 20px 24px;
+    gap: 14px;
+    padding: 16px 20px;
+  }
+
+  .client-logo {
+    height: 42px;
+    max-width: 150px;
+  }
+
+  .client-header nav {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px 12px;
+  }
+
+  .client-header nav a {
+    min-height: 32px;
+    font-size: 13px;
   }
 
   .client-main {
-    padding-top: 34px;
+    width: min(100% - 24px, 1180px);
+    padding-top: 26px;
+    padding-bottom: 34px;
   }
 
   .client-heading h1 {
@@ -850,19 +926,128 @@ body {
 
   .screening-detail {
     grid-template-columns: 1fr;
-    gap: 28px;
+    gap: 22px;
   }
 
   .screening-detail > img {
-    max-width: 360px;
+    max-width: 280px;
+  }
+
+  .screening-copy {
+    gap: 16px;
+  }
+
+  .screening-copy h1 {
+    font-size: clamp(34px, 10vw, 52px);
+  }
+
+  .screening-copy p {
+    font-size: 16px;
+  }
+
+  .screening-options > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .screening-option-link,
+  .screening-options label {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .seat-selection-main {
+    width: min(100% - 20px, 980px);
+  }
+
+  .seat-selection-header {
+    margin-bottom: 16px;
+  }
+
+  .seat-selection-header h1 {
+    font-size: clamp(30px, 10vw, 44px);
+  }
+
+  .seat-selection-header p {
+    font-size: 14px;
+    line-height: 1.45;
   }
 
   .seat-selection-layout {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
   }
 
   .purchase-cart {
     position: static;
+    gap: 12px;
+    padding: 14px;
+    border-color: rgba(255, 255, 255, .18);
+    background: rgba(255, 255, 255, .06);
+  }
+
+  .purchase-cart h2 {
+    font-size: 17px;
+  }
+
+  .purchase-cart dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 14px;
+  }
+
+  .purchase-cart dl > div {
+    min-width: 0;
+    padding: 8px 0;
+  }
+
+  .purchase-cart dl > div:nth-child(3),
+  .purchase-cart .cart-total-row {
+    grid-column: 1 / -1;
+  }
+
+  .purchase-cart dd {
+    max-width: none;
+    overflow-wrap: anywhere;
+  }
+
+  .purchase-cart .cart-seat-list {
+    width: 100%;
+  }
+
+  .cart-seat-lines {
+    max-height: 88px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .purchase-action button {
+    min-height: 52px;
+    font-size: 16px;
+  }
+
+  .seat-reference-line {
+    margin-bottom: 10px;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .client-seat-map {
+    margin-inline: -10px;
+    padding: 12px 10px 8px;
+    border: 1px solid rgba(255, 255, 255, .10);
+    border-radius: 10px;
+    background:
+      linear-gradient(90deg, rgba(5, 7, 11, .96), rgba(5, 7, 11, 0) 24px) left / 32px 100% no-repeat local,
+      linear-gradient(270deg, rgba(5, 7, 11, .96), rgba(5, 7, 11, 0) 24px) right / 32px 100% no-repeat local,
+      rgba(255, 255, 255, .025);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .client-seat-stage {
+    margin: 0;
   }
 
   .ticket-card {
@@ -882,17 +1067,95 @@ body {
 }
 
 @media (max-width: 520px) {
-  .movie-grid,
+  .client-header {
+    padding: 14px 16px;
+  }
+
+  .client-header nav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px 14px;
+  }
+
+  .client-header nav a {
+    justify-content: flex-start;
+    min-width: 0;
+    min-height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .client-header nav a.client-manager-link {
+    padding: 0;
+    border: 0;
+    color: #fbbf24;
+    background: transparent;
+  }
+
+  .client-header nav a.client-manager-link:hover {
+    color: #fde68a;
+    background: transparent;
+  }
+
+  .client-header nav a.client-logout-link {
+    margin-left: auto;
+    color: rgba(255, 255, 255, .58);
+  }
+
+  .client-header nav a span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .client-main {
+    width: min(100% - 18px, 1180px);
+    padding-top: 22px;
+  }
+
   .ticket-list {
     grid-template-columns: 1fr;
   }
 
+  .movie-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .movie-grid .movie-card:only-child {
+    grid-column: 1 / -1;
+  }
+
+  .movie-card-body {
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .movie-card-body h2 {
+    font-size: 16px;
+  }
+
+  .movie-card-body p {
+    font-size: 13px;
+  }
+
+  .screening-detail > img {
+    max-width: 190px;
+    border-radius: 9px;
+  }
+
   .screening-facts {
-    gap: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 14px;
   }
 
   .screening-facts div {
-    min-width: calc(50% - 8px);
+    min-width: 0;
     margin-right: 0;
     padding-right: 0;
   }
@@ -901,8 +1164,109 @@ body {
     display: none;
   }
 
-  .client-header nav {
-    justify-content: flex-start;
+  .screening-options > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .screening-option-link,
+  .screening-options label {
+    padding: 11px 10px;
+  }
+
+  .screening-options span {
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  .screening-options small {
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .seat-selection-main {
+    width: min(100% - 14px, 980px);
+  }
+
+  .seat-selection-header {
+    gap: 7px;
+  }
+
+  .seat-reference-line {
+    gap: 6px;
+  }
+
+  .seat-reference-line b {
+    display: none;
+  }
+
+  .purchase-cart {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    padding: 11px;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+
+  .purchase-cart dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 10px;
+  }
+
+  .purchase-cart dl > div {
+    padding: 6px 0;
+  }
+
+  .purchase-cart dt {
+    font-size: 11px;
+  }
+
+  .purchase-cart dd {
+    font-size: 13px;
+  }
+
+  .purchase-cart .cart-total-row dt,
+  .purchase-cart .cart-total-row dd {
+    font-size: 15px;
+  }
+
+  .cart-seat-lines {
+    max-height: 64px;
+  }
+
+  .purchase-action button {
+    min-height: 50px;
+    padding: 0 18px;
+  }
+
+  .client-seat-map {
+    margin-inline: -7px;
+    padding: 10px 7px 8px;
+  }
+
+  .client-screen-marker {
+    height: 50px;
+    font-size: 11px;
+  }
+
+  .client-seat-stage {
+    --client-seat-width: 34px;
+    --client-seat-height: 34px;
+  }
+
+  .client-seat {
+    font-size: 9px;
+  }
+
+  .client-seat-row-label {
+    width: 20px;
+    font-size: 12px;
+  }
+
+  .ticket-summary {
+    grid-template-columns: 1fr;
   }
 }
 

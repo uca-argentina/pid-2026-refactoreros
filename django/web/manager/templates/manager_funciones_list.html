@@ -13,7 +13,44 @@
     {% endif %}
   </section>
 
+  {% if hidden_priority_functions %}
+    <section class="priority-screenings" aria-label="Funciones ocultas">
+      <div class="priority-screenings-header">
+        <div>
+          <h2>Funciones ocultas</h2>
+          <p>Funciones creadas que todavía no aparecen para clientes.</p>
+        </div>
+        <span>{{ hidden_priority_count }} pendiente{% if hidden_priority_count != 1 %}s{% endif %}</span>
+      </div>
+      <div class="priority-screenings-grid">
+        {% for funcion in hidden_priority_functions %}
+          <article class="priority-screening-card">
+            <div>
+              <span class="status-pill status-draft">Oculta</span>
+              <h3>{{ funcion.pelicula.titulo }}</h3>
+              <p>{{ funcion.sala.nombre }} | {{ funcion.fecha_horario|date:"d/m/Y H:i" }} | desde ${{ funcion.precio_desde }}</p>
+            </div>
+            <form method="post" action="{% url 'manager:funciones_toggle' funcion.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="publish-action">
+                <i data-lucide="send" aria-hidden="true"></i>
+                <span>Publicar</span>
+              </button>
+            </form>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
   {% include "_list_controls.html" %}
+
+  <div class="table-action-reference" aria-label="Referencia de acciones">
+    <span><i data-lucide="pencil" aria-hidden="true"></i> Editar</span>
+    <span><i data-lucide="copy" aria-hidden="true"></i> Usar como plantilla</span>
+    <span><i data-lucide="send" aria-hidden="true"></i> Publicar</span>
+    <span><i data-lucide="eye-off" aria-hidden="true"></i> Ocultar</span>
+  </div>
 
   <section class="table-shell">
     <table>
@@ -46,23 +83,23 @@
             <td data-label="Vendidas">{{ funcion.entradas_vendidas }}</td>
             <td data-label="Disponibles">{{ funcion.entradas_disponibles }}</td>
             <td class="table-actions" data-label="Acciones">
-              <a href="{% url 'manager:funciones_update' funcion.pk %}">
+              <a class="icon-only-action" href="{% url 'manager:funciones_update' funcion.pk %}" title="Editar" aria-label="Editar {{ funcion.pelicula.titulo }}">
                 <i data-lucide="pencil" aria-hidden="true"></i>
-                <span>Editar</span>
+                <span class="sr-only">Editar</span>
               </a>
-              <a href="{% url 'manager:funciones_create' %}?plantilla={{ funcion.pk }}">
+              <a class="icon-only-action" href="{% url 'manager:funciones_create' %}?plantilla={{ funcion.pk }}" title="Usar como plantilla" aria-label="Usar {{ funcion.pelicula.titulo }} como plantilla">
                 <i data-lucide="copy" aria-hidden="true"></i>
-                <span>Usar como plantilla</span>
+                <span class="sr-only">Usar como plantilla</span>
               </a>
               <form method="post" action="{% url 'manager:funciones_toggle' funcion.pk %}">
                 {% csrf_token %}
-                <button type="submit"{% if not funcion.publicada %} class="publish-action"{% endif %}>
+                <button type="submit" class="icon-only-action{% if not funcion.publicada %} publish-action{% endif %}" title="{% if funcion.publicada %}Ocultar{% else %}Publicar{% endif %}" aria-label="{% if funcion.publicada %}Ocultar{% else %}Publicar{% endif %} {{ funcion.pelicula.titulo }}">
                   {% if funcion.publicada %}
                     <i data-lucide="eye-off" aria-hidden="true"></i>
-                    <span>Ocultar</span>
+                    <span class="sr-only">Ocultar</span>
                   {% else %}
                     <i data-lucide="send" aria-hidden="true"></i>
-                    <span>Publicar</span>
+                    <span class="sr-only">Publicar</span>
                   {% endif %}
                 </button>
               </form>
