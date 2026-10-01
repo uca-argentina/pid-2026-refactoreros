@@ -102,7 +102,7 @@ class CatalogFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "screening_detail.html")
-        self.assertContains(response, "Elegi tu funcion")
+        self.assertContains(response, "Elegí tu función")
         self.assertContains(response, reverse("seat_selection", args=[funcion.pk]))
         self.assertNotContains(response, "Disponibles")
 
@@ -227,7 +227,7 @@ class CatalogFlowTests(TestCase):
 
         response = self.client.get(reverse("movie_detail", args=[pelicula.pk]))
 
-        self.assertContains(response, "Funcion agotada")
+        self.assertContains(response, "Función agotada")
         self.assertContains(response, reverse("seat_selection", args=[disponible.pk]))
         self.assertNotContains(response, reverse("seat_selection", args=[agotada.pk]))
 

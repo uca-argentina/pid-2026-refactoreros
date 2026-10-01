@@ -2,12 +2,15 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db.models import Case, IntegerField, Value, When
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_GET, require_POST
+import json
 
 from domain.cinema.models import ConfiguracionCine
 from domain.screenings.models import Funcion
-from domain.tickets.models import CompraEntrada
+from domain.tickets.models import CompraEntrada, ReservaAsiento
 from web.catalog.views import build_seat_map, manager_role
 
 from .forms import TicketPurchaseForm
@@ -17,7 +20,7 @@ from .forms import TicketPurchaseForm
 def seat_selection_view(request, pk):
     funcion = get_object_or_404(Funcion.funciones_publicadas(), pk=pk)
     funcion.entradas_disponibles = CompraEntrada.disponibles_para(funcion)
-    funcion.seat_map = build_seat_map(funcion)
+    funcion.seat_map = build_seat_map(funcion, usuario=request.user)
     purchase_error = request.session.pop("purchase_error", "")
     return render(
         request,
@@ -43,12 +46,16 @@ def ticket_purchase_view(request, pk):
                     funcion=funcion,
                     cantidad=form.cleaned_data["cantidad"],
                     selected_seats=form.cleaned_data["selected_seats"],
+                    require_reservation=bool(form.cleaned_data["selected_seats"]),
                 )
             except ValidationError as error:
                 disponibles = CompraEntrada.disponibles_para(funcion)
-                request.session["purchase_error"] = (
-                    f"Solo tenemos disponibles {disponibles} entradas para esta función."
-                )
+                if hasattr(error, "message_dict") and error.message_dict.get("cantidad"):
+                    request.session["purchase_error"] = error.message_dict["cantidad"][0]
+                else:
+                    request.session["purchase_error"] = (
+                        f"Solo tenemos disponibles {disponibles} entradas para esta función."
+                    )
             else:
                 entrada_label = "entrada" if compra.cantidad == 1 else "entradas"
                 messages.success(
@@ -63,6 +70,62 @@ def ticket_purchase_view(request, pk):
         else:
             request.session["purchase_error"] = "Elegí al menos una entrada."
     return redirect("seat_selection", pk=funcion.pk)
+
+
+def reservation_payload(reserva):
+    seconds_left = max(int((reserva.expira_en - timezone.now()).total_seconds()), 0)
+    return {
+        "label": reserva.label,
+        "expires_at": reserva.expira_en.isoformat(),
+        "seconds_left": seconds_left,
+    }
+
+
+@login_required
+@require_POST
+def seat_reservation_view(request, pk):
+    funcion = get_object_or_404(Funcion.funciones_publicadas(), pk=pk)
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except ValueError:
+        return JsonResponse({"ok": False, "error": "Solicitud inválida."}, status=400)
+
+    label = str(payload.get("label", "")).strip()
+    action = payload.get("action")
+    if not label or action not in {"reserve", "release"}:
+        return JsonResponse({"ok": False, "error": "Solicitud inválida."}, status=400)
+
+    if action == "release":
+        ReservaAsiento.liberar(request.user, funcion, label)
+        return JsonResponse({"ok": True, "label": label})
+
+    try:
+        reserva = ReservaAsiento.reservar(request.user, funcion, label)
+    except ValidationError as error:
+        return JsonResponse(
+            {
+                "ok": False,
+                "label": label,
+                "error": "; ".join(error.messages),
+                "unavailable": list(CompraEntrada.asientos_bloqueados(funcion, usuario=request.user)),
+            },
+            status=409,
+        )
+    return JsonResponse({"ok": True, "reservation": reservation_payload(reserva)})
+
+
+@login_required
+@require_GET
+def seat_reservation_status_view(request, pk):
+    funcion = get_object_or_404(Funcion.funciones_publicadas(), pk=pk)
+    own_reservations = ReservaAsiento.vigentes_para(funcion).filter(usuario=request.user)
+    return JsonResponse(
+        {
+            "ok": True,
+            "unavailable": list(CompraEntrada.asientos_bloqueados(funcion, usuario=request.user)),
+            "reserved": [reservation_payload(reserva) for reserva in own_reservations],
+        }
+    )
 
 
 @login_required

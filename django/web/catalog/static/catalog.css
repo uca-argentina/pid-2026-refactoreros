@@ -659,6 +659,11 @@ body {
     0 7px 16px rgba(251, 191, 36, .22);
 }
 
+.client-seat.is-pending {
+  opacity: .68;
+  cursor: wait;
+}
+
 .client-seat.is-unavailable,
 .client-seat.is-unavailable:hover {
   border-color: rgba(148, 163, 184, .35);
@@ -760,6 +765,34 @@ body {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.35;
+}
+
+.reservation-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid rgba(251, 191, 36, .38);
+  border-radius: 5px;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, .1);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.reservation-summary[hidden] {
+  display: none;
+}
+
+.reservation-summary svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.4;
 }
 
 .purchase-error {

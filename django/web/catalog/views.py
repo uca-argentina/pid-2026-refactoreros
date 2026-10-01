@@ -18,7 +18,7 @@ def index_to_letters(index):
     return label
 
 
-def build_seat_map(funcion):
+def build_seat_map(funcion, usuario=None):
     snapshot = funcion.sala_configuracion_snapshot or {}
     if not snapshot:
         return None
@@ -52,7 +52,7 @@ def build_seat_map(funcion):
         (seat["row"], seat["column"]): seat
         for seat in seats
     }
-    unavailable_labels = CompraEntrada.asientos_ocupados(funcion)
+    unavailable_labels = CompraEntrada.asientos_bloqueados(funcion, usuario=usuario)
     legend_by_type = {}
     rows = []
     for row_index in range(rows_count):
@@ -133,7 +133,7 @@ def movie_detail_view(request, pk):
     )
     for item in pelicula.publicadas:
         item.entradas_disponibles = CompraEntrada.disponibles_para(item)
-        item.seat_map = build_seat_map(item)
+        item.seat_map = build_seat_map(item, usuario=request.user)
     purchase_error = request.session.pop("purchase_error", "")
     return render(
         request,

@@ -5,7 +5,13 @@ from .models import ConfiguracionCine
 
 @admin.register(ConfiguracionCine)
 class ConfiguracionCineAdmin(admin.ModelAdmin):
-    list_display = ("nombre", "slogan", "actualizado_en")
+    list_display = (
+        "nombre",
+        "slogan",
+        "reserva_asientos_minutos",
+        "recarga_asientos_segundos",
+        "actualizado_en",
+    )
     readonly_fields = ("actualizado_en",)
 
     def has_add_permission(self, request):

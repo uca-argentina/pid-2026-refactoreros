@@ -4,6 +4,7 @@ from django.utils import timezone
 from decimal import Decimal, InvalidOperation
 import json
 
+from domain.cinema.models import ConfiguracionCine
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
 from domain.screenings.models import Funcion
@@ -13,6 +14,23 @@ from domain.seat_types.models import SeatType
 User = get_user_model()
 MAX_MOVIE_IMAGE_SIZE_MB = 2
 MAX_MOVIE_IMAGE_SIZE_BYTES = MAX_MOVIE_IMAGE_SIZE_MB * 1024 * 1024
+
+
+class ConfiguracionCineForm(forms.ModelForm):
+    reserva_asientos_minutos = forms.IntegerField(
+        min_value=1,
+        label="Reserva temporal de butacas (minutos)",
+        help_text="Tiempo durante el checkout antes de liberar butacas no confirmadas.",
+    )
+    recarga_asientos_segundos = forms.IntegerField(
+        min_value=1,
+        label="Recarga automática de butacas (segundos)",
+        help_text="Frecuencia con la que el cliente vuelve a consultar disponibilidad.",
+    )
+
+    class Meta:
+        model = ConfiguracionCine
+        fields = ("reserva_asientos_minutos", "recarga_asientos_segundos")
 
 
 class UsuarioGestionForm(forms.ModelForm):

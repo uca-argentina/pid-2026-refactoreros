@@ -62,7 +62,7 @@
 
       <div class="seat-selection-layout">
       {% if funcion.seat_map %}
-        <section class="client-seat-map" data-funcion-id="{{ funcion.pk }}" data-available="{{ funcion.entradas_disponibles }}" aria-label="Seleccionar asientos">
+        <section class="client-seat-map" data-funcion-id="{{ funcion.pk }}" data-available="{{ funcion.entradas_disponibles }}" data-refresh-interval-seconds="{{ cinema.recarga_asientos_segundos }}" data-reservation-url="{% url 'seat_reservation' funcion.pk %}" data-reservation-status-url="{% url 'seat_reservation_status' funcion.pk %}" aria-label="Seleccionar asientos">
           <div class="client-seat-stage">
             <div class="client-screen-marker" aria-hidden="true">
               <span>Pantalla</span>
@@ -121,13 +121,17 @@
               <dd data-cart-total>$0,00</dd>
             </div>
           </dl>
-          <p class="purchase-summary" data-purchase-summary>Seleccioná una butaca para continuar.</p>
+          <p class="purchase-summary" data-purchase-summary></p>
+          <p class="reservation-summary" data-reservation-summary hidden>
+            <i data-lucide="clock-3" aria-hidden="true"></i>
+            <span data-reservation-summary-text></span>
+          </p>
           <div class="purchase-action">
             <button
               type="submit"
               data-singular-label="Comprar entrada"
               data-plural-label="Comprar entradas"
-              data-select-seat-label="Selecciona tus butacas"
+              data-select-seat-label="Seleccioná tus butacas"
               data-sold-out-label="Entradas agotadas para esta funcion"
               {% if funcion.entradas_disponibles <= 0 or funcion.seat_map %}disabled{% endif %}
             >

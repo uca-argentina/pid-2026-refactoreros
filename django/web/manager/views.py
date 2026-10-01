@@ -26,7 +26,13 @@ from domain.screenings.models import Funcion
 from domain.seats.models import Seat
 from domain.seat_types.models import SeatType
 
-from .forms import FuncionForm, PeliculaForm, SalaForm, UsuarioGestionForm
+from .forms import (
+    ConfiguracionCineForm,
+    FuncionForm,
+    PeliculaForm,
+    SalaForm,
+    UsuarioGestionForm,
+)
 
 User = get_user_model()
 
@@ -121,6 +127,35 @@ class GestionHomeView(ManagerAccessMixin, TemplateView):
         context["total_room_capacity"] = Sala.objects.aggregate(
             total=Coalesce(Sum("capacidad"), Value(0), output_field=IntegerField())
         )["total"]
+        return context
+
+
+class ConfiguracionCineUpdateView(GerenteRequiredMixin, UpdateView):
+    model = ConfiguracionCine
+    form_class = ConfiguracionCineForm
+    template_name = "manager_form.html"
+    success_url = reverse_lazy("manager:configuracion")
+
+    def get_object(self, queryset=None):
+        configuracion = ConfiguracionCine.objects.order_by("id").first()
+        if configuracion:
+            return configuracion
+        return ConfiguracionCine.objects.create()
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, "La configuración se actualizó correctamente.")
+        return response
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "section": "Configuración",
+                "form_title": "Configuración",
+                "submit_label": "Guardar configuración",
+            }
+        )
         return context
 
 

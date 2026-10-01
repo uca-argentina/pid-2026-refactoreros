@@ -53,6 +53,10 @@
             <i data-lucide="calendar-clock" aria-hidden="true"></i>
             <span>Funciones</span>
           </a>
+          <a href="{% url 'manager:configuracion' %}" class="nav-settings {% if section == 'Configuración' or section == 'Configuracion' %}is-active{% endif %}">
+            <i data-lucide="settings" aria-hidden="true"></i>
+            <span>Configuración</span>
+          </a>
         {% endif %}
       </nav>
 

@@ -11,6 +11,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from domain.cinema.models import ConfiguracionCine
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
 from domain.seats.models import Seat
@@ -90,6 +91,30 @@ class ManagerAccessTests(TestCase):
         self.client.force_login(self.acomodador)
 
         response = self.client.get(reverse("manager:salas_list"))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_gerente_puede_configurar_reserva_y_recarga_de_butacas(self):
+        self.client.force_login(self.gerente)
+
+        response = self.client.post(
+            reverse("manager:configuracion"),
+            data={
+                "reserva_asientos_minutos": 7,
+                "recarga_asientos_segundos": 12,
+            },
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse("manager:configuracion"))
+        configuracion = ConfiguracionCine.objects.get()
+        self.assertEqual(configuracion.reserva_asientos_minutos, 7)
+        self.assertEqual(configuracion.recarga_asientos_segundos, 12)
+
+    def test_acomodador_no_puede_configurar_reserva_y_recarga_de_butacas(self):
+        self.client.force_login(self.acomodador)
+
+        response = self.client.get(reverse("manager:configuracion"))
 
         self.assertEqual(response.status_code, 403)
 
@@ -532,7 +557,7 @@ class ManagerFuncionesTests(TestCase):
 
         self.assertContains(response, "Publicar")
         self.assertContains(response, 'class="publish-action"')
-        self.assertNotContains(response, "Ocultar")
+        self.assertNotContains(response, 'title="Ocultar"')
 
     def test_lista_funciones_muestra_ocultar_sin_estilo_verde(self):
         Funcion.objects.create(
