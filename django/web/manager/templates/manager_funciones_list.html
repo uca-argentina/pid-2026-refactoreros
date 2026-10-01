@@ -3,7 +3,6 @@
 {% block content %}
   <section class="page-heading page-heading-row">
     <div>
-      <p>Agenda, ventas y publicación</p>
       <h1>Funciones</h1>
     </div>
     {% if create_url_name %}
@@ -14,7 +13,56 @@
     {% endif %}
   </section>
 
+  {% if hidden_priority_functions %}
+    <section class="priority-screenings" aria-label="Funciones ocultas">
+      <div class="priority-screenings-header">
+        <div>
+          <h2>Funciones ocultas</h2>
+          <p>Funciones creadas que todavía no aparecen para clientes.</p>
+        </div>
+        <span>{{ hidden_priority_count }} pendiente{% if hidden_priority_count != 1 %}s{% endif %}</span>
+      </div>
+      <div class="priority-screenings-grid">
+        {% for funcion in hidden_priority_functions %}
+          <article class="priority-screening-card">
+            <div>
+              <span class="status-pill status-draft">Oculta</span>
+              <h3>{{ funcion.pelicula.titulo }}</h3>
+              <p>{{ funcion.sala.nombre }} | {{ funcion.fecha_horario|date:"d/m/Y H:i" }} | desde ${{ funcion.precio_desde }}</p>
+            </div>
+            {% if funcion.estado == "borrador" %}
+              <form method="post" action="{% url 'manager:funciones_estado' funcion.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="estado" value="programada">
+                <button type="submit" class="publish-action">
+                  <i data-lucide="calendar-check" aria-hidden="true"></i>
+                  <span>Programar</span>
+                </button>
+              </form>
+            {% elif funcion.estado == "programada" %}
+              <form method="post" action="{% url 'manager:funciones_estado' funcion.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="estado" value="publicada">
+                <button type="submit" class="publish-action">
+                  <i data-lucide="send" aria-hidden="true"></i>
+                  <span>Publicar</span>
+                </button>
+              </form>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
   {% include "_list_controls.html" %}
+
+  <div class="table-action-reference" aria-label="Referencia de acciones">
+    <span><i data-lucide="pencil" aria-hidden="true"></i> Editar</span>
+    <span><i data-lucide="copy" aria-hidden="true"></i> Usar como plantilla</span>
+    <span><i data-lucide="send" aria-hidden="true"></i> Publicar</span>
+    <span><i data-lucide="eye-off" aria-hidden="true"></i> Ocultar</span>
+  </div>
 
   <section class="table-shell">
     <table>
@@ -24,7 +72,7 @@
           <th>Sala</th>
           <th>Fecha</th>
           <th>Estado</th>
-          <th>Precio</th>
+          <th>Desde</th>
           <th>Vendidas</th>
           <th>Disponibles</th>
           <th>Acciones</th>
@@ -39,7 +87,7 @@
             <td data-label="Estado">
               <span class="status-pill status-{{ funcion.estado }}">{{ funcion.get_estado_display }}</span>
             </td>
-            <td data-label="Precio">${{ funcion.precio_entrada }}</td>
+            <td data-label="Desde">${{ funcion.precio_desde }}</td>
             <td data-label="Vendidas">{{ funcion.entradas_vendidas }}</td>
             <td data-label="Disponibles">{{ funcion.entradas_disponibles }}</td>
             <td class="table-actions" data-label="Acciones">

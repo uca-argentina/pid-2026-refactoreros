@@ -5,6 +5,8 @@ from django.utils import timezone
 
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
+from domain.seats.models import Seat
+from domain.seat_types.models import SeatType
 from domain.screenings.models import Funcion
 from domain.tickets.models import CompraEntrada
 from domain.users.models import Cliente, Gerente
@@ -121,9 +123,99 @@ class CatalogFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "screening_detail.html")
-        self.assertContains(response, "Comprar entrada")
         self.assertContains(response, "Elegí tu función")
+        self.assertContains(response, reverse("seat_selection", args=[funcion.pk]))
         self.assertNotContains(response, "Disponibles")
+
+    def test_detalle_muestra_pantalla_y_mapa_de_asientos_si_hay_snapshot(self):
+        pelicula = Pelicula.objects.create(
+            titulo="Con butacas",
+            sinopsis="Una pelicula de prueba.",
+            genero=Pelicula.Genero.ACCION,
+            clasificacion=Pelicula.Clasificacion.MAS_13,
+            duracion_minutos=120,
+            imagen="peliculas/test.jpg",
+        )
+        sala = Sala.objects.create(nombre="Sala mapa", capacidad=2)
+        tipo = SeatType.objects.get(nombre="Estándar")
+        Seat.objects.create(sala=sala, fila=0, columna=0, tipo=tipo)
+        Seat.objects.create(sala=sala, fila=0, columna=1, tipo=tipo)
+        funcion = Funcion.objects.create(
+            pelicula=pelicula,
+            sala=sala,
+            fecha_horario=timezone.now(),
+            precio_entrada="1500.00",
+            estado=Funcion.Estado.PUBLICADA,
+        )
+        usuario = get_user_model().objects.create_user(
+            username="ana@mail.com",
+            email="ana@mail.com",
+            password="PasswordSegura123!",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("seat_selection", args=[funcion.pk]))
+
+        self.assertTemplateUsed(response, "seat_selection.html")
+        self.assertContains(response, "Pantalla")
+        self.assertContains(response, "1A")
+        self.assertContains(response, "1B")
+        self.assertContains(response, "Fila 1, columna A")
+
+    def test_detalle_muestra_pasillos_sin_saltar_letras_de_columnas(self):
+        pelicula = Pelicula.objects.create(
+            titulo="Con pasillos",
+            sinopsis="Una pelicula de prueba.",
+            genero=Pelicula.Genero.ACCION,
+            clasificacion=Pelicula.Clasificacion.MAS_13,
+            duracion_minutos=120,
+            imagen="peliculas/test.jpg",
+        )
+        sala = Sala.objects.create(nombre="Sala pasillos", capacidad=2)
+        tipo = SeatType.objects.get(nombre="Estándar")
+        funcion = Funcion.objects.create(
+            pelicula=pelicula,
+            sala=sala,
+            fecha_horario=timezone.now(),
+            precio_entrada="1500.00",
+            estado=Funcion.Estado.PUBLICADA,
+            capacidad_snapshot=2,
+            sala_configuracion_snapshot={
+                "rows": 3,
+                "columns": 3,
+                "seats": [
+                    {
+                        "row": 0,
+                        "column": 0,
+                        "type": tipo.nombre,
+                        "type_id": tipo.pk,
+                        "price": str(tipo.precio_base),
+                        "color": tipo.color,
+                    },
+                    {
+                        "row": 0,
+                        "column": 2,
+                        "type": tipo.nombre,
+                        "type_id": tipo.pk,
+                        "price": str(tipo.precio_base),
+                        "color": tipo.color,
+                    },
+                ],
+            },
+        )
+        usuario = get_user_model().objects.create_user(
+            username="ana2@mail.com",
+            email="ana2@mail.com",
+            password="PasswordSegura123!",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("seat_selection", args=[funcion.pk]))
+
+        self.assertContains(response, "1A")
+        self.assertContains(response, "1B")
+        self.assertNotContains(response, "1C")
+        self.assertContains(response, "client-seat-row is-aisle-row")
 
     def test_detalle_muestra_entradas_agotadas_solo_para_funcion_seleccionada(self):
         pelicula = Pelicula.objects.create(
@@ -154,16 +246,13 @@ class CatalogFlowTests(TestCase):
         CompraEntrada.comprar(usuario, agotada, 1)
         self.client.force_login(usuario)
 
-        response = self.client.get(reverse("screening_detail", args=[agotada.pk]), follow=True)
+        response = self.client.get(reverse("movie_detail", args=[pelicula.pk]))
 
-        self.assertContains(response, "Entradas agotadas para esta función")
-        self.assertContains(response, "disabled")
-        self.assertContains(response, f'value="{agotada.pk}"')
-        self.assertContains(response, 'data-available="0"')
-        self.assertContains(response, f'value="{disponible.pk}"')
-        self.assertContains(response, 'data-available="3"')
+        self.assertContains(response, "Función agotada")
+        self.assertContains(response, reverse("seat_selection", args=[disponible.pk]))
+        self.assertNotContains(response, reverse("seat_selection", args=[agotada.pk]))
 
-    def test_url_vieja_de_funcion_redirige_al_detalle_de_pelicula(self):
+    def test_url_vieja_de_funcion_redirige_a_seleccion_de_butacas(self):
         funcion = crear_funcion(estado=Funcion.Estado.PUBLICADA, titulo="Publicada")
         usuario = get_user_model().objects.create_user(
             username="ana@mail.com",
@@ -174,7 +263,7 @@ class CatalogFlowTests(TestCase):
 
         response = self.client.get(reverse("screening_detail", args=[funcion.pk]))
 
-        self.assertRedirects(response, reverse("movie_detail", args=[funcion.pelicula.pk]))
+        self.assertRedirects(response, reverse("seat_selection", args=[funcion.pk]))
 
     def test_home_muestra_acceso_a_gestion_si_es_gerente(self):
         usuario = get_user_model().objects.create_user(

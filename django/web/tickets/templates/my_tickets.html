@@ -19,8 +19,11 @@
       {% endif %}
     </a>
     <nav>
-      <a href="{% url 'home' %}">Peliculas</a>
-      <a href="{% url 'logout' %}">Cerrar sesion</a>
+      <a href="{% url 'home' %}"><i data-lucide="clapperboard" aria-hidden="true"></i><span>Películas</span></a>
+      {% if manager_role %}
+        <a class="client-manager-link" href="{% url 'manager:home' %}"><i data-lucide="settings-2" aria-hidden="true"></i><span>Gestión</span></a>
+      {% endif %}
+      <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesión</span></a>
     </nav>
   </header>
 
@@ -57,6 +60,10 @@
                 <dd>{{ compra.cantidad }}</dd>
               </div>
               <div>
+                <dt>Butacas</dt>
+                <dd>{{ compra.asientos_label|default:"Sin asignar" }}</dd>
+              </div>
+              <div>
                 <dt>Total</dt>
                 <dd>${{ compra.total }}</dd>
               </div>
@@ -71,5 +78,11 @@
       </section>
     {% endif %}
   </main>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  </script>
 </body>
 </html>

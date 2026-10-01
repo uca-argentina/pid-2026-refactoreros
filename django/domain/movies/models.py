@@ -24,17 +24,27 @@ class Pelicula(models.Model):
 
     titulo = models.CharField(max_length=200)
     sinopsis = models.TextField()
-    genero = models.CharField(max_length=20, choices=Genero.choices)
-    clasificacion = models.CharField(max_length=5, choices=Clasificacion.choices)
+    genero = models.CharField(max_length=20, verbose_name="Género", choices=Genero.choices)
+    clasificacion = models.CharField(max_length=5, verbose_name="Clasificación", choices=Clasificacion.choices)
     duracion_minutos = models.PositiveIntegerField(
-        help_text="Duración de la película en minutos"
+        help_text="Duración de la película en minutos",
+        verbose_name="Duración en minutos"
     )
-    imagen = models.ImageField(upload_to="peliculas/")
+    imagen = models.ImageField(upload_to="peliculas/", verbose_name="Imagen del cartel")
 
     class Meta:
         verbose_name = "Película"
         verbose_name_plural = "Películas"
         ordering = ["titulo"]
+
+    @property
+    def duracion_horas_minutos(self):
+        horas, minutos = divmod(self.duracion_minutos, 60)
+        if horas and minutos:
+            return f"{horas} h {minutos} min"
+        if horas:
+            return f"{horas} h"
+        return f"{minutos} min"
 
     def __str__(self):
         return self.titulo

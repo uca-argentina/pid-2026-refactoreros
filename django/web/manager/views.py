@@ -2,11 +2,14 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import F, IntegerField, Q, Sum, Value
+from django.db.models import Case, F, IntegerField, Q, Sum, Value, When
 from django.db.models.functions import Coalesce, Greatest
 from django.shortcuts import get_object_or_404, redirect
+from django.db import transaction
 from django.urls import reverse_lazy
 from django.utils import timezone
+import json
+
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -20,9 +23,17 @@ from domain.cinema.models import ConfiguracionCine
 from domain.movies.models import Pelicula
 from domain.rooms.models import Sala
 from domain.screenings.models import Funcion
+from domain.seats.models import Seat
+from domain.seat_types.models import SeatType
 from domain.tickets.models import CompraEntrada
 
-from .forms import FuncionForm, PeliculaForm, SalaForm, UsuarioGestionForm
+from .forms import (
+    ConfiguracionCineForm,
+    FuncionForm,
+    PeliculaForm,
+    SalaForm,
+    UsuarioGestionForm,
+)
 
 User = get_user_model()
 
@@ -115,8 +126,37 @@ class GestionHomeView(ManagerAccessMixin, TemplateView):
         context["published_upcoming_count"] = proximas_funciones.filter(
             estado=Funcion.Estado.PUBLICADA
         ).count()
-        context["total_room_capacity"] = (
-            Sala.objects.aggregate(total=Coalesce(Sum("capacidad"), Value(0)))["total"]
+        context["total_room_capacity"] = Sala.objects.aggregate(
+            total=Coalesce(Sum("capacidad"), Value(0), output_field=IntegerField())
+        )["total"]
+        return context
+
+
+class ConfiguracionCineUpdateView(GerenteRequiredMixin, UpdateView):
+    model = ConfiguracionCine
+    form_class = ConfiguracionCineForm
+    template_name = "manager_form.html"
+    success_url = reverse_lazy("manager:configuracion")
+
+    def get_object(self, queryset=None):
+        configuracion = ConfiguracionCine.objects.order_by("id").first()
+        if configuracion:
+            return configuracion
+        return ConfiguracionCine.objects.create()
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, "La configuración se actualizó correctamente.")
+        return response
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "section": "Configuración",
+                "form_title": "Configuración",
+                "submit_label": "Guardar configuración",
+            }
         )
         return context
 
@@ -203,7 +243,7 @@ class GerenteCreateView(GerenteRequiredMixin, CreateView):
     form_title = ""
 
     def form_valid(self, form):
-        messages.success(self.request, f"{self.object_label} creado/a correctamente.")
+        messages.success(self.request, f"{self.object_label} se creó correctamente.")
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -220,7 +260,7 @@ class GerenteUpdateView(GerenteRequiredMixin, UpdateView):
     form_title = ""
 
     def form_valid(self, form):
-        messages.success(self.request, f"{self.object_label} actualizado/a correctamente.")
+        messages.success(self.request, f"{self.object_label} se actualizó correctamente.")
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -236,7 +276,7 @@ class GerenteDeleteView(GerenteRequiredMixin, DeleteView):
     template_name = "manager_confirm_delete.html"
 
     def form_valid(self, form):
-        messages.success(self.request, f"Eliminado/a correctamente.")
+        messages.success(self.request, "Se eliminó correctamente.")
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -292,7 +332,7 @@ class UsuarioUpdateView(GerenteRequiredMixin, UpdateView):
     success_url = reverse_lazy("manager:usuarios_list")
     section = "Usuarios"
     enctype = ""
-    object_label = "Usuario"
+    object_label = "El usuario"
 
     def get_object(self, queryset=None):
         usuario = super().get_object(queryset)
@@ -357,8 +397,33 @@ class SalaCreateView(GerenteCreateView):
     success_url = reverse_lazy("manager:salas_list")
     section = "Salas"
     enctype = ""
-    object_label = "Sala"
+    object_label = "La sala"
     form_title = "Nueva sala"
+
+    template_name = "manager_nueva_sala_form.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["seat_types"] = list(SeatType.objects.all())
+        return context
+
+    def form_valid(self,form):
+        room_layout = form.cleaned_data.get("layout_sala")
+        with transaction.atomic():
+            self.object = form.save(commit=False)
+            self.object.layout_configuracion = form.cleaned_data.get("layout_configuracion", {})
+            self.object.save()
+            if room_layout:
+                Seat.objects.bulk_create(self.build_seats(self.object, room_layout["seats"]))
+        messages.success(self.request, f"{self.object_label} se creó correctamente.")
+        return redirect(self.get_success_url())
+    
+
+    def build_seats(self,room, seats_layout):
+        seats = []
+        for seat_data in seats_layout:
+            seats.append(Seat(sala=room,fila=seat_data["row"],columna=seat_data["column"],tipo_id=seat_data["type"]))
+        return seats
 
 
 class SalaUpdateView(GerenteUpdateView):
@@ -367,15 +432,57 @@ class SalaUpdateView(GerenteUpdateView):
     success_url = reverse_lazy("manager:salas_list")
     section = "Salas"
     enctype = ""
-    object_label = "Sala"
+    object_label = "La sala"
     form_title = "Editar sala"
+
+    template_name = "manager_nueva_sala_form.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["seat_types"] = list(SeatType.objects.all())
+        return context
+
+    def form_valid(self, form):
+        room_layout = form.cleaned_data.get("layout_sala")
+        with transaction.atomic():
+            self.object = form.save(commit=False)
+            self.object.layout_configuracion = form.cleaned_data.get("layout_configuracion", {})
+            self.object.save()
+            if room_layout:
+                self.sync_seats(self.object, room_layout["seats"])
+        messages.success(self.request, f"{self.object_label} se actualizó correctamente.")
+        return redirect(self.get_success_url())
+
+    def sync_seats(self, room, seats_layout):
+        existing = {(s.fila, s.columna): s for s in Seat.objects.filter(sala=room)}
+        new_keys = {(d["row"], d["column"]) for d in seats_layout}
+
+        to_delete = [s.pk for key, s in existing.items() if key not in new_keys]
+        if to_delete:
+            Seat.objects.filter(pk__in=to_delete).delete()
+
+        layout_by_key = {(d["row"], d["column"]): d["type"] for d in seats_layout}
+        to_update = []
+        for key, seat in existing.items():
+            if key in layout_by_key and seat.tipo_id != layout_by_key[key]:
+                seat.tipo_id = layout_by_key[key]
+                to_update.append(seat)
+        if to_update:
+            Seat.objects.bulk_update(to_update, ["tipo"])
+
+        to_create = [
+            Seat(sala=room, fila=row, columna=col, tipo_id=layout_by_key[(row, col)])
+            for (row, col) in new_keys
+            if (row, col) not in existing
+        ]
+        Seat.objects.bulk_create(to_create)
 
 
 class SalaDeleteView(GerenteDeleteView):
     model = Sala
     success_url = reverse_lazy("manager:salas_list")
     section = "Salas"
-    object_label = "Sala"
+    object_label = "La sala"
 
 
 class PeliculasListView(GerenteListView):
@@ -407,7 +514,7 @@ class PeliculaCreateView(GerenteCreateView):
     success_url = reverse_lazy("manager:peliculas_list")
     section = "Peliculas"
     enctype = "multipart/form-data"
-    object_label = "Pelicula"
+    object_label = "La película"
     form_title = "Nueva pelicula"
 
 
@@ -417,7 +524,7 @@ class PeliculaUpdateView(GerenteUpdateView):
     success_url = reverse_lazy("manager:peliculas_list")
     section = "Peliculas"
     enctype = "multipart/form-data"
-    object_label = "Pelicula"
+    object_label = "La película"
     form_title = "Editar pelicula"
 
 
@@ -425,7 +532,7 @@ class PeliculaDeleteView(GerenteDeleteView):
     model = Pelicula
     success_url = reverse_lazy("manager:peliculas_list")
     section = "Peliculas"
-    object_label = "Pelicula"
+    object_label = "La película"
 
 
 class FuncionesListView(GerenteListView):
@@ -438,7 +545,7 @@ class FuncionesListView(GerenteListView):
         "Sala",
         "Fecha",
         "Estado",
-        "Precio",
+        "Desde",
         "Vendidas",
         "Disponibles",
     )
@@ -448,33 +555,55 @@ class FuncionesListView(GerenteListView):
         ("fecha_desc", "Fecha más lejana", ("-fecha_horario",)),
         ("pelicula_asc", "Película A-Z", ("pelicula__titulo", "fecha_horario")),
         ("sala_asc", "Sala A-Z", ("sala__nombre", "fecha_horario")),
-        ("precio_desc", "Mayor precio", ("-precio_entrada", "fecha_horario")),
-        ("precio_asc", "Menor precio", ("precio_entrada", "fecha_horario")),
+        ("precio_desc", "Mayor precio desde", ("-precio_entrada", "fecha_horario")),
+        ("precio_asc", "Menor precio desde", ("precio_entrada", "fecha_horario")),
     )
 
-    def get_queryset(self):
+    def get_annotated_queryset(self):
         Funcion.finalizar_vencidas()
-        queryset = (
+        return (
             Funcion.objects.select_related("pelicula", "sala")
             .annotate(
                 entradas_vendidas=Coalesce(
                     Sum("compras_entradas__cantidad"),
                     Value(0),
                     output_field=IntegerField(),
-                )
+                ),
+                capacidad_sala=Case(
+                    When(capacidad_snapshot=0, then=F("sala__capacidad")),
+                    default=F("capacidad_snapshot"),
+                    output_field=IntegerField(),
+                ),
             )
             .annotate(
                 entradas_disponibles=Greatest(
-                    F("sala__capacidad") - F("entradas_vendidas"),
+                    F("capacidad_sala") - F("entradas_vendidas"),
                     Value(0),
                     output_field=IntegerField(),
                 )
             )
         )
+
+    def get_queryset(self):
+        queryset = self.get_annotated_queryset()
         search_query = self.get_search_query()
         if search_query:
             queryset = self.apply_search(queryset, search_query)
         return self.apply_ordering(queryset)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        hidden_queryset = (
+            self.get_annotated_queryset()
+            .filter(
+                estado__in=(Funcion.Estado.BORRADOR, Funcion.Estado.PROGRAMADA),
+                fecha_horario__gte=timezone.now(),
+            )
+            .order_by("fecha_horario")
+        )
+        context["hidden_priority_functions"] = hidden_queryset[:6]
+        context["hidden_priority_count"] = hidden_queryset.count()
+        return context
 
     def apply_search(self, queryset, search_query):
         return queryset.filter(
@@ -489,8 +618,39 @@ class FuncionCreateView(GerenteCreateView):
     success_url = reverse_lazy("manager:funciones_list")
     section = "Funciones"
     enctype = ""
-    object_label = "Funcion"
+    object_label = "La función"
     form_title = "Nueva función"
+
+    def get_price_matrix(self):
+        salas = Sala.objects.prefetch_related("seats__tipo").all()
+        all_types = list(SeatType.objects.all())
+        matrix = {}
+        for sala in salas:
+            types_by_id = {seat.tipo_id: seat.tipo for seat in sala.seats.all()}
+            if not types_by_id:
+                types_by_id = {seat_type.pk: seat_type for seat_type in all_types}
+            defaults = sala.precio_configuracion or {}
+            matrix[str(sala.pk)] = [
+                {
+                    "id": str(seat_type.pk),
+                    "name": seat_type.nombre,
+                    "color": seat_type.color,
+                    "default_price": str(defaults.get(str(seat_type.pk), seat_type.precio_base)),
+                }
+                for seat_type in types_by_id.values()
+            ]
+        return matrix
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        initial_prices = {}
+        if self.object and self.object.pk:
+            initial_prices = self.object.precios_por_tipo or {}
+        elif self.get_initial().get("precios_por_tipo"):
+            initial_prices = self.get_initial()["precios_por_tipo"]
+        context["seat_price_matrix"] = self.get_price_matrix()
+        context["initial_seat_prices"] = initial_prices
+        return context
 
     def get_initial(self):
         initial = super().get_initial()
@@ -504,13 +664,14 @@ class FuncionCreateView(GerenteCreateView):
                 "pelicula": plantilla.pelicula,
                 "sala": plantilla.sala,
                 "fecha_horario": plantilla.fecha_horario,
-                "precio_entrada": plantilla.precio_entrada,
+                "precios_por_tipo": plantilla.precios_por_tipo,
             }
         )
         return initial
 
     def form_valid(self, form):
         form.instance.estado = Funcion.Estado.BORRADOR
+        form.instance.capturar_configuracion_sala()
         return super().form_valid(form)
 
 
@@ -520,7 +681,7 @@ class FuncionUpdateView(GerenteUpdateView):
     success_url = reverse_lazy("manager:funciones_list")
     section = "Funciones"
     enctype = ""
-    object_label = "Funcion"
+    object_label = "La función"
     form_title = "Editar función"
 
     def get_object(self, queryset=None):
@@ -529,12 +690,26 @@ class FuncionUpdateView(GerenteUpdateView):
             raise PermissionDenied
         return funcion
 
+    def get_price_matrix(self):
+        return FuncionCreateView.get_price_matrix(self)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["seat_price_matrix"] = self.get_price_matrix()
+        context["initial_seat_prices"] = self.object.precios_por_tipo or {}
+        return context
+
+    def form_valid(self, form):
+        if self.object.estado != Funcion.Estado.PUBLICADA:
+            form.instance.capturar_configuracion_sala()
+        return super().form_valid(form)
+
 
 class FuncionDeleteView(GerenteDeleteView):
     model = Funcion
     success_url = reverse_lazy("manager:funciones_list")
     section = "Funciones"
-    object_label = "Funcion"
+    object_label = "La función"
 
     def get_object(self, queryset=None):
         funcion = super().get_object(queryset)

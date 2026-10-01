@@ -7,7 +7,15 @@
   <title>Butaca Cero | Gestión</title>
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
   <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
-  <link rel="stylesheet" href="{% static 'manager.css' %}?v=20260929b">
+  <link rel="stylesheet" href="{% static 'manager.css' %}">
+  <script>
+    (function () {
+      var theme = localStorage.getItem("manager-theme") || "dark";
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
+  {% block extra_css %}{% endblock %}
+  
 </head>
 <body>
   <div class="manager-shell">
@@ -45,6 +53,10 @@
             <i data-lucide="calendar-clock" aria-hidden="true"></i>
             <span>Funciones</span>
           </a>
+          <a href="{% url 'manager:configuracion' %}" class="nav-settings {% if section == 'Configuración' or section == 'Configuracion' %}is-active{% endif %}">
+            <i data-lucide="settings" aria-hidden="true"></i>
+            <span>Configuración</span>
+          </a>
         {% endif %}
       </nav>
 
@@ -57,16 +69,25 @@
     <div class="manager-workspace">
       <header class="manager-topbar">
         <div>
-          <span>Panel administrativo</span>
           <strong>{{ cinema.nombre }}</strong>
         </div>
-        <div class="topbar-user">
-          <i data-lucide="circle-user-round" aria-hidden="true"></i>
-          <span>{{ request.user.get_full_name|default:request.user.email|default:request.user.username }}</span>
+        <div class="topbar-actions">
+          <button class="theme-toggle" type="button" aria-label="Cambiar modo claro u oscuro" aria-pressed="true" title="Cambiar tema">
+            <span class="theme-toggle-track" aria-hidden="true">
+              <i data-lucide="moon" class="theme-icon theme-icon-dark"></i>
+              <i data-lucide="sun" class="theme-icon theme-icon-light"></i>
+              <span class="theme-toggle-thumb"></span>
+            </span>
+            <span class="theme-toggle-label">Oscuro</span>
+          </button>
+          <div class="topbar-user">
+            <i data-lucide="circle-user-round" aria-hidden="true"></i>
+            <span>{{ request.user.get_full_name|default:request.user.email|default:request.user.username }}</span>
+          </div>
         </div>
       </header>
 
-      <main class="manager-main">
+      <main class="manager-main{% block main_class %}{% endblock %}">
         {% if messages %}
           <div class="messages" aria-live="polite">
             {% for message in messages %}
@@ -81,10 +102,36 @@
   </div>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
+    (function () {
+      var root = document.documentElement;
+      var toggle = document.querySelector(".theme-toggle");
+      var label = document.querySelector(".theme-toggle-label");
+
+      function applyTheme(theme) {
+        root.dataset.theme = theme;
+        localStorage.setItem("manager-theme", theme);
+        if (toggle) {
+          toggle.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+        }
+        if (label) {
+          label.textContent = theme === "dark" ? "Oscuro" : "Claro";
+        }
+      }
+
+      applyTheme(root.dataset.theme || "dark");
+
+      if (toggle) {
+        toggle.addEventListener("click", function () {
+          applyTheme(root.dataset.theme === "dark" ? "light" : "dark");
+        });
+      }
+    })();
+
     if (window.lucide) {
       lucide.createIcons();
     }
   </script>
+  {% block extra_scripts %}{% endblock %}
   {% block scripts %}{% endblock %}
 </body>
 </html>

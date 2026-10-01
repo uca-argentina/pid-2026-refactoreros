@@ -3,7 +3,6 @@
 {% block content %}
   <section class="page-heading page-heading-row">
     <div>
-      <p>Catálogo exhibido</p>
       <h1>Películas</h1>
     </div>
     {% if create_url_name %}
@@ -54,7 +53,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="6">No hay películas cargadas.</td></tr>
+          <tr><td colspan="6">No se encontró ninguna película.</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -11,21 +11,30 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import environ
-import os
+import sys
 from pathlib import Path
 
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
+REPO_DIR = BASE_DIR.parent
+
+env = environ.Env(
+    DJANGO_DEBUG=(bool, False),
+    DJANGO_ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
+)
+environ.Env.read_env(REPO_DIR / ".env")
+environ.Env.read_env(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env("DJANGO_SECRET_KEY")
+if "test" in sys.argv:
+    SECRET_KEY = env("DJANGO_SECRET_KEY", default="local-test-secret-key")
+else:
+    SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DJANGO_DEBUG")
@@ -48,6 +57,8 @@ INSTALLED_APPS = [
     "domain.screenings",
     "domain.tickets",
     "domain.users",
+    "domain.seats",
+    "domain.seat_types",
     "web.auth",
     "web.catalog",
     "web.manager",
@@ -88,7 +99,7 @@ WSGI_APPLICATION = 'butacaCero.wsgi.application'
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 DATABASES = {
-    "default": env.db("DATABASE_URL")
+    "default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 }
 
 

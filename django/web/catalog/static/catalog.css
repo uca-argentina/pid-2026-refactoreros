@@ -55,10 +55,40 @@ body {
 }
 
 .client-header nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 2px;
   color: rgba(255, 255, 255, .82);
   font-size: 14px;
   font-weight: 700;
   text-decoration: none;
+  transition: color .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.client-header nav a:hover {
+  color: #fff;
+}
+
+.client-header nav a svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.4;
+}
+
+.client-header nav a.client-manager-link {
+  padding: 0 10px;
+  border: 1px solid rgba(251, 191, 36, .42);
+  border-radius: 6px;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, .12);
+}
+
+.client-header nav a.client-manager-link:hover {
+  border-color: rgba(251, 191, 36, .72);
+  color: #fde68a;
+  background: rgba(251, 191, 36, .18);
 }
 
 .client-main {
@@ -257,6 +287,9 @@ body {
 }
 
 .screening-options h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
   color: #fff;
   font-size: 20px;
@@ -268,7 +301,8 @@ body {
   gap: 10px;
 }
 
-.screening-options label {
+.screening-options label,
+.screening-option-link {
   display: grid;
   gap: 4px;
   min-width: 178px;
@@ -278,13 +312,20 @@ body {
   color: #fff;
   background: rgba(255, 255, 255, .08);
   cursor: pointer;
+  text-decoration: none;
   transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
 }
 
-.screening-options label:has(input:checked) {
+.screening-options label:has(input:checked),
+.screening-option-link:hover {
   border-color: rgba(255, 255, 255, .9);
   background: rgba(255, 255, 255, .2);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, .18);
+}
+
+.screening-option-link.is-sold-out {
+  opacity: .5;
+  cursor: not-allowed;
 }
 
 .screening-options input {
@@ -299,11 +340,366 @@ body {
   color: rgba(255, 255, 255, .68);
 }
 
+.seat-selection-main {
+  width: min(980px, calc(100% - 32px));
+}
+
+.seat-selection-header {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 22px;
+  color: #fff;
+}
+
+.seat-selection-header a {
+  width: fit-content;
+  color: rgba(255, 255, 255, .68);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.seat-selection-header .back-to-functions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 28px;
+  padding: 0 0 3px;
+  border-bottom: 1px solid rgba(255, 255, 255, .24);
+  color: rgba(255, 255, 255, .84);
+  background: transparent;
+}
+
+.seat-selection-header .back-to-functions:hover {
+  border-color: rgba(255, 255, 255, .55);
+  color: #fff;
+}
+
+.seat-selection-header h1 {
+  margin: 0;
+  font-size: clamp(32px, 5vw, 56px);
+  line-height: 1.04;
+}
+
+.seat-selection-header p {
+  margin: 0;
+  color: rgba(255, 255, 255, .72);
+  font-size: 15px;
+  font-weight: 800;
+}
+
 .purchase-form {
-  display: flex;
-  align-items: end;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
+}
+
+.seat-selection-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  gap: 24px;
+  align-items: start;
+}
+
+.client-seat-map {
+  max-width: 100%;
+  padding: 14px 0 4px;
+  border-top: 1px solid rgba(255, 255, 255, .14);
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  overflow-x: auto;
+}
+
+.purchase-cart {
+  position: sticky;
+  top: 22px;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 10px;
+  color: #fff;
+  background: rgba(255, 255, 255, .06);
+}
+
+.purchase-cart h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.purchase-cart dl {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.purchase-cart dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, .10);
+}
+
+.purchase-cart dt {
+  color: rgba(255, 255, 255, .58);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.purchase-cart dd {
+  margin: 0;
+  max-width: 150px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.purchase-cart .cart-seat-list {
+  width: min(100%, 190px);
+  max-width: none;
+}
+
+.purchase-cart .cart-total-row {
+  margin-top: 2px;
+  border-top-color: rgba(255, 255, 255, .22);
+}
+
+.purchase-cart .cart-total-row dt,
+.purchase-cart .cart-total-row dd {
+  color: #fff;
+  font-size: 15px;
+}
+
+.cart-seat-lines {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cart-seat-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.cart-seat-lines strong {
+  font-weight: 900;
+}
+
+.client-seat-map.is-hidden {
+  display: none;
+}
+
+.seat-reference-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 14px;
+  color: rgba(255, 255, 255, .70);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.seat-reference-line span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.seat-reference-line b {
+  color: rgba(255, 255, 255, .28);
+  font-weight: 400;
+}
+
+.seat-reference-line i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--seat-color);
+}
+
+.seat-reference-line .legend-selected {
+  background: #f8fafc;
+  box-shadow: 0 0 0 2px #fbbf24;
+}
+
+.seat-reference-line .legend-unavailable {
+  background:
+    linear-gradient(135deg, transparent 38%, rgba(255, 255, 255, .65) 40%, rgba(255, 255, 255, .65) 52%, transparent 54%),
+    #334155;
+}
+
+.client-seat-stage {
+  --client-seat-width: 32px;
+  --client-seat-height: 30px;
+  --client-seat-gap: 4px;
+  display: grid;
+  gap: 12px;
+  width: max-content;
+  min-width: max-content;
+  margin: 0 auto;
+}
+
+.client-screen-marker {
+  display: grid;
+  place-items: center;
+  width: calc(100% - 30px);
+  min-width: 240px;
+  height: 58px;
+  margin: 0 0 2px 30px;
+  color: rgba(255, 255, 255, .88);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  perspective: 320px;
+}
+
+.client-screen-marker::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 22px;
+  border-radius: 0 0 50% 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .42), rgba(255, 255, 255, .08));
+  box-shadow: 0 12px 26px rgba(0, 0, 0, .38);
+  transform: rotateX(-48deg);
+}
+
+.client-screen-marker span {
+  margin-top: 2px;
+}
+
+.client-seat-grid {
+  display: grid;
+  gap: 5px;
+  width: fit-content;
+  min-width: 0;
+  margin: 0;
+}
+
+.client-seat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.client-seat-row-label {
+  width: 22px;
+  color: rgba(255, 255, 255, .58);
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.client-seat-column-row {
+  margin-bottom: 1px;
+}
+
+.client-seat-column-label {
+  display: grid;
+  place-items: center;
+  width: var(--client-seat-width);
+  height: 16px;
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, .50);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.client-seat-column-label.is-aisle {
+  color: transparent;
+}
+
+.client-seat-cells {
+  display: flex;
+  gap: var(--client-seat-gap);
+}
+
+.client-seat,
+.client-seat.aisle {
+  width: var(--client-seat-width);
+  height: var(--client-seat-height);
+  flex: 0 0 auto;
+}
+
+.client-seat {
+  min-height: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--seat-color) 72%, #fff);
+  border-radius: 5px;
+  color: #fff;
+  background: var(--seat-color);
+  box-shadow: inset 0 -8px 14px rgba(0, 0, 0, .13);
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+
+.client-seat:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.12) saturate(1.08);
+}
+
+.client-seat.is-selected {
+  border-color: #f8fafc;
+  color: #0f172a;
+  background: #f8fafc;
+  box-shadow:
+    0 0 0 2px #fbbf24,
+    0 7px 16px rgba(251, 191, 36, .22);
+}
+
+.client-seat.is-pending {
+  opacity: .68;
+  cursor: wait;
+}
+
+.client-seat.is-unavailable,
+.client-seat.is-unavailable:hover {
+  border-color: rgba(148, 163, 184, .35);
+  color: rgba(255, 255, 255, .34);
+  background:
+    linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, .22) 42%, rgba(255, 255, 255, .22) 50%, transparent 52%),
+    #1f2937;
+  box-shadow: none;
+  cursor: not-allowed;
+  filter: none;
+  transform: none;
+}
+
+.client-seat.aisle {
+  display: block;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+
+.client-seat.aisle:hover {
+  filter: none;
+  transform: none;
+}
+
+.client-seat-row.is-aisle-row {
+  margin: 5px 0;
+}
+
+.client-seat-row.is-aisle-row .client-seat-row-label {
+  color: transparent;
+}
+
+.client-seat-row.is-aisle-row .client-seat.aisle {
+  height: 18px;
 }
 
 .purchase-form label {
@@ -331,11 +727,14 @@ body {
 }
 
 .purchase-action {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
 }
 
-.purchase-form button {
+.purchase-action button {
+  width: 100%;
   min-height: 58px;
   padding: 0 28px;
   border: 0;
@@ -348,10 +747,52 @@ body {
   cursor: pointer;
 }
 
-.purchase-form button:disabled {
+.purchase-action button:disabled {
   color: rgba(255, 255, 255, .62);
   background: rgba(255, 255, 255, .16);
   cursor: not-allowed;
+}
+
+.purchase-summary {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: rgba(255, 255, 255, .62);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.reservation-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid rgba(251, 191, 36, .38);
+  border-radius: 5px;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, .1);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.reservation-summary[hidden] {
+  display: none;
+}
+
+.reservation-summary svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.4;
 }
 
 .purchase-error {
@@ -503,11 +944,30 @@ body {
   .client-header {
     align-items: flex-start;
     flex-direction: column;
-    padding: 20px 24px;
+    gap: 14px;
+    padding: 16px 20px;
+  }
+
+  .client-logo {
+    height: 42px;
+    max-width: 150px;
+  }
+
+  .client-header nav {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px 12px;
+  }
+
+  .client-header nav a {
+    min-height: 32px;
+    font-size: 13px;
   }
 
   .client-main {
-    padding-top: 34px;
+    width: min(100% - 24px, 1180px);
+    padding-top: 26px;
+    padding-bottom: 34px;
   }
 
   .client-heading h1 {
@@ -520,11 +980,128 @@ body {
 
   .screening-detail {
     grid-template-columns: 1fr;
-    gap: 28px;
+    gap: 22px;
   }
 
   .screening-detail > img {
-    max-width: 360px;
+    max-width: 280px;
+  }
+
+  .screening-copy {
+    gap: 16px;
+  }
+
+  .screening-copy h1 {
+    font-size: clamp(34px, 10vw, 52px);
+  }
+
+  .screening-copy p {
+    font-size: 16px;
+  }
+
+  .screening-options > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .screening-option-link,
+  .screening-options label {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .seat-selection-main {
+    width: min(100% - 20px, 980px);
+  }
+
+  .seat-selection-header {
+    margin-bottom: 16px;
+  }
+
+  .seat-selection-header h1 {
+    font-size: clamp(30px, 10vw, 44px);
+  }
+
+  .seat-selection-header p {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .seat-selection-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .purchase-cart {
+    position: static;
+    gap: 12px;
+    padding: 14px;
+    border-color: rgba(255, 255, 255, .18);
+    background: rgba(255, 255, 255, .06);
+  }
+
+  .purchase-cart h2 {
+    font-size: 17px;
+  }
+
+  .purchase-cart dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 14px;
+  }
+
+  .purchase-cart dl > div {
+    min-width: 0;
+    padding: 8px 0;
+  }
+
+  .purchase-cart dl > div:nth-child(3),
+  .purchase-cart .cart-total-row {
+    grid-column: 1 / -1;
+  }
+
+  .purchase-cart dd {
+    max-width: none;
+    overflow-wrap: anywhere;
+  }
+
+  .purchase-cart .cart-seat-list {
+    width: 100%;
+  }
+
+  .cart-seat-lines {
+    max-height: 88px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .purchase-action button {
+    min-height: 52px;
+    font-size: 16px;
+  }
+
+  .seat-reference-line {
+    margin-bottom: 10px;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .client-seat-map {
+    margin-inline: -10px;
+    padding: 12px 10px 8px;
+    border: 1px solid rgba(255, 255, 255, .10);
+    border-radius: 10px;
+    background:
+      linear-gradient(90deg, rgba(5, 7, 11, .96), rgba(5, 7, 11, 0) 24px) left / 32px 100% no-repeat local,
+      linear-gradient(270deg, rgba(5, 7, 11, .96), rgba(5, 7, 11, 0) 24px) right / 32px 100% no-repeat local,
+      rgba(255, 255, 255, .025);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .client-seat-stage {
+    margin: 0;
   }
 
   .ticket-card {
@@ -544,17 +1121,95 @@ body {
 }
 
 @media (max-width: 520px) {
-  .movie-grid,
+  .client-header {
+    padding: 14px 16px;
+  }
+
+  .client-header nav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px 14px;
+  }
+
+  .client-header nav a {
+    justify-content: flex-start;
+    min-width: 0;
+    min-height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .client-header nav a.client-manager-link {
+    padding: 0;
+    border: 0;
+    color: #fbbf24;
+    background: transparent;
+  }
+
+  .client-header nav a.client-manager-link:hover {
+    color: #fde68a;
+    background: transparent;
+  }
+
+  .client-header nav a.client-logout-link {
+    margin-left: auto;
+    color: rgba(255, 255, 255, .58);
+  }
+
+  .client-header nav a span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .client-main {
+    width: min(100% - 18px, 1180px);
+    padding-top: 22px;
+  }
+
   .ticket-list {
     grid-template-columns: 1fr;
   }
 
+  .movie-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .movie-grid .movie-card:only-child {
+    grid-column: 1 / -1;
+  }
+
+  .movie-card-body {
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .movie-card-body h2 {
+    font-size: 16px;
+  }
+
+  .movie-card-body p {
+    font-size: 13px;
+  }
+
+  .screening-detail > img {
+    max-width: 190px;
+    border-radius: 9px;
+  }
+
   .screening-facts {
-    gap: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 14px;
   }
 
   .screening-facts div {
-    min-width: calc(50% - 8px);
+    min-width: 0;
     margin-right: 0;
     padding-right: 0;
   }
@@ -563,8 +1218,109 @@ body {
     display: none;
   }
 
-  .client-header nav {
-    justify-content: flex-start;
+  .screening-options > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .screening-option-link,
+  .screening-options label {
+    padding: 11px 10px;
+  }
+
+  .screening-options span {
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  .screening-options small {
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .seat-selection-main {
+    width: min(100% - 14px, 980px);
+  }
+
+  .seat-selection-header {
+    gap: 7px;
+  }
+
+  .seat-reference-line {
+    gap: 6px;
+  }
+
+  .seat-reference-line b {
+    display: none;
+  }
+
+  .purchase-cart {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    padding: 11px;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+
+  .purchase-cart dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 10px;
+  }
+
+  .purchase-cart dl > div {
+    padding: 6px 0;
+  }
+
+  .purchase-cart dt {
+    font-size: 11px;
+  }
+
+  .purchase-cart dd {
+    font-size: 13px;
+  }
+
+  .purchase-cart .cart-total-row dt,
+  .purchase-cart .cart-total-row dd {
+    font-size: 15px;
+  }
+
+  .cart-seat-lines {
+    max-height: 64px;
+  }
+
+  .purchase-action button {
+    min-height: 50px;
+    padding: 0 18px;
+  }
+
+  .client-seat-map {
+    margin-inline: -7px;
+    padding: 10px 7px 8px;
+  }
+
+  .client-screen-marker {
+    height: 50px;
+    font-size: 11px;
+  }
+
+  .client-seat-stage {
+    --client-seat-width: 34px;
+    --client-seat-height: 34px;
+  }
+
+  .client-seat {
+    font-size: 9px;
+  }
+
+  .client-seat-row-label {
+    width: 20px;
+    font-size: 12px;
+  }
+
+  .ticket-summary {
+    grid-template-columns: 1fr;
   }
 }
 
