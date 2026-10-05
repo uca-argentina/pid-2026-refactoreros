@@ -64,18 +64,27 @@
 
         <section class="screening-options" aria-label="Funciones disponibles">
           <h2>Elegí tu función</h2>
-          <div>
-            {% for item in funciones %}
-              <a class="screening-option-link{% if item.entradas_disponibles <= 0 %} is-sold-out{% endif %}" {% if item.entradas_disponibles > 0 %}href="{% url 'seat_selection' item.pk %}"{% else %}aria-disabled="true"{% endif %}>
-                <span>{{ item.fecha_horario|date:"l d/m H:i"|capfirst }}</span>
-                <small>
-                  {% if item.entradas_disponibles <= 0 %}
-                    Función agotada
-                  {% else %}
-                    {{ item.sala.nombre }} | desde ${{ item.precio_desde }}
-                  {% endif %}
-                </small>
-              </a>
+          {% regroup funciones by fecha_horario.date as funciones_por_dia %}
+          <div class="screening-day-list">
+            {% for day in funciones_por_dia %}
+              <section class="screening-day-group">
+                <h3>{{ day.grouper|date:"l d/m"|capfirst }}</h3>
+                <div class="screening-time-chips">
+                  {% for item in day.list %}
+                    {% if item.entradas_disponibles > 0 %}
+                      <a class="screening-time-chip" href="{% url 'seat_selection' item.pk %}" title="{{ item.sala.nombre }} - desde ${{ item.precio_desde }}">
+                        <span>{{ item.fecha_horario|date:"H:i" }}</span>
+                        <small>{{ item.sala.nombre }} · ${{ item.precio_desde }}</small>
+                      </a>
+                    {% else %}
+                      <span class="screening-time-chip is-sold-out" aria-disabled="true" title="Función agotada">
+                        <span>{{ item.fecha_horario|date:"H:i" }}</span>
+                        <small>Agotada</small>
+                      </span>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              </section>
             {% endfor %}
           </div>
         </section>

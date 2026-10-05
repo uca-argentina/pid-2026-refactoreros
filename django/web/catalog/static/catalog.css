@@ -295,20 +295,46 @@ body {
   font-size: 20px;
 }
 
-.screening-options > div {
+.screening-day-list {
+  display: grid;
+  gap: 14px;
+}
+
+.screening-day-group {
+  display: grid;
+  grid-template-columns: minmax(112px, auto) minmax(0, 1fr);
+  gap: 12px 16px;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+}
+
+.screening-day-group h3 {
+  margin: 0;
+  color: rgba(255, 255, 255, .78);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-transform: capitalize;
+}
+
+.screening-time-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .screening-options label,
-.screening-option-link {
+.screening-option-link,
+.screening-time-chip {
   display: grid;
-  gap: 4px;
-  min-width: 178px;
-  padding: 14px 16px;
+  gap: 3px;
+  min-width: 112px;
+  min-height: 54px;
+  padding: 9px 12px;
   border: 1px solid rgba(255, 255, 255, .14);
-  border-radius: 10px;
+  border-radius: 8px;
   color: #fff;
   background: rgba(255, 255, 255, .08);
   cursor: pointer;
@@ -317,14 +343,21 @@ body {
 }
 
 .screening-options label:has(input:checked),
-.screening-option-link:hover {
+.screening-option-link:hover,
+.screening-time-chip:hover {
   border-color: rgba(255, 255, 255, .9);
   background: rgba(255, 255, 255, .2);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, .18);
 }
 
-.screening-option-link.is-sold-out {
-  opacity: .5;
+.screening-option-link.is-sold-out,
+.screening-time-chip.is-sold-out,
+.screening-time-chip.is-sold-out:hover {
+  border-color: rgba(148, 163, 184, .16);
+  color: rgba(255, 255, 255, .42);
+  background: rgba(148, 163, 184, .08);
+  box-shadow: none;
+  opacity: .72;
   cursor: not-allowed;
 }
 
@@ -332,12 +365,18 @@ body {
   accent-color: #fff;
 }
 
-.screening-options span {
+.screening-options span,
+.screening-time-chip span {
   font-weight: 800;
 }
 
-.screening-options small {
+.screening-options small,
+.screening-time-chip small {
   color: rgba(255, 255, 255, .68);
+}
+
+.screening-time-chip.is-sold-out small {
+  color: rgba(255, 255, 255, .36);
 }
 
 .seat-selection-main {
@@ -975,35 +1014,58 @@ body {
   }
 
   .screening-detail {
-    grid-template-columns: 1fr;
-    gap: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
 
   .screening-detail > img {
+    order: 3;
+    align-self: center;
+    width: min(72vw, 280px);
     max-width: 280px;
   }
 
   .screening-copy {
-    gap: 16px;
+    display: contents;
+  }
+
+  .screening-kicker {
+    order: 1;
+    margin-bottom: -8px;
   }
 
   .screening-copy h1 {
+    order: 2;
     font-size: clamp(34px, 10vw, 52px);
+  }
+
+  .screening-facts {
+    order: 4;
+  }
+
+  .screening-options {
+    order: 5;
+  }
+
+  .screening-copy > p:not(.screening-kicker) {
+    order: 6;
   }
 
   .screening-copy p {
     font-size: 16px;
   }
 
-  .screening-options > div {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .screening-day-group {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 14px 0;
   }
 
   .screening-option-link,
-  .screening-options label {
+  .screening-options label,
+  .screening-time-chip {
     min-width: 0;
-    width: 100%;
   }
 
   .seat-selection-main {
@@ -1194,7 +1256,8 @@ body {
   }
 
   .screening-detail > img {
-    max-width: 190px;
+    width: min(64vw, 210px);
+    max-width: 210px;
     border-radius: 9px;
   }
 
@@ -1214,13 +1277,17 @@ body {
     display: none;
   }
 
-  .screening-options > div {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .screening-day-list {
+    gap: 10px;
+  }
+
+  .screening-time-chips {
     gap: 8px;
   }
 
   .screening-option-link,
-  .screening-options label {
+  .screening-options label,
+  .screening-time-chip {
     padding: 11px 10px;
   }
 
