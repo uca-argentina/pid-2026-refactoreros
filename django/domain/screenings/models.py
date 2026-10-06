@@ -72,10 +72,11 @@ class Funcion(models.Model):
 
     def capturar_configuracion_sala(self):
         seats = self.sala.seats.select_related("tipo").order_by("fila", "columna")
-        price_config = self.precios_por_tipo or self.sala.precio_configuracion or {}
+        price_config = {}
         seat_snapshot = []
         for seat in seats:
-            seat_price = price_config.get(str(seat.tipo_id), str(seat.tipo.precio_base))
+            seat_price = str(seat.tipo.precio_base)
+            price_config[str(seat.tipo_id)] = seat_price
             seat_snapshot.append(
                 {
                     "row": seat.fila,

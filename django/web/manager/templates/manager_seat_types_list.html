@@ -1,0 +1,60 @@
+{% extends "manager_base.html" %}
+
+{% block content %}
+  <section class="page-heading page-heading-row">
+    <div>
+      <h1>Butacas</h1>
+    </div>
+    {% if create_url_name %}
+      <a class="primary-link" href="{% url create_url_name %}">
+        <i data-lucide="plus" aria-hidden="true"></i>
+        <span>Nuevo tipo</span>
+      </a>
+    {% endif %}
+  </section>
+
+  {% include "_list_controls.html" %}
+
+  <section class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Precio</th>
+          <th>Color</th>
+          <th>Butacas</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for seat_type in object_list %}
+          <tr>
+            <td data-label="Nombre"><strong class="cell-title">{{ seat_type.nombre }}</strong></td>
+            <td data-label="Precio">${{ seat_type.precio_base|floatformat:2 }}</td>
+            <td data-label="Color">
+              <span class="seat-type-color">
+                <span style="background: {{ seat_type.color }};"></span>
+                {{ seat_type.color }}
+              </span>
+            </td>
+            <td data-label="Butacas">{{ seat_type.cantidad_butacas }}</td>
+            <td class="table-actions" data-label="Acciones">
+              <a href="{% url 'manager:seat_types_update' seat_type.pk %}">
+                <i data-lucide="pencil" aria-hidden="true"></i>
+                <span>Editar</span>
+              </a>
+              <a href="{% url 'manager:seat_types_delete' seat_type.pk %}" class="danger-link">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                <span>Eliminar</span>
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">No hay tipos de butaca cargados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% include "_pagination.html" %}
+{% endblock %}

@@ -7,7 +7,7 @@ class Seat(models.Model):
     sala        = models.ForeignKey(Sala, on_delete=models.CASCADE, related_name="seats")
     fila        = models.PositiveIntegerField()
     columna     = models.PositiveIntegerField()
-    tipo        = models.ForeignKey(SeatType, on_delete=models.CASCADE, related_name="seats")
+    tipo        = models.ForeignKey(SeatType, on_delete=models.PROTECT, related_name="seats")
     
     class Meta:
         verbose_name = "Asiento"

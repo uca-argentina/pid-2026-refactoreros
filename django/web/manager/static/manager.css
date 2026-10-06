@@ -917,6 +917,20 @@ th {
   font-weight: 600;
 }
 
+.seat-type-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.seat-type-color span {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -1302,109 +1316,6 @@ th {
 .manager-form textarea {
   min-height: 150px;
   resize: vertical;
-}
-
-.screening-price-panel {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  background: var(--surface-soft);
-}
-
-.screening-price-panel h2 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.screening-price-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 10px;
-}
-
-.seat-price-field {
-  display: grid !important;
-  grid-template-columns: 14px minmax(0, 1fr);
-  gap: 8px 10px !important;
-  align-items: center;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  background: var(--surface);
-}
-
-.seat-price-swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-}
-
-.price-input-shell {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  background: var(--input-bg);
-}
-
-.price-input-shell.is-invalid {
-  border-color: var(--danger);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 18%, transparent);
-}
-
-.price-input-shell.is-invalid > span {
-  color: var(--danger);
-}
-
-.price-input-shell > span {
-  display: grid;
-  place-items: center;
-  min-width: 38px;
-  height: 100%;
-  color: var(--muted);
-  font-weight: 800;
-  background: var(--surface-soft);
-  border-right: 1px solid var(--border);
-}
-
-.seat-price-field .price-input-shell input {
-  width: 100%;
-  min-height: 42px;
-  border: 0;
-  border-radius: 0;
-}
-
-.screening-snapshot-warning {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
-  align-items: start;
-  padding: 13px 14px;
-  border: 1px solid color-mix(in srgb, var(--warning) 42%, var(--border));
-  border-radius: 2px;
-  color: var(--ink);
-  background: color-mix(in srgb, var(--warning) 12%, var(--surface));
-}
-
-.screening-snapshot-warning svg {
-  width: 18px;
-  height: 18px;
-  margin-top: 1px;
-  color: var(--warning);
-}
-
-.screening-snapshot-warning p {
-  margin: 0;
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.45;
 }
 
 .checkbox-field {

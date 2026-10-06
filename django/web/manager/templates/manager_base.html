@@ -42,8 +42,12 @@
             <span>Usuarios</span>
           </a>
           <a href="{% url 'manager:salas_list' %}" class="nav-rooms {% if section == 'Salas' %}is-active{% endif %}">
-            <i data-lucide="armchair" aria-hidden="true"></i>
+            <i data-lucide="building-2" aria-hidden="true"></i>
             <span>Salas</span>
+          </a>
+          <a href="{% url 'manager:seat_types_list' %}" class="nav-seat-types {% if section == 'Butacas' %}is-active{% endif %}">
+            <i data-lucide="armchair" aria-hidden="true"></i>
+            <span>Butacas</span>
           </a>
           <a href="{% url 'manager:peliculas_list' %}" class="nav-movies {% if section == 'Películas' or section == 'Peliculas' %}is-active{% endif %}">
             <i data-lucide="clapperboard" aria-hidden="true"></i>

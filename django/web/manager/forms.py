@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 import json
 
 from domain.cinema.models import ConfiguracionCine
@@ -63,14 +63,9 @@ class SalaForm(forms.ModelForm):
         required=False,
         widget=forms.HiddenInput(attrs={"id": "id_layout_sala"}),
     )
-    precio_configuracion = forms.CharField(
-        required=False,
-        widget=forms.HiddenInput(attrs={"id": "id_precio_configuracion"}),
-    )
-
     class Meta:
         model = Sala
-        fields = ("nombre", "layout_sala", "precio_configuracion")
+        fields = ("nombre", "layout_sala")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -82,9 +77,6 @@ class SalaForm(forms.ModelForm):
             .select_related("tipo")
             .order_by("fila", "columna")
         )
-        if self.instance.precio_configuracion:
-            self.initial["precio_configuracion"] = json.dumps(self.instance.precio_configuracion)
-
         if self.instance.layout_configuracion:
             self.initial["layout_sala"] = json.dumps(
                 self._normalize_initial_layout(self.instance.layout_configuracion, seats)
@@ -164,33 +156,6 @@ class SalaForm(forms.ModelForm):
     def _to_int(self,value):
         return int(value)
 
-    def _parse_price_map(self, value):
-        if not value:
-            return {}
-        try:
-            data = json.loads(value)
-        except ValueError:
-            raise forms.ValidationError("La configuración de precios no es válida.")
-        if not isinstance(data, dict):
-            raise forms.ValidationError("La configuración de precios no es válida.")
-
-        valid_type_ids = set(str(pk) for pk in SeatType.objects.values_list("pk", flat=True))
-        prices = {}
-        for type_id, price in data.items():
-            if str(type_id) not in valid_type_ids:
-                continue
-            try:
-                normalized_price = Decimal(str(price))
-            except (InvalidOperation, TypeError, ValueError):
-                raise forms.ValidationError("Los precios deben ser numéricos.")
-            if normalized_price <= 0:
-                raise forms.ValidationError("Todos los precios deben ser mayores a cero.")
-            prices[str(type_id)] = str(normalized_price)
-        return prices
-
-    def clean_precio_configuracion(self):
-        return self._parse_price_map(self.cleaned_data.get("precio_configuracion"))
-    
     def clean_layout_sala(self):
         data_as_string = self.cleaned_data.get("layout_sala")
         if not data_as_string:
@@ -304,6 +269,28 @@ class PeliculaForm(forms.ModelForm):
         return imagen
 
 
+class SeatTypeForm(forms.ModelForm):
+    class Meta:
+        model = SeatType
+        fields = ("nombre", "precio_base", "color", "icono")
+        labels = {
+            "nombre": "Nombre",
+            "precio_base": "Precio",
+            "color": "Color",
+            "icono": "Icono",
+        }
+        widgets = {
+            "color": forms.TextInput(attrs={"type": "color"}),
+            "icono": forms.ClearableFileInput(attrs={"accept": "image/*"}),
+        }
+
+    def clean_precio_base(self):
+        precio = self.cleaned_data["precio_base"]
+        if precio <= 0:
+            raise forms.ValidationError("El precio debe ser mayor a cero.")
+        return precio
+
+
 class FuncionForm(forms.ModelForm):
     fecha_horario = forms.DateTimeField(
         input_formats=["%Y-%m-%dT%H:%M"],
@@ -312,14 +299,9 @@ class FuncionForm(forms.ModelForm):
             format="%Y-%m-%dT%H:%M",
         ),
     )
-    precios_por_tipo = forms.CharField(
-        required=False,
-        widget=forms.HiddenInput(attrs={"id": "id_precios_por_tipo"}),
-    )
-
     class Meta:
         model = Funcion
-        fields = ("pelicula", "sala", "fecha_horario", "precios_por_tipo")
+        fields = ("pelicula", "sala", "fecha_horario")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -334,40 +316,15 @@ class FuncionForm(forms.ModelForm):
                 "class": "is-locked-field",
                 "data-locked": "true",
             })
-        if self.instance.pk and self.instance.precios_por_tipo:
-            self.initial["precios_por_tipo"] = json.dumps(self.instance.precios_por_tipo)
-
     def clean_fecha_horario(self):
         fecha_horario = self.cleaned_data["fecha_horario"]
         if fecha_horario <= timezone.now():
             raise forms.ValidationError("La fecha y horario deben ser futuros.")
         return fecha_horario
 
-    def clean_precios_por_tipo(self):
-        value = self.cleaned_data.get("precios_por_tipo")
-        if not value:
-            return {}
-        try:
-            data = json.loads(value)
-        except ValueError:
-            raise forms.ValidationError("La configuración de precios no es válida.")
-        if not isinstance(data, dict):
-            raise forms.ValidationError("La configuración de precios no es válida.")
-        prices = {}
-        for type_id, price in data.items():
-            try:
-                normalized_price = Decimal(str(price))
-            except (InvalidOperation, TypeError, ValueError):
-                raise forms.ValidationError("Los precios deben ser numéricos.")
-            if normalized_price <= 0:
-                raise forms.ValidationError("Todos los precios deben ser mayores a cero.")
-            prices[str(type_id)] = str(normalized_price)
-        return prices
-
     def clean(self):
         cleaned_data = super().clean()
         sala = cleaned_data.get("sala")
-        prices = cleaned_data.get("precios_por_tipo") or {}
         if not sala:
             return cleaned_data
 
@@ -380,10 +337,6 @@ class FuncionForm(forms.ModelForm):
         if not required_type_ids:
             required_type_ids = set(str(pk) for pk in SeatType.objects.values_list("pk", flat=True))
 
-        fallback_prices = {
-            str(type_id): str(price)
-            for type_id, price in (sala.precio_configuracion or {}).items()
-        }
         base_prices = {
             str(pk): str(price)
             for pk, price in SeatType.objects.values_list("pk", "precio_base")
@@ -391,15 +344,14 @@ class FuncionForm(forms.ModelForm):
         completed_prices = {}
         missing = []
         for type_id in required_type_ids:
-            price = prices.get(type_id) or fallback_prices.get(type_id) or base_prices.get(type_id)
+            price = base_prices.get(type_id)
             if price is None:
                 missing.append(type_id)
             else:
                 completed_prices[type_id] = str(Decimal(str(price)))
 
         if missing:
-            self.add_error("precios_por_tipo", "Indicá el precio para cada tipo de asiento de la sala.")
-            return cleaned_data
+            raise forms.ValidationError("Indica el precio para cada tipo de butaca.")
 
         cleaned_data["precios_por_tipo"] = completed_prices
         cleaned_data["precio_entrada"] = min(Decimal(str(price)) for price in completed_prices.values())

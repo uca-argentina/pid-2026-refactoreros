@@ -95,7 +95,7 @@ class TicketPurchaseTests(TestCase):
         self.assertEqual(compra.usuario, usuario)
         self.assertEqual(compra.funcion, funcion)
         self.assertEqual(compra.cantidad, 3)
-        self.assertEqual(compra.total, Decimal("4500.00"))
+        self.assertEqual(compra.total, Decimal("3000.00"))
 
     def test_compra_web_con_butaca_muestra_mensaje_singular(self):
         funcion = crear_funcion_con_butacas(titulo="Publicada")

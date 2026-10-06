@@ -2,7 +2,6 @@ const inputFilas = document.getElementById("rows");
 const inputColumnas = document.getElementById("columns");
 const tabla  = document.getElementById("room_layout_table");
 const layoutInput = document.getElementById("id_layout_sala");
-const priceConfigInput = document.getElementById("id_precio_configuracion");
 const undoButton = document.getElementById("undo-layout");
 const redoButton = document.getElementById("redo-layout");
 const selectAllButton = document.getElementById("select-all-seats");
@@ -12,7 +11,6 @@ const importBackupButton = document.getElementById("import-layout-backup");
 const importBackupInput = document.getElementById("layout-backup-file");
 const roomNameInput = document.getElementById("id_nombre");
 const dimensionStepperButtons = document.querySelectorAll(".dimension-step-button");
-const roomSeatPriceInputs = document.querySelectorAll("[data-room-seat-price]");
 
 let isMouseClicking = false;
 let toolMode = "seat"; 
@@ -625,46 +623,7 @@ document.addEventListener("visibilitychange", () => {
 
 const form = document.querySelector(".manager-form");
 
-const priceErrorMessage = "Ingresá un precio mayor a cero.";
-
-function normalizePriceValue(value) {
-    return value.trim().replace(",", ".");
-}
-
-function validatePriceInput(input, shouldFormat = false) {
-    const normalizedValue = normalizePriceValue(input.value);
-    const price = Number(normalizedValue);
-    const isValid = normalizedValue !== "" && Number.isFinite(price) && price > 0;
-
-    input.setCustomValidity(isValid ? "" : priceErrorMessage);
-    input.closest(".price-input-shell")?.classList.toggle("is-invalid", !isValid);
-
-    if (isValid && shouldFormat) {
-        input.value = price.toFixed(2);
-    }
-    return isValid;
-}
-
-function validateRoomDefaultPrices({shouldReport = false, shouldFormat = false} = {}) {
-    let firstInvalidInput = null;
-    roomSeatPriceInputs.forEach((input) => {
-        if (!validatePriceInput(input, shouldFormat) && !firstInvalidInput) {
-            firstInvalidInput = input;
-        }
-    });
-
-    if (firstInvalidInput && shouldReport) {
-        firstInvalidInput.focus();
-        firstInvalidInput.reportValidity();
-    }
-    return !firstInvalidInput;
-}
-
 form.addEventListener("submit",(event) => {
-    if (!validateRoomDefaultPrices({shouldReport: true, shouldFormat: true})) {
-        event.preventDefault();
-        return;
-    }
     normalizeDimensionInput(inputFilas);
     normalizeDimensionInput(inputColumnas);
 
@@ -673,7 +632,6 @@ form.addEventListener("submit",(event) => {
         columns: normalizeDimensionInput(inputColumnas),
         seats: getSeatsFromEstado(),
     });
-    serializeRoomDefaultPrices();
 });
 
 [inputFilas, inputColumnas].forEach((input) => {
@@ -825,33 +783,6 @@ function loadLayoutFromHiddenInput() {
     }
 }
 
-function serializeRoomDefaultPrices() {
-    if (!priceConfigInput) {
-        return;
-    }
-    const prices = {};
-    roomSeatPriceInputs.forEach((input) => {
-        prices[input.dataset.seatTypeId] = input.value;
-    });
-    priceConfigInput.value = JSON.stringify(prices);
-}
-
-function loadRoomDefaultPrices() {
-    if (!priceConfigInput?.value) {
-        serializeRoomDefaultPrices();
-        return;
-    }
-    try {
-        const prices = JSON.parse(priceConfigInput.value);
-        roomSeatPriceInputs.forEach((input) => {
-            input.value = prices[input.dataset.seatTypeId] || input.dataset.defaultPrice;
-        });
-        serializeRoomDefaultPrices();
-    } catch (_error) {
-        serializeRoomDefaultPrices();
-    }
-}
-
 function setupDoubleConfirm(button, defaultLabel, confirmLabel, action) {
     let confirmationTimer;
     button.addEventListener("click", () => {
@@ -886,18 +817,6 @@ importBackupInput.addEventListener("change", () => {
     }
     importBackupInput.value = "";
 });
-roomSeatPriceInputs.forEach((input) => {
-    input.addEventListener("input", () => {
-        validatePriceInput(input);
-        serializeRoomDefaultPrices();
-    });
-    input.addEventListener("blur", () => {
-        validatePriceInput(input, true);
-        serializeRoomDefaultPrices();
-    });
-});
-
-loadRoomDefaultPrices();
 if (!loadLayoutFromHiddenInput()) {
     const rows = normalizeDimensionInput(inputFilas);
     const columns = normalizeDimensionInput(inputColumnas);

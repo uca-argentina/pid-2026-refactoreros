@@ -103,22 +103,6 @@
       </div>
 
       <div class="room-design-workspace">
-        <section class="room-default-prices" aria-label="Precios por defecto por tipo de asiento">
-          <h2>Precios por defecto</h2>
-          <div class="room-default-price-grid">
-            {% for seat_type in seat_types %}
-              <label class="seat-price-field">
-                <span class="seat-price-swatch" style="background: {{ seat_type.color }};"></span>
-                <span>{{ seat_type.nombre }}</span>
-                <span class="price-input-shell">
-                  <span aria-hidden="true">$</span>
-                  <input type="number" min="1" step="0.01" data-room-seat-price data-seat-type-id="{{ seat_type.pk }}" data-default-price="{{ seat_type.precio_base }}" value="{{ seat_type.precio_base }}" required>
-                </span>
-              </label>
-            {% endfor %}
-          </div>
-        </section>
-
         <div class="room-layout-scroll" aria-label="Plano de sala">
           <div class="room-layout-stage">
             <div class="screen-marker" aria-hidden="true">

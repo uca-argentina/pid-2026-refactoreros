@@ -139,31 +139,6 @@
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.room-default-prices {
-  display: grid;
-  gap: 10px;
-  width: 100%;
-  margin: 0;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  background: var(--surface-soft);
-}
-
-.room-default-prices h2 {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.room-default-price-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-}
-
 .tool-btn.erase {
   border-color: #94a3b8;
   color: #f8fafc;
@@ -324,15 +299,11 @@
 
 .room-design-workspace {
   display: grid;
-  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 22px;
   align-items: start;
   width: min(100%, 1220px);
   min-width: 0;
-}
-
-.room-design-workspace .room-default-prices {
-  align-self: start;
 }
 
 .room-design-workspace .room-layout-scroll {
@@ -673,13 +644,6 @@
     order: 1;
   }
 
-  .room-default-prices {
-    order: 2;
-  }
-
-  .room-default-price-grid {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  }
 }
 
 @media (max-width: 760px) {

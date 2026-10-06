@@ -87,6 +87,7 @@ class ManagerAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Usuarios")
         self.assertContains(response, "Salas")
+        self.assertContains(response, "Butacas")
         self.assertContains(response, "Películas")
         self.assertContains(response, "Funciones")
 
@@ -380,6 +381,66 @@ class ManagerSalasTests(TestCase):
         self.assertFalse(Sala.objects.filter(pk=sala.pk).exists())
 
 
+class ManagerSeatTypesTests(TestCase):
+    def setUp(self):
+        self.gerente = get_user_model().objects.create_user(
+            username="gerente@mail.com",
+            email="gerente@mail.com",
+            password="PasswordSegura123!",
+        )
+        Gerente.objects.create(usuario=self.gerente)
+        self.client.force_login(self.gerente)
+
+    def test_gerente_lista_tipos_de_butaca(self):
+        response = self.client.get(reverse("manager:seat_types_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Estándar")
+        self.assertContains(response, "Precio")
+
+    def test_gerente_crea_tipo_de_butaca_con_precio(self):
+        response = self.client.post(
+            reverse("manager:seat_types_create"),
+            data={
+                "nombre": "Premium",
+                "precio_base": "2500.00",
+                "color": "#111827",
+            },
+        )
+
+        self.assertRedirects(response, reverse("manager:seat_types_list"))
+        tipo = SeatType.objects.get(nombre="Premium")
+        self.assertEqual(tipo.precio_base, Decimal("2500.00"))
+
+    def test_no_permite_tipo_de_butaca_con_precio_cero(self):
+        response = self.client.post(
+            reverse("manager:seat_types_create"),
+            data={
+                "nombre": "Gratis",
+                "precio_base": "0.00",
+                "color": "#111827",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(SeatType.objects.filter(nombre="Gratis").exists())
+        self.assertIn("precio_base", response.context["form"].errors)
+
+    def test_no_elimina_tipo_de_butaca_usado_en_sala(self):
+        sala = Sala.objects.create(nombre="Sala 1")
+        tipo = SeatType.objects.get(nombre="Estándar")
+        Seat.objects.create(sala=sala, fila=0, columna=0, tipo=tipo)
+
+        response = self.client.post(
+            reverse("manager:seat_types_delete", args=[tipo.pk]),
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse("manager:seat_types_list"))
+        self.assertTrue(SeatType.objects.filter(pk=tipo.pk).exists())
+        self.assertContains(response, "No se puede eliminar")
+
+
 SMALL_GIF = (
     b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00"
     b"\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,"
@@ -488,11 +549,9 @@ class ManagerFuncionesTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 200)
-        form = response.context["form"]
-        self.assertIn("precios_por_tipo", form.errors)
-        self.assertIn("mayores a cero", form.errors["precios_por_tipo"][0])
-        self.assertEqual(Funcion.objects.count(), 0)
+        self.assertRedirects(response, reverse("manager:funciones_list"))
+        funcion = Funcion.objects.get()
+        self.assertEqual(funcion.precio_entrada, Decimal("1000.00"))
 
     def test_no_permite_crear_funcion_con_precio_negativo(self):
         response = self.client.post(
@@ -505,11 +564,9 @@ class ManagerFuncionesTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 200)
-        form = response.context["form"]
-        self.assertIn("precios_por_tipo", form.errors)
-        self.assertIn("mayores a cero", form.errors["precios_por_tipo"][0])
-        self.assertEqual(Funcion.objects.count(), 0)
+        self.assertRedirects(response, reverse("manager:funciones_list"))
+        funcion = Funcion.objects.get()
+        self.assertEqual(funcion.precio_entrada, Decimal("1000.00"))
 
     def test_no_permite_crear_funcion_con_fecha_pasada(self):
         response = self.client.post(
@@ -784,21 +841,28 @@ class ManagerFuncionesTests(TestCase):
 
         response = self.client.get(reverse("manager:funciones_list"))
 
-        self.assertContains(response, "$1500,00")
+        self.assertContains(response, "$1000,00")
 
     def test_lista_funciones_ordena_por_mayor_precio(self):
+        tipo_caro = SeatType.objects.create(
+            nombre="Premium",
+            precio_base="2500.00",
+            color="#111827",
+        )
+        sala_cara = Sala.objects.create(nombre="Sala premium")
+        Seat.objects.create(sala=sala_cara, fila=0, columna=0, tipo=tipo_caro)
         barata = Funcion.objects.create(
             pelicula=self.pelicula,
             sala=self.sala,
             fecha_horario=self.fecha_futura(20, 30),
-            precio_entrada="1000.00",
+            precio_entrada="1.00",
             estado=Funcion.Estado.BORRADOR,
         )
         cara = Funcion.objects.create(
             pelicula=self.pelicula,
-            sala=self.sala,
+            sala=sala_cara,
             fecha_horario=self.fecha_futura(22, 30),
-            precio_entrada="2500.00",
+            precio_entrada="1.00",
             estado=Funcion.Estado.BORRADOR,
         )
 
@@ -849,10 +913,7 @@ class ManagerFuncionesTests(TestCase):
             response.context["form"].initial["fecha_horario"],
             funcion.fecha_horario,
         )
-        self.assertEqual(
-            response.context["form"].initial["precios_por_tipo"],
-            funcion.precios_por_tipo,
-        )
+        self.assertNotIn("precios_por_tipo", response.context["form"].initial)
         self.assertContains(
             response,
             f'value="{self.fecha_form(funcion.fecha_horario)}"',
@@ -988,6 +1049,7 @@ class ManagerFuncionesTests(TestCase):
             precio_entrada="1500.00",
             estado=Funcion.Estado.BORRADOR,
         )
+        SeatType.objects.filter(seats__sala=self.sala).update(precio_base="1600.00")
 
         response = self.client.post(
             reverse("manager:funciones_update", args=[funcion.pk]),
@@ -995,7 +1057,6 @@ class ManagerFuncionesTests(TestCase):
                 "pelicula": self.pelicula.pk,
                 "sala": self.sala.pk,
                 "fecha_horario": self.fecha_form(self.fecha_futura(20, 0)),
-                "precios_por_tipo": self.precios_por_tipo_form("1600.00"),
             },
         )
 

@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Case, Count, F, IntegerField, OuterRef, Q, Subquery, Sum, Value, When
+from django.db.models.deletion import ProtectedError
 from django.db.models.functions import Coalesce, Greatest
 from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
@@ -32,6 +33,7 @@ from .forms import (
     FuncionForm,
     PeliculaForm,
     SalaForm,
+    SeatTypeForm,
     UsuarioGestionForm,
 )
 
@@ -109,7 +111,7 @@ class GestionHomeView(ManagerAccessMixin, TemplateView):
             {
                 "label": "Salas disponibles",
                 "value": Sala.objects.count(),
-                "icon": "armchair",
+                "icon": "building-2",
                 "tone": "violet",
             },
             {
@@ -490,6 +492,68 @@ class SalaDeleteView(GerenteDeleteView):
     object_label = "La sala"
 
 
+class SeatTypesListView(GerenteListView):
+    model = SeatType
+    template_name = "manager_seat_types_list.html"
+    section = "Butacas"
+    create_url_name = "manager:seat_types_create"
+    columns = ("Nombre", "Precio", "Color", "Butacas")
+    search_placeholder = "Buscar por nombre"
+    ordering_options = (
+        ("nombre_asc", "Nombre A-Z", ("nombre",)),
+        ("nombre_desc", "Nombre Z-A", ("-nombre",)),
+        ("precio_asc", "Menor precio", ("precio_base", "nombre")),
+        ("precio_desc", "Mayor precio", ("-precio_base", "nombre")),
+    )
+
+    def get_queryset(self):
+        queryset = SeatType.objects.annotate(cantidad_butacas=Count("seats"))
+        search_query = self.get_search_query()
+        if search_query:
+            queryset = self.apply_search(queryset, search_query)
+        return self.apply_ordering(queryset)
+
+    def apply_search(self, queryset, search_query):
+        return queryset.filter(nombre__icontains=search_query)
+
+
+class SeatTypeCreateView(GerenteCreateView):
+    model = SeatType
+    form_class = SeatTypeForm
+    success_url = reverse_lazy("manager:seat_types_list")
+    section = "Butacas"
+    enctype = "multipart/form-data"
+    object_label = "El tipo de butaca"
+    form_title = "Nuevo tipo de butaca"
+
+
+class SeatTypeUpdateView(GerenteUpdateView):
+    model = SeatType
+    form_class = SeatTypeForm
+    success_url = reverse_lazy("manager:seat_types_list")
+    section = "Butacas"
+    enctype = "multipart/form-data"
+    object_label = "El tipo de butaca"
+    form_title = "Editar tipo de butaca"
+
+
+class SeatTypeDeleteView(GerenteDeleteView):
+    model = SeatType
+    success_url = reverse_lazy("manager:seat_types_list")
+    section = "Butacas"
+    object_label = "El tipo de butaca"
+
+    def form_valid(self, form):
+        try:
+            return super().form_valid(form)
+        except ProtectedError:
+            messages.error(
+                self.request,
+                "No se puede eliminar un tipo de butaca que esta usado en una sala.",
+            )
+            return redirect(self.success_url)
+
+
 class PeliculasListView(GerenteListView):
     model = Pelicula
     template_name = "manager_peliculas_list.html"
@@ -636,37 +700,6 @@ class FuncionCreateView(GerenteCreateView):
     object_label = "La función"
     form_title = "Nueva función"
 
-    def get_price_matrix(self):
-        salas = Sala.objects.prefetch_related("seats__tipo").all()
-        all_types = list(SeatType.objects.all())
-        matrix = {}
-        for sala in salas:
-            types_by_id = {seat.tipo_id: seat.tipo for seat in sala.seats.all()}
-            if not types_by_id:
-                types_by_id = {seat_type.pk: seat_type for seat_type in all_types}
-            defaults = sala.precio_configuracion or {}
-            matrix[str(sala.pk)] = [
-                {
-                    "id": str(seat_type.pk),
-                    "name": seat_type.nombre,
-                    "color": seat_type.color,
-                    "default_price": str(defaults.get(str(seat_type.pk), seat_type.precio_base)),
-                }
-                for seat_type in types_by_id.values()
-            ]
-        return matrix
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        initial_prices = {}
-        if self.object and self.object.pk:
-            initial_prices = self.object.precios_por_tipo or {}
-        elif self.get_initial().get("precios_por_tipo"):
-            initial_prices = self.get_initial()["precios_por_tipo"]
-        context["seat_price_matrix"] = self.get_price_matrix()
-        context["initial_seat_prices"] = initial_prices
-        return context
-
     def get_initial(self):
         initial = super().get_initial()
         plantilla_id = self.request.GET.get("plantilla")
@@ -679,7 +712,6 @@ class FuncionCreateView(GerenteCreateView):
                 "pelicula": plantilla.pelicula,
                 "sala": plantilla.sala,
                 "fecha_horario": plantilla.fecha_horario,
-                "precios_por_tipo": plantilla.precios_por_tipo,
             }
         )
         return initial
@@ -704,15 +736,6 @@ class FuncionUpdateView(GerenteUpdateView):
         if not funcion.es_editable:
             raise PermissionDenied
         return funcion
-
-    def get_price_matrix(self):
-        return FuncionCreateView.get_price_matrix(self)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["seat_price_matrix"] = self.get_price_matrix()
-        context["initial_seat_prices"] = self.object.precios_por_tipo or {}
-        return context
 
     def form_valid(self, form):
         if self.object.estado != Funcion.Estado.PUBLICADA:
