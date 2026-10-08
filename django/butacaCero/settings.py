@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import environ
-import os
 import sys
 from pathlib import Path
 
@@ -23,14 +22,6 @@ REPO_DIR = BASE_DIR.parent
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
     DJANGO_ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
-    DJANGO_CSRF_TRUSTED_ORIGINS=(list, []),
-    DJANGO_EMAIL_HOST=(str, "localhost"),
-    DJANGO_EMAIL_PORT=(int, 25),
-    DJANGO_EMAIL_HOST_USER=(str, ""),
-    DJANGO_EMAIL_HOST_PASSWORD=(str, ""),
-    DJANGO_EMAIL_USE_TLS=(bool, False),
-    DJANGO_EMAIL_USE_SSL=(bool, False),
-    DJANGO_DEFAULT_FROM_EMAIL=(str, "webmaster@localhost"),
 )
 environ.Env.read_env(REPO_DIR / ".env")
 environ.Env.read_env(BASE_DIR / ".env")
@@ -48,24 +39,7 @@ else:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DJANGO_DEBUG")
 
-ALLOWED_HOSTS = [host for host in env.list("DJANGO_ALLOWED_HOSTS") if host]
-RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
-
-if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-
-CSRF_TRUSTED_ORIGINS = [
-    origin for origin in env.list("DJANGO_CSRF_TRUSTED_ORIGINS") if origin
-]
-
-if RENDER_EXTERNAL_HOSTNAME:
-    render_origin = f"https://{RENDER_EXTERNAL_HOSTNAME}"
-    if render_origin not in CSRF_TRUSTED_ORIGINS:
-        CSRF_TRUSTED_ORIGINS.append(render_origin)
-
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS")
 
 
 # Application definition
@@ -93,7 +67,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -172,14 +145,6 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -192,24 +157,8 @@ LOGOUT_REDIRECT_URL = "login"
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL")
-default_email_backend = (
-    "django.core.mail.backends.console.EmailBackend"
-    if DEBUG
-    else "django.core.mail.backends.smtp.EmailBackend"
-)
 MAILERS = {
-    "default": {
-        "BACKEND": env("DJANGO_EMAIL_BACKEND", default=default_email_backend),
+    'default': {
+        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
-
-if MAILERS["default"]["BACKEND"] == "django.core.mail.backends.smtp.EmailBackend":
-    MAILERS["default"]["OPTIONS"] = {
-        "host": env("DJANGO_EMAIL_HOST"),
-        "port": env.int("DJANGO_EMAIL_PORT"),
-        "username": env("DJANGO_EMAIL_HOST_USER"),
-        "password": env("DJANGO_EMAIL_HOST_PASSWORD"),
-        "use_tls": env.bool("DJANGO_EMAIL_USE_TLS"),
-        "use_ssl": env.bool("DJANGO_EMAIL_USE_SSL"),
-    }

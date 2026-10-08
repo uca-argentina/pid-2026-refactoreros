@@ -105,37 +105,6 @@ Borrar contenedores y base local:
 docker compose down -v
 ```
 
-## Deploy en Render
-
-El repo incluye `render.yaml` para crear un Blueprint con:
-
-- un Web Service Docker para Django;
-- una base PostgreSQL administrada;
-- `DATABASE_URL`, `DJANGO_DEBUG=False`, `DJANGO_SECRET_KEY` generado por Render y `DJANGO_ALLOWED_HOSTS` conectado al hostname del servicio;
-- health check en `/health/`.
-
-Pasos:
-
-1. Subir la rama con los cambios a GitHub.
-2. En Render, crear un Blueprint desde este repositorio y elegir la rama que contiene `render.yaml`.
-3. Esperar el primer deploy. El contenedor ejecuta `collectstatic` y `migrate` antes de iniciar Gunicorn.
-4. Crear el superusuario desde la Shell de Render:
-
-```bash
-python manage.py createsuperuser
-```
-
-Si se agrega un dominio propio, sumar el hostname a `DJANGO_ALLOWED_HOSTS` y el origen HTTPS a `DJANGO_CSRF_TRUSTED_ORIGINS`, por ejemplo:
-
-```text
-DJANGO_ALLOWED_HOSTS=butaca-cero.onrender.com,mi-dominio.com
-DJANGO_CSRF_TRUSTED_ORIGINS=https://mi-dominio.com
-```
-
-En producción, Django usa SMTP por defecto para no depender del backend de consola. Si la app va a enviar emails, configurar `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_PASSWORD`, `DJANGO_EMAIL_USE_TLS` y `DJANGO_DEFAULT_FROM_EMAIL` en Render.
-
-Render inyecta `PORT`; el Dockerfile lo usa para iniciar Gunicorn en `0.0.0.0:$PORT`.
-
 ## Consideraciones
 
 - No subir `.env` a Git.
