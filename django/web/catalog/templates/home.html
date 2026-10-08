@@ -12,11 +12,7 @@
 <body class="client-page">
   <header class="client-header">
     <a class="client-brand" href="{% url 'home' %}">
-      {% if cinema.logo %}
-        <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="client-logo">
-      {% else %}
-        <strong>{{ cinema.nombre }}</strong>
-      {% endif %}
+      <img src="{% static 'branding/Logo_WHITE.png' %}" alt="{{ cinema.nombre }}" class="client-logo">
     </a>
     <nav>
       <a href="{% url 'my_tickets' %}"><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>

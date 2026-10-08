@@ -13,15 +13,9 @@
 <body>
   <main class="auth-page">
     <section class="auth-shell">
-      <aside class="brand-panel"{% if cinema.imagen_login %} style="background-image: linear-gradient(180deg, rgba(8, 12, 18, .18), rgba(8, 12, 18, .86)), url('{{ cinema.imagen_login.url }}');"{% endif %}>
+      <aside class="brand-panel" style="background-image: linear-gradient(180deg, rgba(8, 12, 18, .18), rgba(8, 12, 18, .86)), url('{% static 'branding/Fondo_brand_login.png' %}');">
         <div class="brand-lockup brand-lockup-light">
-          {% if cinema.logo %}
-            <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="brand-logo">
-          {% else %}
-            <div>
-              <strong>{{ cinema.nombre }}</strong>
-            </div>
-          {% endif %}
+          <img src="{% static 'branding/Logo_WHITE.png' %}" alt="{{ cinema.nombre }}" class="brand-logo">
         </div>
 
         <div class="brand-message">
@@ -31,13 +25,7 @@
 
       <section class="form-panel">
         <div class="mobile-brand">
-          {% if cinema.logo %}
-            <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="brand-logo">
-          {% else %}
-            <div>
-              <strong>{{ cinema.nombre }}</strong>
-            </div>
-          {% endif %}
+          <img src="{% static 'branding/Logo_WHITE.png' %}" alt="{{ cinema.nombre }}" class="brand-logo">
         </div>
 
         <nav class="auth-tabs" aria-label="Acceso">

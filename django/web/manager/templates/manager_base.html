@@ -21,13 +21,9 @@
   <div class="manager-shell">
     <aside class="manager-sidebar" aria-label="Panel de gestión">
       <a class="brand" href="{% url 'manager:home' %}" aria-label="Butaca Cero y {{ cinema.nombre }}">
-        <img src="{% static 'butaca-cero-logo.png' %}" alt="Butaca Cero" class="brand-logo">
+        <img src="{% static 'branding/Logo_WHITE.png' %}" alt="Butaca Cero" class="brand-logo">
         <span class="cinema-mark" aria-hidden="true">
-          {% if cinema.logo %}
-            <img src="{{ cinema.logo.url }}" alt="" class="cinema-logo">
-          {% else %}
-            <span class="cinema-logo-placeholder">{{ cinema.nombre|slice:":1" }}</span>
-          {% endif %}
+          <img src="{% static 'branding/Logo_WHITE.png' %}" alt="" class="cinema-logo">
         </span>
       </a>
 
