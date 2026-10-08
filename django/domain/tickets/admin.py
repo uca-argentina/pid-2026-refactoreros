@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils import timezone
 
 from .models import CompraAsiento, CompraEntrada, ReservaAsiento
 
@@ -13,9 +14,15 @@ class CompraEntradaAdmin(admin.ModelAdmin):
 
 @admin.register(CompraAsiento)
 class CompraAsientoAdmin(admin.ModelAdmin):
-    list_display = ("funcion", "label", "compra", "creada_en")
-    list_filter = ("funcion__sala", "creada_en")
+    list_display = ("funcion", "label", "compra", "creada_en", "utilizada_en")
+    list_filter = ("funcion__sala", "creada_en", ("utilizada_en", admin.EmptyFieldListFilter))
     search_fields = ("label", "funcion__pelicula__titulo", "compra__usuario__email")
+    actions = ("marcar_utilizadas",)
+
+    @admin.action(description="Marcar como utilizadas")
+    def marcar_utilizadas(self, request, queryset):
+        actualizadas = queryset.filter(utilizada_en__isnull=True).update(utilizada_en=timezone.now())
+        self.message_user(request, f"{actualizadas} entradas marcadas como utilizadas.")
 
 
 @admin.register(ReservaAsiento)

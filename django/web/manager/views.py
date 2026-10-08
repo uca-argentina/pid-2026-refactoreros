@@ -28,6 +28,7 @@ from domain.seats.models import Seat
 from domain.seat_types.models import SeatType
 from domain.tickets.models import CompraEntrada
 
+from .dashboard import construir_dashboard
 from .forms import (
     ConfiguracionCineForm,
     FuncionForm,
@@ -129,6 +130,17 @@ class GestionHomeView(ManagerAccessMixin, TemplateView):
             estado=Funcion.Estado.PUBLICADA
         ).count()
         context["total_room_capacity"] = Seat.objects.count()
+        return context
+
+
+class DashboardView(GerenteRequiredMixin, TemplateView):
+    template_name = "manager_dashboard.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        Funcion.finalizar_vencidas()
+        context["section"] = "Dashboard"
+        context["dashboard"] = construir_dashboard(self.request.GET.get("periodo"))
         return context
 
 

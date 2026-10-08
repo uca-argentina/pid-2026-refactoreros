@@ -1,0 +1,11 @@
+{% if delta %}
+  <span class="kpi-delta is-{{ delta.direccion }}">
+    <i data-lucide="{% if delta.direccion == 'up' %}trending-up{% elif delta.direccion == 'down' %}trending-down{% else %}minus{% endif %}" aria-hidden="true"></i>
+    <span>{{ delta.signo }}{{ delta.valor|floatformat:1 }}{{ delta.unidad }} vs. período anterior</span>
+  </span>
+{% elif comparable %}
+  <span class="kpi-delta is-flat">
+    <i data-lucide="minus" aria-hidden="true"></i>
+    <span>Sin datos del período anterior</span>
+  </span>
+{% endif %}
