@@ -1,7 +1,7 @@
 import shutil
 import tempfile
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -17,9 +17,10 @@ from domain.rooms.models import Sala
 from domain.seats.models import Seat
 from domain.seat_types.models import SeatType
 from domain.screenings.models import Funcion
-from domain.tickets.models import CompraEntrada
+from domain.tickets.models import CompraAsiento, CompraEntrada
 from domain.users.models import Acomodador, Cliente, Gerente
 
+from .dashboard import DIAS_SEMANA, construir_dashboard
 from .forms import PeliculaForm
 
 
@@ -1002,3 +1003,203 @@ class ManagerFuncionesTests(TestCase):
         self.assertRedirects(response, reverse("manager:funciones_list"))
         funcion.refresh_from_db()
         self.assertEqual(str(funcion.precio_entrada), "1600.00")
+
+
+class ManagerDashboardTests(TestCase):
+    def setUp(self):
+        self.gerente = get_user_model().objects.create_user(
+            username="gerente@mail.com",
+            email="gerente@mail.com",
+            password="PasswordSegura123!",
+        )
+        Gerente.objects.create(usuario=self.gerente)
+        self.cliente = get_user_model().objects.create_user(
+            username="cliente@mail.com",
+            email="cliente@mail.com",
+            password="PasswordSegura123!",
+        )
+        self.sala = crear_sala_con_butacas("Sala 1", 10)
+        self.pelicula = self.crear_pelicula("Pelicula A")
+        self.ahora = timezone.make_aware(datetime(2026, 10, 8, 23, 0))
+
+    def crear_pelicula(self, titulo):
+        return Pelicula.objects.create(
+            titulo=titulo,
+            sinopsis="Sinopsis",
+            genero=Pelicula.Genero.ACCION,
+            clasificacion=Pelicula.Clasificacion.MAS_13,
+            duracion_minutos=100,
+            imagen="peliculas/poster.gif",
+        )
+
+    def crear_funcion(self, dias, hora=20, estado=Funcion.Estado.FINALIZADA, pelicula=None, ahora=None):
+        fecha = timezone.localdate(ahora or self.ahora) + timedelta(days=dias)
+        return Funcion.objects.create(
+            pelicula=pelicula or self.pelicula,
+            sala=self.sala,
+            fecha_horario=timezone.make_aware(datetime.combine(fecha, datetime.min.time()).replace(hour=hora)),
+            precio_entrada="1000.00",
+            estado=estado,
+        )
+
+    def vender(self, funcion, cantidad, total, utilizadas=0):
+        compra = CompraEntrada.objects.create(
+            usuario=self.cliente,
+            funcion=funcion,
+            cantidad=cantidad,
+            total=Decimal(total),
+        )
+        for indice in range(cantidad):
+            CompraAsiento.objects.create(
+                compra=compra,
+                funcion=funcion,
+                label=f"{compra.pk}-{indice}",
+                utilizada_en=self.ahora if indice < utilizadas else None,
+            )
+        return compra
+
+    def test_gerente_ve_dashboard(self):
+        self.client.force_login(self.gerente)
+
+        response = self.client.get(reverse("manager:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Recaudación simulada")
+        self.assertContains(response, "Vendidas vs. utilizadas")
+        self.assertContains(response, "Películas más vistas")
+        self.assertContains(response, "Ocupación por sala")
+        self.assertContains(response, "Horarios de mayor demanda")
+
+    def test_acomodador_no_puede_ver_dashboard(self):
+        acomodador = get_user_model().objects.create_user(
+            username="acomodador@mail.com",
+            email="acomodador@mail.com",
+            password="PasswordSegura123!",
+        )
+        Acomodador.objects.create(usuario=acomodador)
+        self.client.force_login(acomodador)
+
+        response = self.client.get(reverse("manager:dashboard"))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_menu_del_gerente_enlaza_al_dashboard(self):
+        self.client.force_login(self.gerente)
+
+        response = self.client.get(reverse("manager:home"))
+
+        self.assertContains(response, f'href="{reverse("manager:dashboard")}"')
+
+    def test_resumen_calcula_recaudacion_ocupacion_y_asistencia(self):
+        primera = self.crear_funcion(-2)
+        self.vender(primera, 3, "3000.00", utilizadas=2)
+        self.vender(primera, 2, "2500.00")
+        segunda = self.crear_funcion(-1, hora=18, estado=Funcion.Estado.PUBLICADA)
+        self.vender(segunda, 1, "1000.00")
+
+        resumen = construir_dashboard("30", ahora=self.ahora)["resumen"]
+
+        self.assertEqual(resumen["funciones"], 2)
+        self.assertEqual(resumen["vendidas"], 6)
+        self.assertEqual(resumen["recaudacion"], Decimal("6500.00"))
+        self.assertEqual(resumen["capacidad"], 20)
+        self.assertAlmostEqual(resumen["ocupacion"], 30.0)
+        self.assertEqual(resumen["utilizadas"], 2)
+        self.assertEqual(resumen["no_utilizadas"], 4)
+        self.assertAlmostEqual(resumen["asistencia"], 100 / 3)
+
+    def test_excluye_canceladas_y_separa_preventa(self):
+        realizada = self.crear_funcion(-1)
+        self.vender(realizada, 2, "2000.00")
+        cancelada = self.crear_funcion(-1, hora=22, estado=Funcion.Estado.CANCELADA)
+        self.vender(cancelada, 4, "4000.00")
+        proxima = self.crear_funcion(2, estado=Funcion.Estado.PUBLICADA)
+        self.vender(proxima, 5, "5000.00")
+
+        dashboard = construir_dashboard("30", ahora=self.ahora)
+
+        self.assertEqual(dashboard["resumen"]["vendidas"], 2)
+        self.assertEqual(dashboard["resumen"]["recaudacion"], Decimal("2000.00"))
+        self.assertEqual(dashboard["preventa"]["funciones"], 1)
+        self.assertEqual(dashboard["preventa"]["vendidas"], 5)
+        self.assertEqual(dashboard["preventa"]["recaudacion"], Decimal("5000.00"))
+
+    def test_periodo_filtra_funciones_por_fecha(self):
+        self.vender(self.crear_funcion(-3), 1, "1000.00")
+        self.vender(self.crear_funcion(-20), 2, "2000.00")
+
+        self.assertEqual(construir_dashboard("7", ahora=self.ahora)["resumen"]["vendidas"], 1)
+        self.assertEqual(construir_dashboard("30", ahora=self.ahora)["resumen"]["vendidas"], 3)
+        self.assertEqual(construir_dashboard("todo", ahora=self.ahora)["resumen"]["vendidas"], 3)
+
+    def test_periodo_invalido_usa_ultimos_30_dias(self):
+        dashboard = construir_dashboard("cualquiera", ahora=self.ahora)
+
+        self.assertEqual(dashboard["periodo"], "30")
+        self.assertEqual(dashboard["desde"], timezone.localdate(self.ahora) - timedelta(days=29))
+
+    def test_variacion_compara_con_el_periodo_anterior(self):
+        self.vender(self.crear_funcion(-2), 3, "3000.00")
+        self.vender(self.crear_funcion(-9), 2, "2000.00")
+
+        variaciones = construir_dashboard("7", ahora=self.ahora)["variaciones"]
+
+        self.assertEqual(variaciones["recaudacion"]["direccion"], "up")
+        self.assertAlmostEqual(variaciones["recaudacion"]["valor"], 50.0)
+        self.assertEqual(variaciones["vendidas"]["signo"], "+")
+        self.assertEqual(variaciones["ocupacion"]["direccion"], "up")
+        self.assertAlmostEqual(variaciones["ocupacion"]["valor"], 10.0)
+
+    def test_serie_de_recaudacion_agrupa_por_dia_o_semana(self):
+        self.vender(self.crear_funcion(-1), 2, "2000.00")
+        self.vender(self.crear_funcion(-1, hora=22), 1, "1500.00")
+
+        serie_mensual = construir_dashboard("30", ahora=self.ahora)["recaudacion"]
+        serie_trimestral = construir_dashboard("90", ahora=self.ahora)["recaudacion"]
+
+        self.assertEqual(serie_mensual["granularidad"], "dia")
+        self.assertEqual(len(serie_mensual["columnas"]), 30)
+        pico = [columna for columna in serie_mensual["columnas"] if columna["es_maximo"]]
+        self.assertEqual(len(pico), 1)
+        self.assertEqual(pico[0]["recaudacion"], Decimal("3500.00"))
+        self.assertEqual(pico[0]["altura_css"], "87.50%")
+        self.assertEqual(serie_trimestral["granularidad"], "semana")
+        self.assertEqual(
+            sum(columna["recaudacion"] for columna in serie_trimestral["columnas"]),
+            Decimal("3500.00"),
+        )
+
+    def test_peliculas_mas_vistas_ordena_por_entradas_vendidas(self):
+        otra = self.crear_pelicula("Pelicula B")
+        self.vender(self.crear_funcion(-2), 2, "2000.00")
+        self.vender(self.crear_funcion(-1, pelicula=otra), 5, "5000.00")
+
+        ranking = construir_dashboard("30", ahora=self.ahora)["peliculas"]
+
+        self.assertEqual([datos["pelicula"].titulo for datos in ranking], ["Pelicula B", "Pelicula A"])
+        self.assertEqual(ranking[0]["ancho_css"], "100.00%")
+        self.assertEqual(ranking[1]["ancho_css"], "40.00%")
+
+    def test_horarios_destaca_la_franja_con_mas_entradas(self):
+        self.vender(self.crear_funcion(-2, hora=16), 1, "1000.00")
+        noche = self.crear_funcion(-1, hora=21)
+        self.vender(noche, 6, "6000.00")
+
+        horarios = construir_dashboard("30", ahora=self.ahora)["horarios"]
+
+        self.assertEqual(horarios["horas"], list(range(16, 22)))
+        franja = horarios["top"][0]
+        self.assertEqual(franja["hora"], 21)
+        self.assertEqual(franja["dia"], DIAS_SEMANA[timezone.localtime(noche.fecha_horario).weekday()])
+        self.assertEqual(franja["vendidas"], 6)
+        self.assertAlmostEqual(franja["ocupacion"], 60.0)
+
+    def test_dashboard_renderiza_anchos_css_con_punto_decimal(self):
+        funcion = self.crear_funcion(-1, ahora=timezone.now())
+        self.vender(funcion, 3, "3000.00", utilizadas=1)
+        self.client.force_login(self.gerente)
+
+        response = self.client.get(reverse("manager:dashboard"))
+
+        self.assertContains(response, 'style="width: 33.33%"')
+        self.assertContains(response, "33,3%")

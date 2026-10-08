@@ -6,6 +6,7 @@ app_name = "manager"
 
 urlpatterns = [
     path("", views.GestionHomeView.as_view(), name="home"),
+    path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
     path("configuracion/", views.ConfiguracionCineUpdateView.as_view(), name="configuracion"),
     path("usuarios/", views.UsuariosListView.as_view(), name="usuarios_list"),
     path("usuarios/<int:pk>/editar/", views.UsuarioUpdateView.as_view(), name="usuarios_update"),

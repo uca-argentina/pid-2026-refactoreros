@@ -287,6 +287,7 @@ class CompraAsiento(models.Model):
     )
     label = models.CharField(max_length=12)
     creada_en = models.DateTimeField(auto_now_add=True)
+    utilizada_en = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Asiento vendido"

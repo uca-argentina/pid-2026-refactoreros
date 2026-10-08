@@ -37,6 +37,10 @@
           <span>Inicio</span>
         </a>
         {% if manager_role == "gerente" %}
+          <a href="{% url 'manager:dashboard' %}" class="nav-analytics {% if section == 'Dashboard' %}is-active{% endif %}">
+            <i data-lucide="chart-column" aria-hidden="true"></i>
+            <span>Dashboard</span>
+          </a>
           <a href="{% url 'manager:usuarios_list' %}" class="nav-users {% if section == 'Usuarios' %}is-active{% endif %}">
             <i data-lucide="users" aria-hidden="true"></i>
             <span>Usuarios</span>
