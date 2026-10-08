@@ -61,5 +61,8 @@ jobs:
       - name: Run Django system checks
         run: python manage.py check
 
+      - name: Collect static files
+        run: python manage.py collectstatic --noinput --clear
+
       - name: Run tests
         run: python manage.py test
