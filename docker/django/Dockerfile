@@ -14,4 +14,4 @@ COPY django/ .
 COPY docker/django/entrypoint.sh /entrypoint.sh
 
 ENTRYPOINT ["sh", "/entrypoint.sh"]
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["sh", "-c", "gunicorn butacaCero.wsgi:application --bind 0.0.0.0:${PORT:-8000}"]
