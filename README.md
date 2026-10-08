@@ -119,11 +119,21 @@ Pasos:
 1. Subir la rama con los cambios a GitHub.
 2. En Render, crear un Blueprint desde este repositorio y elegir la rama que contiene `render.yaml`.
 3. Esperar el primer deploy. El contenedor ejecuta `collectstatic` y `migrate` antes de iniciar Gunicorn.
-4. Crear el superusuario desde la Shell de Render:
+4. Si el plan permite Shell, crear el superusuario desde la Shell de Render:
 
 ```bash
 python manage.py createsuperuser
 ```
+
+En el plan free de Render no hay Shell. Para crear el primer admin, configurar temporalmente estas variables en el Web Service y hacer un redeploy:
+
+```text
+DJANGO_CREATE_SUPERUSER=True
+DJANGO_SUPERUSER_EMAIL=admin@example.com
+DJANGO_SUPERUSER_PASSWORD=una-password-segura
+```
+
+El deploy crea el usuario si no existe. Despues de entrar al admin, cambiar la password si hace falta y borrar `DJANGO_CREATE_SUPERUSER` o cambiarla a `False`.
 
 Si se agrega un dominio propio, sumar el hostname a `DJANGO_ALLOWED_HOSTS` y el origen HTTPS a `DJANGO_CSRF_TRUSTED_ORIGINS`, por ejemplo:
 
