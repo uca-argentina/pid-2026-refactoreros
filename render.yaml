@@ -20,6 +20,8 @@ services:
           name: butaca-cero
           type: web
           envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: DJANGO_SERVE_MEDIA
+        value: "True"
 
 databases:
   - name: butaca-cero-db

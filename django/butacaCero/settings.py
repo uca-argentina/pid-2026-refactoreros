@@ -31,6 +31,7 @@ env = environ.Env(
     DJANGO_EMAIL_USE_TLS=(bool, False),
     DJANGO_EMAIL_USE_SSL=(bool, False),
     DJANGO_DEFAULT_FROM_EMAIL=(str, "webmaster@localhost"),
+    DJANGO_SERVE_MEDIA=(bool, False),
 )
 environ.Env.read_env(REPO_DIR / ".env")
 environ.Env.read_env(BASE_DIR / ".env")
@@ -183,6 +184,7 @@ STORAGES = {
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+SERVE_MEDIA_FILES = env.bool("DJANGO_SERVE_MEDIA")
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"

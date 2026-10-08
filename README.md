@@ -146,6 +146,8 @@ En producción, Django usa SMTP por defecto para no depender del backend de cons
 
 Render inyecta `PORT`; el Dockerfile lo usa para iniciar Gunicorn en `0.0.0.0:$PORT`.
 
+Para que las imagenes subidas desde el admin se vean en Render, el Blueprint define `DJANGO_SERVE_MEDIA=True` y Django sirve `/media/`. En el plan free esos archivos viven en el filesystem efimero del servicio: pueden perderse al reiniciar o redeployar. Para uso real conviene migrar media a un storage persistente externo o a un plan con disco persistente.
+
 ## Consideraciones
 
 - No subir `.env` a Git.

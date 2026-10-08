@@ -37,5 +37,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 ]
 
-if settings.DEBUG:
+if settings.DEBUG or settings.SERVE_MEDIA_FILES:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
