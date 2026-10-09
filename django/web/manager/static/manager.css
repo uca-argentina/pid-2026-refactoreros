@@ -633,6 +633,37 @@ svg {
   font-weight: 400;
 }
 
+.schedule-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin-top: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.schedule-progress-track {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.schedule-progress-fill {
+  display: block;
+  width: clamp(0%, var(--progress), 100%);
+  height: 100%;
+  border-radius: inherit;
+  background: hsl(calc(var(--progress-value) * 1.2) 72% 44%);
+}
+
+.schedule-progress strong {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .ops-panel {
   position: sticky;
   top: 92px;

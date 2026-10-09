@@ -46,6 +46,12 @@
                 <div class="schedule-content">
                   <h3>{{ funcion.pelicula.titulo }}</h3>
                   <span>{{ funcion.sala.nombre }} · {{ funcion.fecha_horario|date:"H:i" }} · {{ funcion.entradas_vendidas }} vendidas</span>
+                  <div class="schedule-progress" style="--progress: {{ funcion.ocupacion_porcentaje }}%; --progress-value: {{ funcion.ocupacion_porcentaje }}" aria-label="{{ funcion.ocupacion_porcentaje }}% de butacas vendidas">
+                    <span class="schedule-progress-track" aria-hidden="true">
+                      <span class="schedule-progress-fill"></span>
+                    </span>
+                    <strong>{{ funcion.ocupacion_porcentaje }}%</strong>
+                  </div>
                 </div>
                 <span class="status-pill status-{{ funcion.estado }}">{{ funcion.get_estado_display }}</span>
               </article>
