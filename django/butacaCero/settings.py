@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 import environ
 import os
 import sys
+from django.core.exceptions import ImproperlyConfigured
 from pathlib import Path
 
 
@@ -22,6 +23,10 @@ REPO_DIR = BASE_DIR.parent
 
 env = environ.Env(
     CLOUDINARY_URL=(str, ""),
+    CLOUDINARY_CLOUD_NAME=(str, ""),
+    CLOUDINARY_API_KEY=(str, ""),
+    CLOUDINARY_API_SECRET=(str, ""),
+    DJANGO_REQUIRE_CLOUDINARY=(bool, False),
     DJANGO_DEBUG=(bool, False),
     DJANGO_ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
     DJANGO_CSRF_TRUSTED_ORIGINS=(list, []),
@@ -176,6 +181,18 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 CLOUDINARY_URL = env("CLOUDINARY_URL")
+CLOUDINARY_CLOUD_NAME = env("CLOUDINARY_CLOUD_NAME")
+CLOUDINARY_API_KEY = env("CLOUDINARY_API_KEY")
+CLOUDINARY_API_SECRET = env("CLOUDINARY_API_SECRET")
+CLOUDINARY_CONFIGURED = bool(CLOUDINARY_URL) or all(
+    [CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET]
+)
+if not CLOUDINARY_URL and CLOUDINARY_CONFIGURED:
+    CLOUDINARY_STORAGE = {
+        "CLOUD_NAME": CLOUDINARY_CLOUD_NAME,
+        "API_KEY": CLOUDINARY_API_KEY,
+        "API_SECRET": CLOUDINARY_API_SECRET,
+    }
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -188,8 +205,15 @@ STORAGES = {
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 SERVE_MEDIA_FILES = env.bool("DJANGO_SERVE_MEDIA")
+REQUIRE_CLOUDINARY = env.bool("DJANGO_REQUIRE_CLOUDINARY")
 
-if CLOUDINARY_URL:
+if REQUIRE_CLOUDINARY and not CLOUDINARY_CONFIGURED:
+    raise ImproperlyConfigured(
+        "DJANGO_REQUIRE_CLOUDINARY=True pero no hay credenciales de Cloudinary. "
+        "Configura CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET."
+    )
+
+if CLOUDINARY_CONFIGURED:
     STORAGES["default"] = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
     }

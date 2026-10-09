@@ -128,6 +128,18 @@ DATABASE_URL=postgresql://...
 CLOUDINARY_URL=cloudinary://...
 ```
 
+Si Cloudinary devuelve `Invalid Signature`, cargar las credenciales por separado en lugar de `CLOUDINARY_URL`:
+
+```text
+CLOUDINARY_CLOUD_NAME=cloud-name
+CLOUDINARY_API_KEY=api-key
+CLOUDINARY_API_SECRET=api-secret
+```
+
+En ese caso conviene borrar `CLOUDINARY_URL` del entorno para evitar credenciales duplicadas o mezcladas.
+
+El Blueprint define `DJANGO_REQUIRE_CLOUDINARY=True` para evitar que Render arranque usando filesystem efimero si faltan esas credenciales.
+
 6. Esperar el primer deploy. El contenedor ejecuta `collectstatic` y `migrate` antes de iniciar Gunicorn.
 7. Si el plan permite Shell, crear el superusuario desde la Shell de Render:
 

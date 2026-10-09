@@ -9,10 +9,16 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
-      - key: CLOUDINARY_URL
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
         sync: false
       - key: DJANGO_DEBUG
         value: "False"
+      - key: DJANGO_REQUIRE_CLOUDINARY
+        value: "True"
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DJANGO_ALLOWED_HOSTS
