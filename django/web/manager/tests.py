@@ -939,7 +939,9 @@ class ManagerFuncionesTests(TestCase):
 
         self.assertContains(response, "Vendidas")
         self.assertContains(response, "Disponibles")
-        self.assertContains(response, '<td data-label="Vendidas">35</td>', html=True)
+        self.assertContains(response, "sales-progress")
+        self.assertContains(response, "<strong>35</strong>", html=True)
+        self.assertContains(response, "<span>29%</span>", html=True)
         self.assertContains(response, '<td data-label="Disponibles">85</td>', html=True)
 
     def test_funcion_publicada_mantiene_snapshot_de_capacidad_de_sala(self):

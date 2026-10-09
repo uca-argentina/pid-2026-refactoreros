@@ -695,7 +695,15 @@ class FuncionesListView(GerenteListView):
                     F("capacidad_sala") - F("entradas_vendidas"),
                     Value(0),
                     output_field=IntegerField(),
-                )
+                ),
+                ocupacion_porcentaje=Case(
+                    When(
+                        capacidad_sala__gt=0,
+                        then=100 * F("entradas_vendidas") / F("capacidad_sala"),
+                    ),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                ),
             )
         )
 
