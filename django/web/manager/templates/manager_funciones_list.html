@@ -88,17 +88,7 @@
               <span class="status-pill status-{{ funcion.estado }}">{{ funcion.get_estado_display }}</span>
             </td>
             <td data-label="Desde">${{ funcion.precio_desde }}</td>
-            <td data-label="Vendidas">
-              <div class="sales-progress" style="--progress: {{ funcion.ocupacion_porcentaje }}%" aria-label="{{ funcion.ocupacion_porcentaje }}% de ocupación">
-                <div class="sales-progress-head">
-                  <strong>{{ funcion.entradas_vendidas }}</strong>
-                  <span>{{ funcion.ocupacion_porcentaje }}%</span>
-                </div>
-                <span class="sales-progress-track" aria-hidden="true">
-                  <span class="sales-progress-fill"></span>
-                </span>
-              </div>
-            </td>
+            <td data-label="Vendidas">{{ funcion.entradas_vendidas }}</td>
             <td data-label="Disponibles">{{ funcion.entradas_disponibles }}</td>
             <td class="table-actions" data-label="Acciones">
               {% with transiciones=funcion.transiciones_disponibles %}

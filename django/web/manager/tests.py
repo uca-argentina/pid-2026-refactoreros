@@ -92,6 +92,32 @@ class ManagerAccessTests(TestCase):
         self.assertContains(response, "Películas")
         self.assertContains(response, "Funciones")
 
+    def test_home_muestra_ocupacion_de_proximas_funciones(self):
+        sala = crear_sala_con_butacas("Sala progreso", 10)
+        pelicula = Pelicula.objects.create(
+            titulo="Pelicula progreso",
+            sinopsis="Sinopsis",
+            genero=Pelicula.Genero.ACCION,
+            clasificacion=Pelicula.Clasificacion.MAS_13,
+            duracion_minutos=120,
+            imagen="peliculas/test.jpg",
+        )
+        funcion = Funcion.objects.create(
+            pelicula=pelicula,
+            sala=sala,
+            fecha_horario=timezone.now() + timedelta(days=1),
+            precio_entrada="1000.00",
+            estado=Funcion.Estado.PUBLICADA,
+        )
+        CompraEntrada.comprar(self.cliente, funcion, 3)
+        self.client.force_login(self.gerente)
+
+        response = self.client.get(reverse("manager:home"))
+
+        self.assertContains(response, "schedule-progress")
+        self.assertContains(response, "3 vendidas")
+        self.assertContains(response, "<strong>30%</strong>", html=True)
+
     def test_link_inicio_del_manager_apunta_al_home_de_gestion(self):
         self.client.force_login(self.gerente)
 
@@ -939,9 +965,8 @@ class ManagerFuncionesTests(TestCase):
 
         self.assertContains(response, "Vendidas")
         self.assertContains(response, "Disponibles")
-        self.assertContains(response, "sales-progress")
-        self.assertContains(response, "<strong>35</strong>", html=True)
-        self.assertContains(response, "<span>29%</span>", html=True)
+        self.assertContains(response, '<td data-label="Vendidas">35</td>', html=True)
+        self.assertNotContains(response, "sales-progress")
         self.assertContains(response, '<td data-label="Disponibles">85</td>', html=True)
 
     def test_funcion_publicada_mantiene_snapshot_de_capacidad_de_sala(self):

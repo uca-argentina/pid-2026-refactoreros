@@ -96,10 +96,34 @@ class GestionHomeView(ManagerAccessMixin, TemplateView):
         Funcion.finalizar_vencidas()
         now = timezone.now()
         today = timezone.localdate()
+        current_room_capacity = (
+            Sala.objects.filter(pk=OuterRef("sala_id"))
+            .annotate(total=Count("seats"))
+            .values("total")[:1]
+        )
         funciones_base = Funcion.objects.select_related("pelicula", "sala").annotate(
             entradas_vendidas=Coalesce(
                 Sum("compras_entradas__cantidad"),
                 Value(0),
+                output_field=IntegerField(),
+            ),
+            sala_capacidad_actual=Coalesce(
+                Subquery(current_room_capacity),
+                Value(0),
+                output_field=IntegerField(),
+            ),
+            capacidad_sala=Case(
+                When(capacidad_snapshot=0, then=F("sala_capacidad_actual")),
+                default=F("capacidad_snapshot"),
+                output_field=IntegerField(),
+            ),
+        ).annotate(
+            ocupacion_porcentaje=Case(
+                When(
+                    capacidad_sala__gt=0,
+                    then=100 * F("entradas_vendidas") / F("capacidad_sala"),
+                ),
+                default=Value(0),
                 output_field=IntegerField(),
             )
         )
@@ -695,15 +719,7 @@ class FuncionesListView(GerenteListView):
                     F("capacidad_sala") - F("entradas_vendidas"),
                     Value(0),
                     output_field=IntegerField(),
-                ),
-                ocupacion_porcentaje=Case(
-                    When(
-                        capacidad_sala__gt=0,
-                        then=100 * F("entradas_vendidas") / F("capacidad_sala"),
-                    ),
-                    default=Value(0),
-                    output_field=IntegerField(),
-                ),
+                )
             )
         )
 
