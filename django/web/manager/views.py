@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
+from cloudinary.exceptions import Error as CloudinaryError
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Case, Count, F, IntegerField, OuterRef, Q, Subquery, Sum, Value, When
 from django.db.models.deletion import ProtectedError
@@ -255,8 +256,13 @@ class GerenteCreateView(GerenteRequiredMixin, CreateView):
     form_title = ""
 
     def form_valid(self, form):
+        try:
+            response = super().form_valid(form)
+        except CloudinaryError as error:
+            form.add_error(None, f"No se pudo subir la imagen a Cloudinary: {error}")
+            return self.form_invalid(form)
         messages.success(self.request, f"{self.object_label} se creó correctamente.")
-        return super().form_valid(form)
+        return response
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -272,8 +278,13 @@ class GerenteUpdateView(GerenteRequiredMixin, UpdateView):
     form_title = ""
 
     def form_valid(self, form):
+        try:
+            response = super().form_valid(form)
+        except CloudinaryError as error:
+            form.add_error(None, f"No se pudo subir la imagen a Cloudinary: {error}")
+            return self.form_invalid(form)
         messages.success(self.request, f"{self.object_label} se actualizó correctamente.")
-        return super().form_valid(form)
+        return response
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
