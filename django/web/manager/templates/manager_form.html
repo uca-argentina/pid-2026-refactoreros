@@ -1,4 +1,4 @@
-{% extends "manager_base.html" %}
+﻿{% extends "manager_base.html" %}
 
 {% block content %}
   <section class="page-heading">
@@ -17,8 +17,8 @@
         {% else %}
           <label{% if field.field.widget.input_type == "checkbox" %} class="checkbox-field"{% endif %}>
             <span>{{ field.label }}</span>
-            {% if field.name == "imagen" and object.imagen %}
-              <img class="image-preview" src="{{ object.imagen.url }}" alt="{{ object.titulo }}">
+            {% if field.name == "imagen" and object.image %}
+              <img class="image-preview" src="{{ object.image.url }}" alt="{{ object.title }}">
             {% endif %}
             {{ field }}
             {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
@@ -40,7 +40,7 @@
       <section class="status-action">
         <div class="section-title">
           <div>
-            <h2>Estado del usuario</h2>
+            <h2>Estado del user</h2>
           </div>
         </div>
         {% if can_toggle_user_status %}
@@ -56,13 +56,13 @@
               {% endif %}
             </button>
             {% if object.is_active %}
-              <small>Si bloqueás este usuario, no va a poder acceder al sitio.</small>
+              <small>Si bloqueÃ¡s este user, no va a poder acceder al sitio.</small>
             {% else %}
               <small>Al activarlo, va a poder volver a acceder al sitio.</small>
             {% endif %}
           </form>
         {% else %}
-          <small>No podés bloquear tu propio usuario.</small>
+          <small>No podÃ©s bloquear tu propio user.</small>
         {% endif %}
       </section>
     {% endif %}

@@ -289,6 +289,23 @@ body {
   background: #182231;
 }
 
+.guest-access-link {
+  display: inline-flex;
+  align-self: center;
+  justify-content: center;
+  margin-top: 22px;
+  color: #4b5563;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.guest-access-link:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
 @media (max-width: 1280px) {
   .auth-page {
     padding: 32px;

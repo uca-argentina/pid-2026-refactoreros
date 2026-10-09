@@ -1,20 +1,21 @@
 from django.db import models
 
 
-class Sala(models.Model):
-    nombre = models.CharField(max_length=100, unique=True)
-    layout_configuracion = models.JSONField(default=dict, blank=True)
-    
+class Room(models.Model):
+    name = models.CharField(max_length=100, unique=True, db_column="nombre")
+    layout_configuration = models.JSONField(default=dict, blank=True, db_column="layout_configuracion")
+
     class Meta:
         verbose_name = "Sala"
         verbose_name_plural = "Salas"
-        ordering = ["nombre"]
+        db_table = "rooms_sala"
+        ordering = ["name"]
 
     @property
-    def capacidad(self):
-        if hasattr(self, "_capacidad"):
-            return self._capacidad
+    def capacity(self):
+        if hasattr(self, "_capacity"):
+            return self._capacity
         return self.seats.count() if self.pk else 0
 
     def __str__(self):
-        return f"{self.nombre} (cap. {self.capacidad})"
+        return f"{self.name} (cap. {self.capacity})"

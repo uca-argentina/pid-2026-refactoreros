@@ -1,4 +1,4 @@
-{% extends "manager_base.html" %}
+﻿{% extends "manager_base.html" %}
 {% load static %}
 
 {% block extra_css %}
@@ -13,11 +13,11 @@
       </div>
     </section>
 
-    <nav class="period-filter" aria-label="Período del dashboard">
+    <nav class="period-filter" aria-label="PerÃ­odo del dashboard">
       <div class="period-options">
         {% for periodo in dashboard.periodos %}
           <a href="?periodo={{ periodo.clave }}" class="period-option{% if periodo.activo %} is-active{% endif %}"{% if periodo.activo %} aria-current="page"{% endif %}>
-            <span>{% if periodo.clave != "todo" %}<span class="period-option-prefix">Últimos </span>{% endif %}{{ periodo.etiqueta }}</span>
+            <span>{% if periodo.clave != "todo" %}<span class="period-option-prefix">Ãšltimos </span>{% endif %}{{ periodo.etiqueta }}</span>
           </a>
         {% endfor %}
       </div>
@@ -30,12 +30,12 @@
       </p>
     </nav>
 
-    <section class="kpi-grid" aria-label="Indicadores del período">
+    <section class="kpi-grid" aria-label="Indicadores del perÃ­odo">
       <article class="kpi-card">
-        <span class="kpi-label"><i data-lucide="banknote" aria-hidden="true"></i>Recaudación simulada</span>
+        <span class="kpi-label"><i data-lucide="banknote" aria-hidden="true"></i>RecaudaciÃ³n simulada</span>
         <strong class="kpi-value">${{ resumen.recaudacion|floatformat:"0g" }}</strong>
         {% include "_dashboard_delta.html" with delta=variaciones.recaudacion comparable=variaciones %}
-        <span class="kpi-meta">Pagos simulados de {{ resumen.funciones }} {{ resumen.funciones|pluralize:"función,funciones" }}</span>
+        <span class="kpi-meta">Pagos simulados de {{ resumen.screenings }} {{ resumen.screenings|pluralize:"funciÃ³n,funciones" }}</span>
       </article>
       <article class="kpi-card">
         <span class="kpi-label"><i data-lucide="ticket" aria-hidden="true"></i>Entradas vendidas</span>
@@ -44,14 +44,14 @@
         <span class="kpi-meta">Ticket promedio ${{ resumen.ticket_promedio|floatformat:"0g" }}</span>
       </article>
       <article class="kpi-card">
-        <span class="kpi-label"><i data-lucide="armchair" aria-hidden="true"></i>Ocupación</span>
+        <span class="kpi-label"><i data-lucide="armchair" aria-hidden="true"></i>OcupaciÃ³n</span>
         <strong class="kpi-value">{{ resumen.ocupacion|floatformat:"-1" }}%</strong>
         {% include "_dashboard_delta.html" with delta=variaciones.ocupacion comparable=variaciones %}
         <span class="kpi-meta">{{ resumen.vendidas|floatformat:"0g" }} de {{ resumen.capacidad|floatformat:"0g" }} butacas</span>
       </article>
       <article class="kpi-card">
         <span class="kpi-label"><i data-lucide="scan-line" aria-hidden="true"></i>Asistencia</span>
-        <strong class="kpi-value">{% if resumen.vendidas %}{{ resumen.asistencia|floatformat:"-1" }}%{% else %}—{% endif %}</strong>
+        <strong class="kpi-value">{% if resumen.vendidas %}{{ resumen.asistencia|floatformat:"-1" }}%{% else %}â€”{% endif %}</strong>
         <span class="kpi-meta">{{ resumen.utilizadas|floatformat:"0g" }} {{ resumen.utilizadas|pluralize:"entrada utilizada,entradas utilizadas" }}</span>
       </article>
     </section>
@@ -60,10 +60,10 @@
       <article class="panel-section viz-card viz-card-fill">
         <header class="viz-header">
           <div>
-            <h2>Recaudación simulada</h2>
+            <h2>RecaudaciÃ³n simulada</h2>
             <p>
-              {% if dashboard.recaudacion.granularidad == "semana" %}Por semana{% elif dashboard.recaudacion.granularidad == "mes" %}Por mes{% else %}Por día{% endif %}
-              de función
+              {% if dashboard.recaudacion.granularidad == "semana" %}Por semana{% elif dashboard.recaudacion.granularidad == "mes" %}Por mes{% else %}Por dÃ­a{% endif %}
+              de funciÃ³n
             </p>
           </div>
         </header>
@@ -80,15 +80,15 @@
                 {% for tick in serie.ticks %}
                   <span class="column-chart-grid{% if forloop.first %} is-baseline{% endif %}" style="bottom: {{ tick.posicion_css }}" aria-hidden="true"></span>
                 {% endfor %}
-                <div class="column-chart-bars" style="--columns: {{ serie.columnas|length }}" role="list" aria-label="Recaudación simulada por período">
+                <div class="column-chart-bars" style="--columns: {{ serie.columnas|length }}" rolee="list" aria-label="RecaudaciÃ³n simulada por perÃ­odo">
                   {% for columna in serie.columnas %}
                     <div
                       class="column-slot"
-                      role="listitem"
+                      rolee="listitem"
                       tabindex="0"
                       data-tip-title="{% if serie.granularidad == 'semana' %}Semana del {{ columna.fecha|date:'d/m/Y' }}{% elif serie.granularidad == 'mes' %}{{ columna.fecha|date:'F Y' }}{% else %}{{ columna.fecha|date:'l d/m' }}{% endif %}"
                       data-tip-value="${{ columna.recaudacion|floatformat:'0g' }}"
-                      data-tip-meta="{{ columna.vendidas }} {{ columna.vendidas|pluralize:'entrada,entradas' }} · {{ columna.funciones }} {{ columna.funciones|pluralize:'función,funciones' }}"
+                      data-tip-meta="{{ columna.vendidas }} {{ columna.vendidas|pluralize:'entrada,entradas' }} Â· {{ columna.screenings }} {{ columna.screenings|pluralize:'función,funciones' }}"
                       aria-label="{% if serie.granularidad == 'semana' %}Semana del {{ columna.fecha|date:'d/m/Y' }}{% elif serie.granularidad == 'mes' %}{{ columna.fecha|date:'F Y' }}{% else %}{{ columna.fecha|date:'l d/m' }}{% endif %}: ${{ columna.recaudacion|floatformat:'0g' }}"
                     >
                       <span class="column-bar" style="height: {{ columna.altura_css }}">
@@ -113,8 +113,8 @@
                 <table>
                   <thead>
                     <tr>
-                      <th scope="col">{% if serie.granularidad == "semana" %}Semana del{% elif serie.granularidad == "mes" %}Mes{% else %}Día{% endif %}</th>
-                      <th scope="col">Recaudación</th>
+                      <th scope="col">{% if serie.granularidad == "semana" %}Semana del{% elif serie.granularidad == "mes" %}Mes{% else %}DÃ­a{% endif %}</th>
+                      <th scope="col">RecaudaciÃ³n</th>
                       <th scope="col">Entradas</th>
                       <th scope="col">Funciones</th>
                     </tr>
@@ -123,9 +123,9 @@
                     {% for columna in serie.columnas %}
                       <tr>
                         <td data-label="Fecha">{% if serie.granularidad == "mes" %}{{ columna.fecha|date:"F Y" }}{% else %}{{ columna.fecha|date:"d/m/Y" }}{% endif %}</td>
-                        <td data-label="Recaudación">${{ columna.recaudacion|floatformat:"0g" }}</td>
+                        <td data-label="RecaudaciÃ³n">${{ columna.recaudacion|floatformat:"0g" }}</td>
                         <td data-label="Entradas">{{ columna.vendidas }}</td>
-                        <td data-label="Funciones">{{ columna.funciones }}</td>
+                        <td data-label="Funciones">{{ columna.screenings }}</td>
                       </tr>
                     {% endfor %}
                   </tbody>
@@ -137,7 +137,7 @@
               <i data-lucide="chart-no-axes-column" aria-hidden="true"></i>
               <div>
                 <h3>Sin funciones realizadas</h3>
-                <p>No hubo funciones publicadas en este período. Probá con un rango más amplio.</p>
+                <p>No hubo funciones publicadas en este perÃ­odo. ProbÃ¡ con un rango mÃ¡s amplio.</p>
               </div>
             </div>
           {% endif %}
@@ -158,7 +158,7 @@
               <strong>{{ resumen.asistencia|floatformat:"-1" }}%</strong>
               <span>de las entradas vendidas se utilizaron</span>
             </p>
-            <div class="attendance-meter" role="img" aria-label="{{ resumen.utilizadas }} entradas utilizadas de {{ resumen.vendidas }} vendidas">
+            <div class="attendance-meter" rolee="img" aria-label="{{ resumen.utilizadas }} entradas utilizadas de {{ resumen.vendidas }} vendidas">
               {% if resumen.utilizadas %}<span class="attendance-used" style="width: {{ resumen.asistencia_css }}"></span>{% endif %}
               {% if resumen.no_utilizadas %}<span class="attendance-unused"></span>{% endif %}
             </div>
@@ -177,14 +177,14 @@
               </div>
             </dl>
             {% if not resumen.utilizadas %}
-              <p class="viz-note">Todavía no hay entradas marcadas como utilizadas en este período.</p>
+              <p class="viz-note">TodavÃ­a no hay entradas marcadas como utilizadas en este perÃ­odo.</p>
             {% endif %}
           {% else %}
             <div class="empty-state compact">
               <i data-lucide="ticket-x" aria-hidden="true"></i>
               <div>
                 <h3>Sin entradas vendidas</h3>
-                <p>Las funciones del período no registraron ventas.</p>
+                <p>Las funciones del perÃ­odo no registraron ventas.</p>
               </div>
             </div>
           {% endif %}
@@ -194,7 +194,7 @@
           <header class="viz-header">
             <div>
               <h2>Preventa</h2>
-              <p>Próximas funciones publicadas</p>
+              <p>PrÃ³ximas funciones publicadas</p>
             </div>
           </header>
           <dl class="presale-figures">
@@ -208,10 +208,10 @@
             </div>
             <div>
               <dt>Funciones</dt>
-              <dd>{{ dashboard.preventa.funciones }}</dd>
+              <dd>{{ dashboard.preventa.screenings }}</dd>
             </div>
           </dl>
-          <p class="viz-note">No se suma a los indicadores del período hasta que la función se realiza.</p>
+          <p class="viz-note">No se suma a los indicadores del perÃ­odo hasta que la funciÃ³n se realiza.</p>
         </article>
       </div>
     </section>
@@ -220,25 +220,25 @@
       <article class="panel-section viz-card">
         <header class="viz-header">
           <div>
-            <h2>Películas más vistas</h2>
+            <h2>PelÃ­culas mÃ¡s vistas</h2>
             <p>Ranking por entradas vendidas</p>
           </div>
         </header>
 
-        {% if dashboard.peliculas %}
+        {% if dashboard.movies %}
           <ol class="bar-list">
-            {% for datos in dashboard.peliculas %}
+            {% for datos in dashboard.movies %}
               <li class="bar-item">
                 <div class="bar-item-head">
                   <span class="bar-item-rank">{{ forloop.counter }}</span>
-                  <span class="bar-item-name">{{ datos.pelicula.titulo }}</span>
+                  <span class="bar-item-name">{{ datos.movie.title }}</span>
                   <strong class="bar-item-value">{{ datos.vendidas|floatformat:"0g" }}</strong>
                 </div>
                 <div class="bar-track"><span class="bar-fill" style="width: {{ datos.ancho_css }}"></span></div>
                 <span class="bar-item-meta">
                   ${{ datos.recaudacion|floatformat:"0g" }}
-                  · {{ datos.funciones }} {{ datos.funciones|pluralize:"función,funciones" }}
-                  · {{ datos.utilizadas }} {{ datos.utilizadas|pluralize:"utilizada,utilizadas" }}
+                  Â· {{ datos.screenings }} {{ datos.screenings|pluralize:"funciÃ³n,funciones" }}
+                  Â· {{ datos.utilizadas }} {{ datos.utilizadas|pluralize:"utilizada,utilizadas" }}
                 </span>
               </li>
             {% endfor %}
@@ -247,7 +247,7 @@
           <div class="empty-state compact">
             <i data-lucide="clapperboard" aria-hidden="true"></i>
             <div>
-              <h3>Sin ventas en el período</h3>
+              <h3>Sin ventas en el perÃ­odo</h3>
               <p>El ranking aparece cuando las funciones realizadas tienen entradas vendidas.</p>
             </div>
           </div>
@@ -257,23 +257,23 @@
       <article class="panel-section viz-card">
         <header class="viz-header">
           <div>
-            <h2>Ocupación por sala</h2>
+            <h2>OcupaciÃ³n por sala</h2>
             <p>Butacas vendidas sobre capacidad</p>
           </div>
         </header>
 
-        {% if dashboard.salas %}
+        {% if dashboard.rooms %}
           <ol class="bar-list">
-            {% for datos in dashboard.salas %}
+            {% for datos in dashboard.rooms %}
               <li class="bar-item">
                 <div class="bar-item-head">
-                  <span class="bar-item-name">{{ datos.sala.nombre }}</span>
+                  <span class="bar-item-name">{{ datos.room.name }}</span>
                   <strong class="bar-item-value">{{ datos.ocupacion|floatformat:"-1" }}%</strong>
                 </div>
                 <div class="bar-track is-meter"><span class="bar-fill" style="width: {{ datos.ancho_css }}"></span></div>
                 <span class="bar-item-meta">
                   {{ datos.vendidas|floatformat:"0g" }} de {{ datos.capacidad|floatformat:"0g" }} butacas
-                  · {{ datos.funciones }} {{ datos.funciones|pluralize:"función,funciones" }}
+                  Â· {{ datos.screenings }} {{ datos.screenings|pluralize:"funciÃ³n,funciones" }}
                 </span>
               </li>
             {% endfor %}
@@ -283,7 +283,7 @@
             <i data-lucide="armchair" aria-hidden="true"></i>
             <div>
               <h3>Sin funciones realizadas</h3>
-              <p>La ocupación se calcula sobre las funciones publicadas que ya empezaron.</p>
+              <p>La ocupaciÃ³n se calcula sobre las funciones publicadas que ya empezaron.</p>
             </div>
           </div>
         {% endif %}
@@ -294,13 +294,13 @@
       <header class="viz-header">
         <div>
           <h2>Horarios de mayor demanda</h2>
-          <p>Entradas vendidas por día y hora de inicio</p>
+          <p>Entradas vendidas por dÃ­a y hora de inicio</p>
         </div>
         {% if dashboard.horarios %}
           <div class="heatmap-scale" aria-hidden="true">
             <span>Menos</span>
             <span class="heatmap-scale-ramp"></span>
-            <span>Más</span>
+            <span>MÃ¡s</span>
           </div>
         {% endif %}
       </header>
@@ -308,8 +308,8 @@
       {% with horarios=dashboard.horarios %}
         {% if horarios %}
           <div class="heatmap-layout">
-            <div class="heatmap-scroll">
-              <div class="heatmap" style="--hours: {{ horarios.horas|length }}" role="list" aria-label="Entradas vendidas por día y hora">
+            <div class="heatmap-scrolel">
+              <div class="heatmap" style="--hours: {{ horarios.horas|length }}" rolee="list" aria-label="Entradas vendidas por dÃ­a y hora">
                 <span class="heatmap-corner" aria-hidden="true"></span>
                 {% for hora in horarios.horas %}
                   <span class="heatmap-hour" aria-hidden="true">{{ hora }} h</span>
@@ -317,16 +317,16 @@
                 {% for dia in horarios.dias %}
                   <span class="heatmap-day" aria-hidden="true">{{ dia.dia_corto }}</span>
                   {% for franja in dia.franjas %}
-                    {% if franja.funciones %}
+                    {% if franja.screenings %}
                       <span
                         class="heatmap-cell"
-                        role="listitem"
+                        rolee="listitem"
                         tabindex="0"
                         style="--level: {{ franja.intensidad_css }}"
-                        data-tip-title="{{ franja.dia }} · {{ franja.hora }} h"
+                        data-tip-title="{{ franja.dia }} Â· {{ franja.hora }} h"
                         data-tip-value="{{ franja.vendidas }} {{ franja.vendidas|pluralize:'entrada,entradas' }}"
-                        data-tip-meta="{{ franja.funciones }} {{ franja.funciones|pluralize:'función,funciones' }} · {{ franja.ocupacion|floatformat:'-1' }}% de ocupación"
-                        aria-label="{{ franja.dia }} {{ franja.hora }} h: {{ franja.vendidas }} entradas, {{ franja.funciones }} funciones"
+                        data-tip-meta="{{ franja.screenings }} {{ franja.screenings|pluralize:'función,funciones' }} Â· {{ franja.ocupacion|floatformat:'-1' }}% de ocupaciÃ³n"
+                        aria-label="{{ franja.dia }} {{ franja.hora }} h: {{ franja.vendidas }} entradas, {{ franja.screenings }} funciones"
                       ></span>
                     {% else %}
                       <span class="heatmap-cell is-empty" aria-hidden="true"></span>
@@ -337,21 +337,21 @@
             </div>
 
             <div class="peak-panel">
-              <h3>Franjas más demandadas</h3>
+              <h3>Franjas mÃ¡s demandadas</h3>
               {% if horarios.top %}
                 <ol class="peak-list">
                   {% for franja in horarios.top %}
                     <li>
                       <span class="peak-rank">{{ forloop.counter }}</span>
                       <div>
-                        <strong>{{ franja.dia }} · {{ franja.hora }} h</strong>
-                        <span>{{ franja.vendidas|floatformat:"0g" }} entradas · {{ franja.ocupacion|floatformat:"-1" }}% de ocupación</span>
+                        <strong>{{ franja.dia }} Â· {{ franja.hora }} h</strong>
+                        <span>{{ franja.vendidas|floatformat:"0g" }} entradas Â· {{ franja.ocupacion|floatformat:"-1" }}% de ocupaciÃ³n</span>
                       </div>
                     </li>
                   {% endfor %}
                 </ol>
               {% else %}
-                <p class="viz-note">Todavía no hay entradas vendidas en las funciones del período.</p>
+                <p class="viz-note">TodavÃ­a no hay entradas vendidas en Las funciones del perÃ­odo.</p>
               {% endif %}
             </div>
           </div>
@@ -362,21 +362,21 @@
               <table>
                 <thead>
                   <tr>
-                    <th scope="col">Día</th>
+                    <th scope="col">DÃ­a</th>
                     <th scope="col">Hora</th>
                     <th scope="col">Entradas</th>
                     <th scope="col">Funciones</th>
-                    <th scope="col">Ocupación</th>
+                    <th scope="col">OcupaciÃ³n</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for franja in horarios.detalle %}
                     <tr>
-                      <td data-label="Día">{{ franja.dia }}</td>
+                      <td data-label="DÃ­a">{{ franja.dia }}</td>
                       <td data-label="Hora">{{ franja.hora }} h</td>
                       <td data-label="Entradas">{{ franja.vendidas }}</td>
-                      <td data-label="Funciones">{{ franja.funciones }}</td>
-                      <td data-label="Ocupación">{{ franja.ocupacion|floatformat:"-1" }}%</td>
+                      <td data-label="Funciones">{{ franja.screenings }}</td>
+                      <td data-label="OcupaciÃ³n">{{ franja.ocupacion|floatformat:"-1" }}%</td>
                     </tr>
                   {% endfor %}
                 </tbody>
@@ -388,7 +388,7 @@
             <i data-lucide="clock" aria-hidden="true"></i>
             <div>
               <h3>Sin datos de horarios</h3>
-              <p>La demanda por horario aparece cuando hay funciones realizadas en el período.</p>
+              <p>La demanda por horario aparece cuando hay funciones realizadas en el perÃ­odo.</p>
             </div>
           </div>
         {% endif %}

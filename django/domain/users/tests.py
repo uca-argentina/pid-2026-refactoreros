@@ -3,83 +3,83 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase
 
 from .forms import (
-    AdminUsuarioChangeForm,
-    AdminUsuarioCreationForm,
-    ClienteSignupForm,
+    AdminUserChangeForm,
+    AdminUserCreationForm,
+    CustomerSignupForm,
 )
-from .models import Acomodador, Cliente, Gerente
+from .models import Usher, Customer, Manager
 
 
 class PerfilesUsuarioTests(TestCase):
     def setUp(self):
         self.password = "PasswordSegura123!"
-        self.usuario = get_user_model().objects.create_user(
+        self.user = get_user_model().objects.create_user(
             username="juan",
             email="juan@mail.com",
             password=self.password,
         )
 
     def test_al_crear_un_usuario_su_password_se_hashea(self):
-        self.assertNotEqual(self.usuario.password, self.password)
-        self.assertTrue(self.usuario.check_password(self.password))
+        self.assertNotEqual(self.user.password, self.password)
+        self.assertTrue(self.user.check_password(self.password))
 
     def test_crear_perfil_cliente(self):
-        cliente = Cliente.objects.create(usuario=self.usuario)
+        cliente = Customer.objects.create(user=self.user)
 
-        self.assertEqual(cliente.usuario, self.usuario)
+        self.assertEqual(cliente.user, self.user)
         self.assertEqual(str(cliente), "juan")
 
     def test_crear_perfil_acomodador(self):
-        acomodador = Acomodador.objects.create(usuario=self.usuario)
+        acomodador = Usher.objects.create(user=self.user)
 
-        self.assertEqual(acomodador.usuario, self.usuario)
+        self.assertEqual(acomodador.user, self.user)
         self.assertEqual(str(acomodador), "juan")
 
     def test_crear_perfil_gerente(self):
-        gerente = Gerente.objects.create(usuario=self.usuario)
+        gerente = Manager.objects.create(user=self.user)
 
-        self.assertEqual(gerente.usuario, self.usuario)
+        self.assertEqual(gerente.user, self.user)
         self.assertEqual(str(gerente), "juan")
 
     def test_cuando_un_usuario_se_asigna_a_un_segundo_cliente_entonces_falla(self):
-        Cliente.objects.create(usuario=self.usuario)
+        Customer.objects.create(user=self.user)
 
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
-                Cliente.objects.create(usuario=self.usuario)
+                Customer.objects.create(user=self.user)
 
     def test_cuando_un_usuario_se_elimina_entonces_se_elimina_el_cliente_asociado(self):
-        Cliente.objects.create(usuario=self.usuario)
+        Customer.objects.create(user=self.user)
 
-        self.usuario.delete()
+        self.user.delete()
 
-        self.assertEqual(Cliente.objects.count(), 0)
+        self.assertEqual(Customer.objects.count(), 0)
 
     def test_cuando_un_usuario_se_elimina_entonces_se_elimina_el_acomodador_asociado(self):
-        Acomodador.objects.create(usuario=self.usuario)
+        Usher.objects.create(user=self.user)
 
-        self.usuario.delete()
+        self.user.delete()
 
-        self.assertEqual(Acomodador.objects.count(), 0)
+        self.assertEqual(Usher.objects.count(), 0)
 
     def test_cuando_un_usuario_se_elimina_entonces_se_elimina_el_gerente_asociado(self):
-        Gerente.objects.create(usuario=self.usuario)
+        Manager.objects.create(user=self.user)
 
-        self.usuario.delete()
+        self.user.delete()
 
-        self.assertEqual(Gerente.objects.count(), 0)
+        self.assertEqual(Manager.objects.count(), 0)
 
 
 class ValidacionMailAdminUsuarioTests(TestCase):
     def setUp(self):
-        self.usuario = get_user_model().objects.create_user(
+        self.user = get_user_model().objects.create_user(
             username="juan",
             email="juan@mail.com",
             password="PasswordSegura123!",
         )
 
     def test_al_crear_usuario_el_mail_es_obligatorio(self):
-        form = AdminUsuarioCreationForm(
+        form = AdminUserCreationForm(
             data={
                 "username": "ana",
                 "email": "",
@@ -92,7 +92,7 @@ class ValidacionMailAdminUsuarioTests(TestCase):
         self.assertIn("email", form.errors)
 
     def test_al_crear_usuario_el_mail_no_puede_repetirse(self):
-        form = AdminUsuarioCreationForm(
+        form = AdminUserCreationForm(
             data={
                 "username": "ana",
                 "email": "JUAN@mail.com",
@@ -106,13 +106,13 @@ class ValidacionMailAdminUsuarioTests(TestCase):
         self.assertEqual(form.email_duplicado, "juan@mail.com")
 
     def test_al_editar_usuario_permite_conservar_su_mismo_mail(self):
-        form = AdminUsuarioChangeForm(
-            instance=self.usuario,
+        form = AdminUserChangeForm(
+            instance=self.user,
             data={
                 "username": "juan",
                 "email": "juan@mail.com",
-                "password": self.usuario.password,
-                "date_joined": self.usuario.date_joined.strftime("%Y-%m-%d %H:%M:%S"),
+                "password": self.user.password,
+                "date_joined": self.user.date_joined.strftime("%Y-%m-%d %H:%M:%S"),
             },
         )
 
@@ -124,7 +124,7 @@ class ValidacionMailAdminUsuarioTests(TestCase):
             email="ana@mail.com",
             password="PasswordSegura123!",
         )
-        form = AdminUsuarioChangeForm(
+        form = AdminUserChangeForm(
             instance=otro_usuario,
             data={
                 "username": "ana",
@@ -140,7 +140,7 @@ class ValidacionMailAdminUsuarioTests(TestCase):
 
 class SignupClienteFormTests(TestCase):
     def test_signup_form_crea_usuario_con_email_como_username(self):
-        form = ClienteSignupForm(
+        form = CustomerSignupForm(
             data={
                 "nombre": "Ana",
                 "apellido": "Gomez",
@@ -152,16 +152,16 @@ class SignupClienteFormTests(TestCase):
 
         self.assertTrue(form.is_valid())
 
-        usuario = form.save()
+        user = form.save()
 
-        self.assertEqual(usuario.username, "ana@mail.com")
-        self.assertEqual(usuario.email, "ana@mail.com")
-        self.assertEqual(usuario.first_name, "Ana")
-        self.assertEqual(usuario.last_name, "Gomez")
-        self.assertTrue(usuario.check_password("PasswordSegura123!"))
+        self.assertEqual(user.username, "ana@mail.com")
+        self.assertEqual(user.email, "ana@mail.com")
+        self.assertEqual(user.first_name, "Ana")
+        self.assertEqual(user.last_name, "Gomez")
+        self.assertTrue(user.check_password("PasswordSegura123!"))
 
     def test_si_un_usuario_se_registra_con_password_invalida_entonces_devuelve_error(self):
-        form = ClienteSignupForm(
+        form = CustomerSignupForm(
             data={
                 "nombre": "Ana",
                 "apellido": "Gomez",
@@ -175,7 +175,7 @@ class SignupClienteFormTests(TestCase):
         self.assertIn("password1", form.errors)
 
     def test_si_un_usuario_se_registra_sin_numero_entonces_devuelve_error(self):
-        form = ClienteSignupForm(
+        form = CustomerSignupForm(
             data={
                 "nombre": "Ana",
                 "apellido": "Gomez",
@@ -193,7 +193,7 @@ class SignupClienteFormTests(TestCase):
         )
 
     def test_si_un_usuario_se_registra_sin_caracter_especial_entonces_devuelve_error(self):
-        form = ClienteSignupForm(
+        form = CustomerSignupForm(
             data={
                 "nombre": "Ana",
                 "apellido": "Gomez",

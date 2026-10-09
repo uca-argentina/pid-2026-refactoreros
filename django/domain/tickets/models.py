@@ -1,11 +1,12 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
 from django.utils import timezone
-from datetime import timedelta
 
-from domain.cinema.models import ConfiguracionCine
-from domain.screenings.models import Funcion
+from domain.cinema.models import CinemaSettings
+from domain.screenings.models import Screening
 
 
 def index_to_letters(index):
@@ -17,54 +18,57 @@ def index_to_letters(index):
     return label
 
 
-class CompraEntrada(models.Model):
-    usuario = models.ForeignKey(
+class TicketPurchase(models.Model):
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="compras_entradas",
+        related_name="ticket_purchases",
+        db_column="usuario_id",
     )
-    funcion = models.ForeignKey(
-        Funcion,
+    screening = models.ForeignKey(
+        Screening,
         on_delete=models.CASCADE,
-        related_name="compras_entradas",
+        related_name="ticket_purchases",
+        db_column="funcion_id",
     )
-    cantidad = models.PositiveIntegerField()
+    quantity = models.PositiveIntegerField(db_column="cantidad")
     total = models.DecimalField(max_digits=10, decimal_places=2)
-    asientos_seleccionados = models.JSONField(default=list, blank=True)
-    creada_en = models.DateTimeField(auto_now_add=True)
+    selected_seats = models.JSONField(default=list, blank=True, db_column="asientos_seleccionados")
+    created_at = models.DateTimeField(auto_now_add=True, db_column="creada_en")
 
     class Meta:
         verbose_name = "Compra de entrada"
         verbose_name_plural = "Compras de entradas"
-        ordering = ["-creada_en"]
+        db_table = "tickets_compraentrada"
+        ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.usuario} - {self.funcion} x{self.cantidad}"
+        return f"{self.user} - {self.screening} x{self.quantity}"
 
     @property
-    def asientos_label(self):
-        labels = self._labels_from_selected_seats(self.asientos_seleccionados)
+    def seat_labels(self):
+        labels = self._labels_from_selected_seats(self.selected_seats)
         return ", ".join(labels)
 
     @classmethod
-    def cantidad_vendida(cls, funcion):
-        cls.sincronizar_asientos_vendidos(funcion)
-        sold_seats = CompraAsiento.objects.filter(funcion=funcion).count()
+    def sold_quantity(cls, screening):
+        cls.sync_sold_seats(screening)
+        sold_seats = SeatPurchase.objects.filter(screening=screening).count()
         legacy_total = 0
-        legacy_compras = cls.objects.filter(funcion=funcion, asientos_seleccionados=[]).prefetch_related(
-            "asientos_vendidos"
+        legacy_purchases = cls.objects.filter(screening=screening, selected_seats=[]).prefetch_related(
+            "sold_seats"
         )
-        for compra in legacy_compras:
-            legacy_total += max(compra.cantidad - compra.asientos_vendidos.count(), 0)
+        for purchase in legacy_purchases:
+            legacy_total += max(purchase.quantity - purchase.sold_seats.count(), 0)
         return sold_seats + legacy_total
 
     @classmethod
-    def disponibles_para(cls, funcion):
-        return max(funcion.capacidad_disponible - cls.cantidad_vendida(funcion), 0)
+    def available_for(cls, screening):
+        return max(screening.available_capacity - cls.sold_quantity(screening), 0)
 
     @classmethod
-    def precios_por_asiento(cls, funcion):
-        snapshot = funcion.sala_configuracion_snapshot or {}
+    def seat_prices(cls, screening):
+        snapshot = screening.room_layout_snapshot or {}
         if isinstance(snapshot, dict):
             seats = snapshot.get("seats", [])
             columns_count = snapshot.get("columns") or max(
@@ -88,7 +92,7 @@ class CompraEntrada(models.Model):
             if not column_label:
                 continue
             label = f"{seat['row'] + 1}{column_label}"
-            prices[label] = funcion.precio_para_tipo(seat.get("type_id"))
+            prices[label] = screening.price_for_type(seat.get("type_id"))
         return prices
 
     @classmethod
@@ -101,56 +105,58 @@ class CompraEntrada(models.Model):
         return labels
 
     @classmethod
-    def asientos_ocupados(cls, funcion):
-        cls.sincronizar_asientos_vendidos(funcion)
-        return set(CompraAsiento.objects.filter(funcion=funcion).values_list("label", flat=True))
+    def occupied_seats(cls, screening):
+        cls.sync_sold_seats(screening)
+        return set(SeatPurchase.objects.filter(screening=screening).values_list("label", flat=True))
 
     @classmethod
-    def asientos_bloqueados(cls, funcion, usuario=None):
-        occupied = cls.asientos_ocupados(funcion)
-        reserved = ReservaAsiento.vigentes_para(funcion).exclude(usuario=usuario)
+    def blocked_seats(cls, screening, user=None):
+        occupied = cls.occupied_seats(screening)
+        reserved = SeatReservation.active_for(screening)
+        if user is not None and getattr(user, "is_authenticated", False):
+            reserved = reserved.exclude(user=user)
         return occupied | set(reserved.values_list("label", flat=True))
 
     @classmethod
-    def sincronizar_asientos_vendidos(cls, funcion):
-        compras = cls.objects.filter(funcion=funcion)
-        legacy_compras = []
+    def sync_sold_seats(cls, screening):
+        purchases = cls.objects.filter(screening=screening)
+        legacy_purchases = []
         legacy_sold_count = 0
-        for compra in compras:
-            labels = cls._labels_from_selected_seats(compra.asientos_seleccionados)
+        for purchase in purchases:
+            labels = cls._labels_from_selected_seats(purchase.selected_seats)
             if labels:
                 for label in labels:
-                    CompraAsiento.objects.get_or_create(
-                        compra=compra,
-                        funcion=funcion,
+                    SeatPurchase.objects.get_or_create(
+                        purchase=purchase,
+                        screening=screening,
                         label=label,
                     )
             else:
-                assigned_count = CompraAsiento.objects.filter(compra=compra).count()
-                remaining = max(compra.cantidad - assigned_count, 0)
+                assigned_count = SeatPurchase.objects.filter(purchase=purchase).count()
+                remaining = max(purchase.quantity - assigned_count, 0)
                 if remaining:
-                    legacy_compras.append({"compra": compra, "remaining": remaining})
+                    legacy_purchases.append({"purchase": purchase, "remaining": remaining})
                     legacy_sold_count += remaining
 
         if legacy_sold_count:
             occupied_labels = set(
-                CompraAsiento.objects.filter(funcion=funcion).values_list("label", flat=True)
+                SeatPurchase.objects.filter(screening=screening).values_list("label", flat=True)
             )
             legacy_index = 0
-            legacy_remaining = legacy_compras[legacy_index]["remaining"] if legacy_compras else 0
-            for label in cls.precios_por_asiento(funcion):
+            legacy_remaining = legacy_purchases[legacy_index]["remaining"] if legacy_purchases else 0
+            for label in cls.seat_prices(screening):
                 if label in occupied_labels:
                     continue
-                while legacy_compras and legacy_remaining <= 0:
+                while legacy_purchases and legacy_remaining <= 0:
                     legacy_index += 1
-                    if legacy_index >= len(legacy_compras):
+                    if legacy_index >= len(legacy_purchases):
                         break
-                    legacy_remaining = legacy_compras[legacy_index]["remaining"]
-                if legacy_index >= len(legacy_compras):
+                    legacy_remaining = legacy_purchases[legacy_index]["remaining"]
+                if legacy_index >= len(legacy_purchases):
                     break
-                CompraAsiento.objects.get_or_create(
-                    compra=legacy_compras[legacy_index]["compra"],
-                    funcion=funcion,
+                SeatPurchase.objects.get_or_create(
+                    purchase=legacy_purchases[legacy_index]["purchase"],
+                    screening=screening,
                     label=label,
                 )
                 occupied_labels.add(label)
@@ -160,8 +166,8 @@ class CompraEntrada(models.Model):
                     break
 
     @classmethod
-    def total_para_asientos(cls, funcion, selected_seats):
-        seat_prices = cls.precios_por_asiento(funcion)
+    def total_for_seats(cls, screening, selected_seats):
+        seat_prices = cls.seat_prices(screening)
         labels = cls._labels_from_selected_seats(selected_seats)
 
         if not labels:
@@ -169,7 +175,7 @@ class CompraEntrada(models.Model):
 
         invalid_labels = [label for label in labels if label not in seat_prices]
         if invalid_labels:
-            raise ValidationError({"cantidad": "La seleccion de asientos no es valida."})
+            raise ValidationError({"quantity": "La seleccion de asientos no es valida."})
 
         selected_payload = [
             {"label": label, "price": str(seat_prices[label])}
@@ -178,21 +184,21 @@ class CompraEntrada(models.Model):
         return sum(seat_prices[label] for label in labels), len(labels), selected_payload
 
     @classmethod
-    def comprar(cls, usuario, funcion, cantidad, selected_seats=None, require_reservation=False):
+    def buy(cls, user, screening, quantity, selected_seats=None, require_reservation=False):
         with transaction.atomic():
-            cantidad = int(cantidad)
-            funcion = Funcion.objects.select_for_update().select_related("sala").get(
-                pk=funcion.pk
+            quantity = int(quantity)
+            screening = Screening.objects.select_for_update().select_related("room").get(
+                pk=screening.pk
             )
-            ReservaAsiento.limpiar_expiradas()
-            list(cls.objects.select_for_update().filter(funcion=funcion))
-            list(CompraAsiento.objects.select_for_update().filter(funcion=funcion))
-            list(ReservaAsiento.objects.select_for_update().filter(funcion=funcion))
-            total_asientos, cantidad_asientos, selected_payload = cls.total_para_asientos(
-                funcion, selected_seats
+            SeatReservation.clear_expired()
+            list(cls.objects.select_for_update().filter(screening=screening))
+            list(SeatPurchase.objects.select_for_update().filter(screening=screening))
+            list(SeatReservation.objects.select_for_update().filter(screening=screening))
+            total_seats, seat_quantity, selected_payload = cls.total_for_seats(
+                screening, selected_seats
             )
             if selected_payload:
-                occupied_labels = cls.asientos_ocupados(funcion)
+                occupied_labels = cls.occupied_seats(screening)
                 already_taken = [
                     seat["label"]
                     for seat in selected_payload
@@ -200,12 +206,12 @@ class CompraEntrada(models.Model):
                 ]
                 if already_taken:
                     raise ValidationError(
-                        {"cantidad": "Algunos asientos seleccionados ya no estan disponibles."}
+                        {"quantity": "Algunos asientos seleccionados ya no estan disponibles."}
                     )
                 if require_reservation:
                     reserved_by_user = set(
-                        ReservaAsiento.vigentes_para(funcion)
-                        .filter(usuario=usuario)
+                        SeatReservation.active_for(screening)
+                        .filter(user=user)
                         .values_list("label", flat=True)
                     )
                     missing_reservations = [
@@ -215,168 +221,174 @@ class CompraEntrada(models.Model):
                     ]
                     if missing_reservations:
                         raise ValidationError(
-                            {"cantidad": "Algunas butacas ya no estan reservadas para tu compra."}
+                            {"quantity": "Algunas butacas ya no estan reservadas para tu compra."}
                         )
-            if cantidad_asientos:
-                cantidad = cantidad_asientos
-            total = total_asientos if total_asientos is not None else funcion.precio_desde * cantidad
-            compra = cls(
-                usuario=usuario,
-                funcion=funcion,
-                cantidad=cantidad,
+            if seat_quantity:
+                quantity = seat_quantity
+            total = total_seats if total_seats is not None else screening.price_from * quantity
+            purchase = cls(
+                user=user,
+                screening=screening,
+                quantity=quantity,
                 total=total,
-                asientos_seleccionados=selected_payload,
+                selected_seats=selected_payload,
             )
-            compra.full_clean()
-            compra.save()
+            purchase.full_clean()
+            purchase.save()
             sold_seats = [
-                CompraAsiento(compra=compra, funcion=funcion, label=seat["label"])
+                SeatPurchase(purchase=purchase, screening=screening, label=seat["label"])
                 for seat in selected_payload
             ]
             try:
-                CompraAsiento.objects.bulk_create(sold_seats)
+                SeatPurchase.objects.bulk_create(sold_seats)
             except IntegrityError:
                 raise ValidationError(
-                    {"cantidad": "Algunos asientos seleccionados ya no estan disponibles."}
+                    {"quantity": "Algunos asientos seleccionados ya no estan disponibles."}
                 )
             if selected_payload:
-                ReservaAsiento.objects.filter(
-                    funcion=funcion,
-                    usuario=usuario,
+                SeatReservation.objects.filter(
+                    screening=screening,
+                    user=user,
                     label__in=[seat["label"] for seat in selected_payload],
                 ).delete()
-            return compra
+            return purchase
 
     def clean(self):
         super().clean()
-        if self.cantidad < 1:
-            raise ValidationError({"cantidad": "Elegí al menos una entrada."})
+        if self.quantity < 1:
+            raise ValidationError({"quantity": "Elegi al menos una entrada."})
 
-        if not self.pk and self.funcion.estado != Funcion.Estado.PUBLICADA:
-            raise ValidationError("Esta función no tiene entradas a la venta.")
+        if not self.pk and self.screening.status != Screening.Status.PUBLISHED:
+            raise ValidationError("Esta funcion no tiene entradas a la venta.")
 
-        disponibles = self.disponibles_para(self.funcion)
+        available = self.available_for(self.screening)
         if self.pk:
-            disponibles += self.cantidad
-        if self.cantidad > disponibles:
+            available += self.quantity
+        if self.quantity > available:
             raise ValidationError(
                 {
-                    "cantidad": (
-                        f"Solo tenemos disponibles {disponibles} entradas "
-                        "para esta función."
+                    "quantity": (
+                        f"Solo tenemos disponibles {available} entradas "
+                        "para esta funcion."
                     )
                 }
             )
 
     def save(self, *args, **kwargs):
-        if self.funcion_id and self.cantidad and self.total in (None, ""):
-            self.total = self.funcion.precio_desde * self.cantidad
+        if self.screening_id and self.quantity and self.total in (None, ""):
+            self.total = self.screening.price_from * self.quantity
         super().save(*args, **kwargs)
 
 
-class CompraAsiento(models.Model):
-    compra = models.ForeignKey(
-        CompraEntrada,
+class SeatPurchase(models.Model):
+    purchase = models.ForeignKey(
+        TicketPurchase,
         on_delete=models.CASCADE,
-        related_name="asientos_vendidos",
+        related_name="sold_seats",
+        db_column="compra_id",
     )
-    funcion = models.ForeignKey(
-        Funcion,
+    screening = models.ForeignKey(
+        Screening,
         on_delete=models.CASCADE,
-        related_name="asientos_vendidos",
+        related_name="sold_seats",
+        db_column="funcion_id",
     )
     label = models.CharField(max_length=12)
-    creada_en = models.DateTimeField(auto_now_add=True)
-    utilizada_en = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_column="creada_en")
+    used_at = models.DateTimeField(null=True, blank=True, db_column="utilizada_en")
 
     class Meta:
         verbose_name = "Asiento vendido"
         verbose_name_plural = "Asientos vendidos"
+        db_table = "tickets_compraasiento"
         constraints = [
             models.UniqueConstraint(
-                fields=["funcion", "label"],
+                fields=["screening", "label"],
                 name="unique_sold_seat_per_screening",
             )
         ]
 
     def __str__(self):
-        return f"{self.funcion} - {self.label}"
+        return f"{self.screening} - {self.label}"
 
 
-class ReservaAsiento(models.Model):
-    usuario = models.ForeignKey(
+class SeatReservation(models.Model):
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="reservas_asientos",
+        related_name="seat_reservations",
+        db_column="usuario_id",
     )
-    funcion = models.ForeignKey(
-        Funcion,
+    screening = models.ForeignKey(
+        Screening,
         on_delete=models.CASCADE,
-        related_name="reservas_asientos",
+        related_name="seat_reservations",
+        db_column="funcion_id",
     )
     label = models.CharField(max_length=12)
-    expira_en = models.DateTimeField()
-    creada_en = models.DateTimeField(auto_now_add=True)
-    actualizada_en = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField(db_column="expira_en")
+    created_at = models.DateTimeField(auto_now_add=True, db_column="creada_en")
+    updated_at = models.DateTimeField(auto_now=True, db_column="actualizada_en")
 
     class Meta:
         verbose_name = "Reserva temporal de asiento"
         verbose_name_plural = "Reservas temporales de asientos"
+        db_table = "tickets_reservaasiento"
         constraints = [
             models.UniqueConstraint(
-                fields=["funcion", "label"],
+                fields=["screening", "label"],
                 name="unique_reserved_seat_per_screening",
             )
         ]
 
     def __str__(self):
-        return f"{self.usuario} - {self.funcion} - {self.label}"
+        return f"{self.user} - {self.screening} - {self.label}"
 
     @classmethod
-    def duracion(cls):
-        minutos = ConfiguracionCine.actual().reserva_asientos_minutos or 5
-        return timedelta(minutes=minutos)
+    def duration(cls):
+        minutes = CinemaSettings.current().seat_reservation_minutes or 5
+        return timedelta(minutes=minutes)
 
     @classmethod
-    def limpiar_expiradas(cls):
-        return cls.objects.filter(expira_en__lte=timezone.now()).delete()
+    def clear_expired(cls):
+        return cls.objects.filter(expires_at__lte=timezone.now()).delete()
 
     @classmethod
-    def vigentes_para(cls, funcion):
-        cls.limpiar_expiradas()
-        return cls.objects.filter(funcion=funcion, expira_en__gt=timezone.now())
+    def active_for(cls, screening):
+        cls.clear_expired()
+        return cls.objects.filter(screening=screening, expires_at__gt=timezone.now())
 
     @classmethod
-    def reservar(cls, usuario, funcion, label):
+    def reserve(cls, user, screening, label):
         with transaction.atomic():
-            funcion = Funcion.objects.select_for_update().get(pk=funcion.pk)
-            cls.limpiar_expiradas()
-            CompraEntrada.sincronizar_asientos_vendidos(funcion)
-            if label not in CompraEntrada.precios_por_asiento(funcion):
+            screening = Screening.objects.select_for_update().get(pk=screening.pk)
+            cls.clear_expired()
+            TicketPurchase.sync_sold_seats(screening)
+            if label not in TicketPurchase.seat_prices(screening):
                 raise ValidationError("La butaca no es valida para esta funcion.")
-            if CompraAsiento.objects.filter(funcion=funcion, label=label).exists():
+            if SeatPurchase.objects.filter(screening=screening, label=label).exists():
                 raise ValidationError("La butaca ya fue comprada.")
 
-            reserva = cls.objects.select_for_update().filter(
-                funcion=funcion,
+            reservation = cls.objects.select_for_update().filter(
+                screening=screening,
                 label=label,
             ).first()
-            expiration = timezone.now() + cls.duracion()
-            if reserva and reserva.usuario_id != usuario.pk and reserva.expira_en > timezone.now():
+            expiration = timezone.now() + cls.duration()
+            if reservation and reservation.user_id != user.pk and reservation.expires_at > timezone.now():
                 raise ValidationError("La butaca esta reservada temporalmente.")
-            if reserva:
-                reserva.usuario = usuario
-                reserva.expira_en = expiration
-                reserva.save(update_fields=["usuario", "expira_en", "actualizada_en"])
+            if reservation:
+                reservation.user = user
+                reservation.expires_at = expiration
+                reservation.save(update_fields=["user", "expires_at", "updated_at"])
             else:
-                reserva = cls.objects.create(
-                    usuario=usuario,
-                    funcion=funcion,
+                reservation = cls.objects.create(
+                    user=user,
+                    screening=screening,
                     label=label,
-                    expira_en=expiration,
+                    expires_at=expiration,
                 )
-            return reserva
+            return reservation
 
     @classmethod
-    def liberar(cls, usuario, funcion, label):
-        cls.objects.filter(usuario=usuario, funcion=funcion, label=label).delete()
+    def release(cls, user, screening, label):
+        cls.objects.filter(user=user, screening=screening, label=label).delete()

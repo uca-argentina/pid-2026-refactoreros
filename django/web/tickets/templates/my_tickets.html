@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mis entradas | {{ cinema.nombre }}</title>
+  <title>Mis entradas | {{ cinema.name }}</title>
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
   <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
   <link rel="stylesheet" href="{% static 'catalog.css' %}">
@@ -13,14 +13,14 @@
   <header class="client-header">
     <a class="client-brand" href="{% url 'home' %}">
       {% if cinema.logo %}
-        <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="client-logo">
+        <img src="{{ cinema.logo.url }}" alt="{{ cinema.name }}" class="client-logo">
       {% else %}
-        <strong>{{ cinema.nombre }}</strong>
+        <strong>{{ cinema.name }}</strong>
       {% endif %}
     </a>
     <nav>
       <a href="{% url 'home' %}"><i data-lucide="clapperboard" aria-hidden="true"></i><span>Películas</span></a>
-      {% if manager_role %}
+      {% if manager_rolee %}
         <a class="client-manager-link" href="{% url 'manager:home' %}"><i data-lucide="settings-2" aria-hidden="true"></i><span>Gestión</span></a>
       {% endif %}
       <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesión</span></a>
@@ -40,32 +40,32 @@
       <h1>Mis entradas</h1>
     </section>
 
-    {% if compras %}
-      <section class="ticket-list" aria-label="Entradas compradas">
-        {% for compra in compras %}
-          <article class="ticket-card{% if compra.funcion.estado == 'cancelada' %} is-cancelled{% endif %}">
+    {% if purchases %}
+      <section class="ticket-list" aria-label="Entradas purchasedas">
+        {% for purchase in purchases %}
+          <article class="ticket-card{% if purchase.screening.status == 'cancelada' %} is-cancelled{% endif %}">
             <div class="ticket-main">
               <div class="ticket-tags">
-                <span>{{ compra.funcion.fecha_horario|date:"l d/m H:i"|capfirst }}</span>
-                {% if compra.funcion.estado == 'cancelada' %}
+                <span>{{ purchase.screening.starts_at|date:"l d/m H:i"|capfirst }}</span>
+                {% if purchase.screening.status == 'cancelada' %}
                   <span class="ticket-status">Función cancelada</span>
                 {% endif %}
               </div>
-              <h2>{{ compra.funcion.pelicula.titulo }}</h2>
-              <p>{{ compra.funcion.sala.nombre }}</p>
+              <h2>{{ purchase.screening.movie.title }}</h2>
+              <p>{{ purchase.screening.room.name }}</p>
             </div>
             <dl class="ticket-summary">
               <div>
                 <dt>Cantidad</dt>
-                <dd>{{ compra.cantidad }}</dd>
+                <dd>{{ purchase.cantidad }}</dd>
               </div>
               <div>
                 <dt>Butacas</dt>
-                <dd>{{ compra.asientos_label|default:"Sin asignar" }}</dd>
+                <dd>{{ purchase.seat_labels|default:"Sin asignar" }}</dd>
               </div>
               <div>
                 <dt>Total</dt>
-                <dd>${{ compra.total }}</dd>
+                <dd>${{ purchase.total }}</dd>
               </div>
             </dl>
           </article>
@@ -73,7 +73,7 @@
       </section>
     {% else %}
       <section class="client-empty">
-        <h2>Todavia no compraste entradas</h2>
+        <h2>Todavia no purchaseste entradas</h2>
         <p>Elegí una función de la cartelera para empezar.</p>
       </section>
     {% endif %}

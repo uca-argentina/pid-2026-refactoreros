@@ -1,50 +1,52 @@
 from django.db import models
 
 
-class Pelicula(models.Model):
-    class Clasificacion(models.TextChoices):
-        ATP = "ATP", "ATP - Apta para todo público"
-        MAS_13 = "+13", "+13 años"
-        MAS_16 = "+16", "+16 años"
-        MAS_18 = "+18", "+18 años"
+class Movie(models.Model):
+    class Rating(models.TextChoices):
+        ATP = "ATP", "ATP - Apta para todo publico"
+        MAS_13 = "+13", "+13 anos"
+        MAS_16 = "+16", "+16 anos"
+        MAS_18 = "+18", "+18 anos"
 
-    class Genero(models.TextChoices):
-        ACCION = "ACCION", "Acción"
+    class Genre(models.TextChoices):
+        ACCION = "ACCION", "Accion"
         AVENTURA = "AVENTURA", "Aventura"
-        ANIMACION = "ANIMACION", "Animación"
+        ANIMACION = "ANIMACION", "Animacion"
         COMEDIA = "COMEDIA", "Comedia"
         DRAMA = "DRAMA", "Drama"
         TERROR = "TERROR", "Terror"
-        CIENCIA_FICCION = "CIENCIA_FICCION", "Ciencia ficción"
+        CIENCIA_FICCION = "CIENCIA_FICCION", "Ciencia ficcion"
         SUSPENSO = "SUSPENSO", "Suspenso"
         ROMANCE = "ROMANCE", "Romance"
         DOCUMENTAL = "DOCUMENTAL", "Documental"
-        FANTASIA = "FANTASIA", "Fantasía"
+        FANTASIA = "FANTASIA", "Fantasia"
         MUSICAL = "MUSICAL", "Musical"
 
-    titulo = models.CharField(max_length=200)
-    sinopsis = models.TextField()
-    genero = models.CharField(max_length=20, verbose_name="Género", choices=Genero.choices)
-    clasificacion = models.CharField(max_length=5, verbose_name="Clasificación", choices=Clasificacion.choices)
-    duracion_minutos = models.PositiveIntegerField(
-        help_text="Duración de la película en minutos",
-        verbose_name="Duración en minutos"
+    title = models.CharField(max_length=200, db_column="titulo")
+    synopsis = models.TextField(db_column="sinopsis")
+    genre = models.CharField(max_length=20, verbose_name="Genero", choices=Genre.choices, db_column="genero")
+    rating = models.CharField(max_length=5, verbose_name="Clasificacion", choices=Rating.choices, db_column="clasificacion")
+    duration_minutes = models.PositiveIntegerField(
+        help_text="Duracion de la pelicula en minutos",
+        verbose_name="Duracion en minutos",
+        db_column="duracion_minutos",
     )
-    imagen = models.ImageField(upload_to="peliculas/", verbose_name="Imagen del cartel")
+    image = models.ImageField(upload_to="peliculas/", verbose_name="Imagen del cartel", db_column="imagen")
 
     class Meta:
-        verbose_name = "Película"
-        verbose_name_plural = "Películas"
-        ordering = ["titulo"]
+        verbose_name = "Pelicula"
+        verbose_name_plural = "Peliculas"
+        db_table = "movies_pelicula"
+        ordering = ["title"]
 
     @property
-    def duracion_horas_minutos(self):
-        horas, minutos = divmod(self.duracion_minutos, 60)
-        if horas and minutos:
-            return f"{horas} h {minutos} min"
-        if horas:
-            return f"{horas} h"
-        return f"{minutos} min"
+    def runtime_label(self):
+        hours, minutes = divmod(self.duration_minutes, 60)
+        if hours and minutes:
+            return f"{hours} h {minutes} min"
+        if hours:
+            return f"{hours} h"
+        return f"{minutes} min"
 
     def __str__(self):
-        return self.titulo
+        return self.title

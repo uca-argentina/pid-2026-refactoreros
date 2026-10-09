@@ -1,11 +1,11 @@
 from django.contrib import admin
 
-from .models import Funcion
+from .models import Screening
 
 
-@admin.register(Funcion)
-class FuncionAdmin(admin.ModelAdmin):
-    list_display = ("pelicula", "sala", "fecha_horario", "estado", "precio_desde")
-    list_filter = ("sala", "estado")
-    date_hierarchy = "fecha_horario"
-    ordering = ("fecha_horario",)
+@admin.register(Screening)
+class ScreeningAdmin(admin.ModelAdmin):
+    list_display = ("movie", "room", "starts_at", "status", "price_from")
+    list_filter = ("room", "status")
+    date_hierarchy = "starts_at"
+    ordering = ("starts_at",)

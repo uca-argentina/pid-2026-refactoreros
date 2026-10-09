@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ cinema.nombre }} | Cartelera</title>
+  <title>{{ cinema.name }} | Cartelera</title>
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
   <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
   <link rel="stylesheet" href="{% static 'catalog.css' %}">
@@ -13,17 +13,25 @@
   <header class="client-header">
     <a class="client-brand" href="{% url 'home' %}">
       {% if cinema.logo %}
-        <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="client-logo">
+        <img src="{{ cinema.logo.url }}" alt="{{ cinema.name }}" class="client-logo">
       {% else %}
-        <strong>{{ cinema.nombre }}</strong>
+        <strong>{{ cinema.name }}</strong>
       {% endif %}
     </a>
     <nav>
-      <a href="{% url 'my_tickets' %}"><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>
+      {% if request.user.is_authenticated %}
+        <a href="{% url 'my_tickets' %}"><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>
+      {% else %}
+        <a href="{% url 'login' %}?next={% url 'my_tickets' %}"><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>
+      {% endif %}
       {% if manager_role %}
         <a class="client-manager-link" href="{% url 'manager:home' %}"><i data-lucide="settings-2" aria-hidden="true"></i><span>Gestión</span></a>
       {% endif %}
-      <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesión</span></a>
+      {% if request.user.is_authenticated %}
+        <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesión</span></a>
+      {% else %}
+        <a href="{% url 'login' %}"><i data-lucide="log-in" aria-hidden="true"></i><span>Iniciar sesión</span></a>
+      {% endif %}
     </nav>
   </header>
 
@@ -32,14 +40,14 @@
       <h1>Películas</h1>
     </section>
 
-    {% if peliculas %}
+    {% if movies %}
       <section class="movie-grid" aria-label="Peliculas con funciones publicadas">
-        {% for pelicula in peliculas %}
-          <a class="movie-card" href="{% url 'movie_detail' pelicula.pk %}">
-            <img src="{{ pelicula.imagen.url }}" alt="{{ pelicula.titulo }}">
+        {% for movie in movies %}
+          <a class="movie-card" href="{% url 'movie_detail' movie.pk %}">
+            <img src="{{ movie.image.url }}" alt="{{ movie.title }}">
             <div class="movie-card-body">
-              <h2>{{ pelicula.titulo }}</h2>
-              <p>{{ pelicula.get_clasificacion_display }}</p>
+              <h2>{{ movie.title }}</h2>
+              <p>{{ movie.get_rating_display }}</p>
             </div>
           </a>
         {% endfor %}

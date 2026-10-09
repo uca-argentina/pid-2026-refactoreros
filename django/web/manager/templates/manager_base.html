@@ -1,10 +1,10 @@
-{% load static %}
+﻿{% load static %}
 <!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Butaca Cero | Gestión</title>
+  <title>Butaca Cero | GestiÃ³n</title>
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
   <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
   <link rel="stylesheet" href="{% static 'manager.css' %}">
@@ -19,24 +19,24 @@
 </head>
 <body>
   <div class="manager-shell">
-    <aside class="manager-sidebar" aria-label="Panel de gestión">
-      <a class="brand" href="{% url 'manager:home' %}" aria-label="Butaca Cero y {{ cinema.nombre }}">
+    <aside class="manager-sidebar" aria-label="Panel de gestiÃ³n">
+      <a class="brand" href="{% url 'manager:home' %}" aria-label="Butaca Cero y {{ cinema.name }}">
         <img src="{% static 'butaca-cero-logo.png' %}" alt="Butaca Cero" class="brand-logo">
         <span class="cinema-mark" aria-hidden="true">
           {% if cinema.logo %}
             <img src="{{ cinema.logo.url }}" alt="" class="cinema-logo">
           {% else %}
-            <span class="cinema-logo-placeholder">{{ cinema.nombre|slice:":1" }}</span>
+            <span class="cinema-logo-placeholder">{{ cinema.name|slice:":1" }}</span>
           {% endif %}
         </span>
       </a>
 
-      <nav class="manager-nav" aria-label="Gestión">
+      <nav class="manager-nav" aria-label="GestiÃ³n">
         <a href="{% url 'manager:home' %}" class="nav-dashboard {% if not section %}is-active{% endif %}">
           <i data-lucide="layout-dashboard" aria-hidden="true"></i>
           <span>Inicio</span>
         </a>
-        {% if manager_role == "gerente" %}
+        {% if manager_role == "manager" %}
           <a href="{% url 'manager:dashboard' %}" class="nav-analytics {% if section == 'Dashboard' %}is-active{% endif %}">
             <i data-lucide="chart-column" aria-hidden="true"></i>
             <span>Dashboard</span>
@@ -53,17 +53,17 @@
             <i data-lucide="armchair" aria-hidden="true"></i>
             <span>Butacas</span>
           </a>
-          <a href="{% url 'manager:peliculas_list' %}" class="nav-movies {% if section == 'Películas' or section == 'Peliculas' %}is-active{% endif %}">
+          <a href="{% url 'manager:peliculas_list' %}" class="nav-movies {% if section == 'PelÃ­culas' or section == 'Peliculas' %}is-active{% endif %}">
             <i data-lucide="clapperboard" aria-hidden="true"></i>
-            <span>Películas</span>
+            <span>PelÃ­culas</span>
           </a>
           <a href="{% url 'manager:funciones_list' %}" class="nav-screenings {% if section == 'Funciones' %}is-active{% endif %}">
             <i data-lucide="calendar-clock" aria-hidden="true"></i>
             <span>Funciones</span>
           </a>
-          <a href="{% url 'manager:configuracion' %}" class="nav-settings {% if section == 'Configuración' or section == 'Configuracion' %}is-active{% endif %}">
+          <a href="{% url 'manager:configuracion' %}" class="nav-settings {% if section == 'ConfiguraciÃ³n' or section == 'Configuracion' %}is-active{% endif %}">
             <i data-lucide="settings" aria-hidden="true"></i>
-            <span>Configuración</span>
+            <span>ConfiguraciÃ³n</span>
           </a>
         {% endif %}
       </nav>
@@ -77,9 +77,13 @@
     <div class="manager-workspace">
       <header class="manager-topbar">
         <div>
-          <strong>{{ cinema.nombre }}</strong>
+          <strong>{{ cinema.name }}</strong>
         </div>
         <div class="topbar-actions">
+          <a class="topbar-site-link" href="{% url 'home' %}" title="Ir al sitio del cliente">
+            <i data-lucide="eye" aria-hidden="true"></i>
+            <span>Sitio cliente</span>
+          </a>
           <button class="theme-toggle" type="button" aria-label="Cambiar modo claro u oscuro" aria-pressed="true" title="Cambiar tema">
             <span class="theme-toggle-track" aria-hidden="true">
               <i data-lucide="moon" class="theme-icon theme-icon-dark"></i>

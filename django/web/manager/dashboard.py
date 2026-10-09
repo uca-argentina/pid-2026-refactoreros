@@ -5,9 +5,9 @@ from decimal import Decimal
 from django.db.models import Count, Sum
 from django.utils import timezone
 
-from domain.screenings.models import Funcion
+from domain.screenings.models import Screening
 from domain.seats.models import Seat
-from domain.tickets.models import CompraAsiento, CompraEntrada
+from domain.tickets.models import SeatPurchase, TicketPurchase
 
 
 PERIODOS = (
@@ -18,7 +18,7 @@ PERIODOS = (
 )
 PERIODO_POR_DEFECTO = "30"
 # Solo las funciones publicadas pueden vender; las finalizadas conservan sus ventas.
-ESTADOS_CON_VENTA = (Funcion.Estado.PUBLICADA, Funcion.Estado.FINALIZADA)
+ESTADOS_CON_VENTA = (Screening.Status.PUBLISHED, Screening.Status.FINISHED)
 DIAS_SEMANA = ("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
 DIAS_SEMANA_CORTOS = ("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
 TOP_PELICULAS = 5
@@ -26,17 +26,17 @@ TOP_FRANJAS = 3
 ETIQUETAS_EJE_X = 8
 
 
-def construir_dashboard(periodo=None, ahora=None):
-    ahora = ahora or timezone.now()
+def build_dashboard(periodo=None, now=None):
+    now = now or timezone.now()
     clave, dias = resolver_periodo(periodo)
-    hoy = timezone.localdate(ahora)
-    desde = inicio_del_dia(hoy - timedelta(days=dias - 1)) if dias else None
+    today = timezone.localdate(now)
+    desde = inicio_del_dia(today - timedelta(days=dias - 1)) if dias else None
 
-    filas = filas_de_funciones(funciones_realizadas(desde, ahora))
+    filas = filas_de_funciones(funciones_realizadas(desde, now))
     resumen = resumir(filas)
     anterior = None
     if desde is not None:
-        desde_anterior = inicio_del_dia(hoy - timedelta(days=dias * 2 - 1))
+        desde_anterior = inicio_del_dia(today - timedelta(days=dias * 2 - 1))
         anterior = resumir(filas_de_funciones(funciones_realizadas(desde_anterior, desde)))
 
     return {
@@ -46,14 +46,14 @@ def construir_dashboard(periodo=None, ahora=None):
         ],
         "periodo": clave,
         "desde": timezone.localdate(desde) if desde else primera_fecha(filas),
-        "hasta": hoy,
+        "hasta": today,
         "resumen": resumen,
         "variaciones": variaciones(resumen, anterior),
-        "recaudacion": serie_recaudacion(filas, desde, hoy),
-        "peliculas": peliculas_mas_vistas(filas),
+        "recaudacion": serie_recaudacion(filas, desde, today),
+        "movies": peliculas_mas_vistas(filas),
         "salas": ocupacion_por_sala(filas),
         "horarios": demanda_por_horario(filas),
-        "preventa": preventa(ahora),
+        "preventa": preventa(now),
     }
 
 
@@ -69,50 +69,50 @@ def inicio_del_dia(fecha):
 
 
 def funciones_realizadas(desde, hasta):
-    funciones = Funcion.objects.filter(
-        estado__in=ESTADOS_CON_VENTA,
-        fecha_horario__lt=hasta,
+    screenings = Screening.objects.filter(
+        status__in=ESTADOS_CON_VENTA,
+        starts_at__lt=hasta,
     )
     if desde is not None:
-        funciones = funciones.filter(fecha_horario__gte=desde)
-    return funciones
+        screenings = screenings.filter(starts_at__gte=desde)
+    return screenings
 
 
-def filas_de_funciones(funciones):
-    ids = funciones.values("pk")
+def filas_de_funciones(screenings):
+    ids = screenings.values("pk")
     ventas = {
-        venta["funcion_id"]: venta
-        for venta in CompraEntrada.objects.filter(funcion__in=ids)
+        venta["screening_id"]: venta
+        for venta in TicketPurchase.objects.filter(screening__in=ids)
         .order_by()
-        .values("funcion_id")
-        .annotate(vendidas=Sum("cantidad"), recaudacion=Sum("total"))
+        .values("screening_id")
+        .annotate(sold=Sum("quantity"), recaudacion=Sum("total"))
     }
     utilizadas = dict(
-        CompraAsiento.objects.filter(funcion__in=ids, utilizada_en__isnull=False)
+        SeatPurchase.objects.filter(screening__in=ids, used_at__isnull=False)
         .order_by()
-        .values("funcion_id")
+        .values("screening_id")
         .annotate(total=Count("pk"))
-        .values_list("funcion_id", "total")
+        .values_list("screening_id", "total")
     )
     capacidades = dict(
         Seat.objects.order_by()
-        .values("sala_id")
+        .values("room_id")
         .annotate(total=Count("pk"))
-        .values_list("sala_id", "total")
+        .values_list("room_id", "total")
     )
 
     filas = []
-    for funcion in funciones.select_related("pelicula", "sala").order_by("fecha_horario"):
-        venta = ventas.get(funcion.pk, {})
-        vendidas = venta.get("vendidas") or 0
+    for screening in screenings.select_related("movie", "room").order_by("starts_at"):
+        venta = ventas.get(screening.pk, {})
+        sold = venta.get("sold") or 0
         filas.append(
             {
-                "funcion": funcion,
-                "inicio": timezone.localtime(funcion.fecha_horario),
-                "vendidas": vendidas,
+                "screening": screening,
+                "inicio": timezone.localtime(screening.starts_at),
+                "vendidas": sold,
                 "recaudacion": venta.get("recaudacion") or Decimal("0"),
-                "utilizadas": min(utilizadas.get(funcion.pk, 0), vendidas),
-                "capacidad": funcion.capacidad_snapshot or capacidades.get(funcion.sala_id, 0),
+                "utilizadas": min(utilizadas.get(screening.pk, 0), sold),
+                "capacidad": screening.capacity_snapshot or capacidades.get(screening.room_id, 0),
             }
         )
     return filas
@@ -123,21 +123,21 @@ def porcentaje(parte, total):
 
 
 def resumir(filas):
-    vendidas = sum(fila["vendidas"] for fila in filas)
-    utilizadas = sum(fila["utilizadas"] for fila in filas)
-    capacidad = sum(fila["capacidad"] for fila in filas)
-    recaudacion = sum((fila["recaudacion"] for fila in filas), Decimal("0"))
+    sold = sum(row["vendidas"] for row in filas)
+    utilizadas = sum(row["utilizadas"] for row in filas)
+    capacity = sum(row["capacidad"] for row in filas)
+    recaudacion = sum((row["recaudacion"] for row in filas), Decimal("0"))
     return {
-        "funciones": len(filas),
-        "vendidas": vendidas,
+        "screenings": len(filas),
+        "vendidas": sold,
         "utilizadas": utilizadas,
-        "no_utilizadas": vendidas - utilizadas,
-        "capacidad": capacidad,
+        "no_utilizadas": sold - utilizadas,
+        "capacidad": capacity,
         "recaudacion": recaudacion,
-        "ticket_promedio": recaudacion / vendidas if vendidas else Decimal("0"),
-        "ocupacion": porcentaje(vendidas, capacidad),
-        "asistencia": porcentaje(utilizadas, vendidas),
-        "asistencia_css": css_porcentaje(porcentaje(utilizadas, vendidas)),
+        "ticket_promedio": recaudacion / sold if sold else Decimal("0"),
+        "ocupacion": porcentaje(sold, capacity),
+        "asistencia": porcentaje(utilizadas, sold),
+        "asistencia_css": css_porcentaje(porcentaje(utilizadas, sold)),
     }
 
 
@@ -165,10 +165,10 @@ def variacion(valor, unidad):
     }
 
 
-def variacion_porcentual(actual, previo):
+def variacion_porcentual(current, previo):
     if not previo:
         return None
-    return float(actual - previo) * 100 / float(previo)
+    return float(current - previo) * 100 / float(previo)
 
 
 def variaciones(resumen, anterior):
@@ -210,11 +210,11 @@ def clave_de_agrupacion(fecha, granularidad):
     return fecha
 
 
-def serie_recaudacion(filas, desde, hoy):
+def serie_recaudacion(filas, desde, today):
     if not filas:
         return None
-    inicio = timezone.localdate(desde) if desde else primera_fecha(filas)
-    total_dias = (hoy - inicio).days + 1
+    start = timezone.localdate(desde) if desde else primera_fecha(filas)
+    total_dias = (today - start).days + 1
     if total_dias <= 31:
         granularidad, avanzar = "dia", lambda fecha: fecha + timedelta(days=1)
     elif total_dias <= 26 * 7:
@@ -223,20 +223,20 @@ def serie_recaudacion(filas, desde, hoy):
         granularidad, avanzar = "mes", sumar_mes
 
     claves = []
-    clave = clave_de_agrupacion(inicio, granularidad)
-    while clave <= hoy:
+    clave = clave_de_agrupacion(start, granularidad)
+    while clave <= today:
         claves.append(clave)
         clave = avanzar(clave)
 
     acumulado = {
-        clave: {"recaudacion": Decimal("0"), "vendidas": 0, "funciones": 0}
+        clave: {"recaudacion": Decimal("0"), "vendidas": 0, "screenings": 0}
         for clave in claves
     }
-    for fila in filas:
-        datos = acumulado[clave_de_agrupacion(fila["inicio"].date(), granularidad)]
-        datos["recaudacion"] += fila["recaudacion"]
-        datos["vendidas"] += fila["vendidas"]
-        datos["funciones"] += 1
+    for row in filas:
+        datos = acumulado[clave_de_agrupacion(row["inicio"].date(), granularidad)]
+        datos["recaudacion"] += row["recaudacion"]
+        datos["vendidas"] += row["vendidas"]
+        datos["screenings"] += 1
 
     maximo = max(datos["recaudacion"] for datos in acumulado.values())
     tope, ticks = escala(float(maximo))
@@ -270,26 +270,26 @@ def serie_recaudacion(filas, desde, hoy):
 
 def peliculas_mas_vistas(filas):
     por_pelicula = {}
-    for fila in filas:
-        pelicula = fila["funcion"].pelicula
+    for row in filas:
+        movie = row["screening"].movie
         datos = por_pelicula.setdefault(
-            pelicula.pk,
+            movie.pk,
             {
-                "pelicula": pelicula,
+                "movie": movie,
                 "vendidas": 0,
                 "utilizadas": 0,
                 "recaudacion": Decimal("0"),
-                "funciones": 0,
+                "screenings": 0,
             },
         )
-        datos["vendidas"] += fila["vendidas"]
-        datos["utilizadas"] += fila["utilizadas"]
-        datos["recaudacion"] += fila["recaudacion"]
-        datos["funciones"] += 1
+        datos["vendidas"] += row["vendidas"]
+        datos["utilizadas"] += row["utilizadas"]
+        datos["recaudacion"] += row["recaudacion"]
+        datos["screenings"] += 1
 
     ranking = sorted(
         (datos for datos in por_pelicula.values() if datos["vendidas"]),
-        key=lambda datos: (-datos["vendidas"], -datos["recaudacion"], datos["pelicula"].titulo),
+        key=lambda datos: (-datos["vendidas"], -datos["recaudacion"], datos["movie"].title),
     )[:TOP_PELICULAS]
     for datos in ranking:
         datos["ancho_css"] = css_porcentaje(porcentaje(datos["vendidas"], ranking[0]["vendidas"]))
@@ -298,28 +298,28 @@ def peliculas_mas_vistas(filas):
 
 def ocupacion_por_sala(filas):
     por_sala = {}
-    for fila in filas:
-        sala = fila["funcion"].sala
+    for row in filas:
+        room = row["screening"].room
         datos = por_sala.setdefault(
-            sala.pk, {"sala": sala, "vendidas": 0, "capacidad": 0, "funciones": 0}
+            room.pk, {"room": room, "vendidas": 0, "capacidad": 0, "screenings": 0}
         )
-        datos["vendidas"] += fila["vendidas"]
-        datos["capacidad"] += fila["capacidad"]
-        datos["funciones"] += 1
+        datos["vendidas"] += row["vendidas"]
+        datos["capacidad"] += row["capacidad"]
+        datos["screenings"] += 1
 
-    salas = list(por_sala.values())
-    for datos in salas:
+    rooms = list(por_sala.values())
+    for datos in rooms:
         datos["ocupacion"] = porcentaje(datos["vendidas"], datos["capacidad"])
         datos["ancho_css"] = css_porcentaje(datos["ocupacion"])
-    return sorted(salas, key=lambda datos: (-datos["ocupacion"], datos["sala"].nombre))
+    return sorted(rooms, key=lambda datos: (-datos["ocupacion"], datos["room"].name))
 
 
 def demanda_por_horario(filas):
     if not filas:
         return None
     franjas = {}
-    for fila in filas:
-        dia, hora = fila["inicio"].weekday(), fila["inicio"].hour
+    for row in filas:
+        dia, hora = row["inicio"].weekday(), row["inicio"].hour
         datos = franjas.setdefault(
             (dia, hora),
             {
@@ -328,12 +328,12 @@ def demanda_por_horario(filas):
                 "hora": hora,
                 "vendidas": 0,
                 "capacidad": 0,
-                "funciones": 0,
+                "screenings": 0,
             },
         )
-        datos["vendidas"] += fila["vendidas"]
-        datos["capacidad"] += fila["capacidad"]
-        datos["funciones"] += 1
+        datos["vendidas"] += row["vendidas"]
+        datos["capacidad"] += row["capacidad"]
+        datos["screenings"] += 1
 
     maximo = max(datos["vendidas"] for datos in franjas.values())
     for datos in franjas.values():
@@ -352,7 +352,7 @@ def demanda_por_horario(filas):
                 "franjas": [
                     franjas.get(
                         (dia, hora),
-                        {"dia": DIAS_SEMANA[dia], "hora": hora, "funciones": 0},
+                        {"dia": DIAS_SEMANA[dia], "hora": hora, "screenings": 0},
                     )
                     for hora in horas
                 ],
@@ -367,17 +367,17 @@ def demanda_por_horario(filas):
     }
 
 
-def preventa(ahora):
-    funciones = Funcion.objects.filter(
-        estado=Funcion.Estado.PUBLICADA,
-        fecha_horario__gte=ahora,
+def preventa(now):
+    screenings = Screening.objects.filter(
+        status=Screening.Status.PUBLISHED,
+        starts_at__gte=now,
     )
-    ventas = CompraEntrada.objects.filter(funcion__in=funciones.values("pk")).aggregate(
-        vendidas=Sum("cantidad"),
+    ventas = TicketPurchase.objects.filter(screening__in=screenings.values("pk")).aggregate(
+        sold=Sum("quantity"),
         recaudacion=Sum("total"),
     )
     return {
-        "funciones": funciones.count(),
-        "vendidas": ventas["vendidas"] or 0,
+        "screenings": screenings.count(),
+        "vendidas": ventas["sold"] or 0,
         "recaudacion": ventas["recaudacion"] or Decimal("0"),
     }

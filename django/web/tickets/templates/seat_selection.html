@@ -1,10 +1,10 @@
-{% load static %}
+﻿{% load static %}
 <!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Butacas | {{ funcion.pelicula.titulo }} | {{ cinema.nombre }}</title>
+  <title>Butacas | {{ screening.movie.title }} | {{ cinema.name }}</title>
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
   <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
   <link rel="stylesheet" href="{% static 'catalog.css' %}">
@@ -14,41 +14,41 @@
   <header class="client-header">
     <a class="client-brand" href="{% url 'home' %}">
       {% if cinema.logo %}
-        <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="client-logo">
+        <img src="{{ cinema.logo.url }}" alt="{{ cinema.name }}" class="client-logo">
       {% else %}
-        <strong>{{ cinema.nombre }}</strong>
+        <strong>{{ cinema.name }}</strong>
       {% endif %}
     </a>
     <nav>
-      <a href="{% url 'home' %}"><i data-lucide="clapperboard" aria-hidden="true"></i><span>Películas</span></a>
+      <a href="{% url 'home' %}"><i data-lucide="clapperboard" aria-hidden="true"></i><span>PelÃ­culas</span></a>
       <a href="{% url 'my_tickets' %}"><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>
-      {% if manager_role %}
-        <a class="client-manager-link" href="{% url 'manager:home' %}"><i data-lucide="settings-2" aria-hidden="true"></i><span>Gestión</span></a>
+      {% if manager_rolee %}
+        <a class="client-manager-link" href="{% url 'manager:home' %}"><i data-lucide="settings-2" aria-hidden="true"></i><span>GestiÃ³n</span></a>
       {% endif %}
-      <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesión</span></a>
+      <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesiÃ³n</span></a>
     </nav>
   </header>
 
   <main class="client-main seat-selection-main">
     <section class="seat-selection-header">
-      <a class="back-to-functions" href="{% url 'movie_detail' funcion.pelicula.pk %}"><span aria-hidden="true">&larr;</span> Volver a funciones</a>
-      <h1>{{ funcion.pelicula.titulo }}</h1>
+      <a class="back-to-functions" href="{% url 'movie_detail' screening.movie.pk %}"><span aria-hidden="true">&larr;</span> Volver a funciones</a>
+      <h1>{{ screening.movie.title }}</h1>
       <p>
-        {{ funcion.fecha_horario|date:"l d/m H:i"|capfirst }}
+        {{ screening.starts_at|date:"l d/m H:i"|capfirst }}
         |
-        {{ funcion.sala.nombre }}
+        {{ screening.room.name }}
         |
-        desde ${{ funcion.precio_desde }}
+        desde ${{ screening.price_from }}
       </p>
     </section>
 
-    <form class="purchase-form seat-selection-form" method="post" action="{% url 'ticket_purchase' funcion.pk %}">
+    <form class="purchase-form seat-selection-form" method="post" action="{% url 'ticket_purchase' screening.pk %}">
       {% csrf_token %}
       <input type="hidden" name="selected_seats" value="">
 
-      {% if funcion.seat_map %}
+      {% if screening.seat_map %}
         <div class="seat-reference-line" aria-label="Referencias de asientos">
-          {% for tier in funcion.seat_map.legend %}
+          {% for tier in screening.seat_map.legend %}
             <span><i style="--seat-color: {{ tier.color }};"></i>{{ tier.type }} ${{ tier.price }}</span>
             {% if not forloop.last %}<b>|</b>{% endif %}
           {% endfor %}
@@ -60,8 +60,8 @@
       {% endif %}
 
       <div class="seat-selection-layout">
-      {% if funcion.seat_map %}
-        <section class="client-seat-map" data-funcion-id="{{ funcion.pk }}" data-available="{{ funcion.entradas_disponibles }}" data-refresh-interval-seconds="{{ cinema.recarga_asientos_segundos }}" data-reservation-url="{% url 'seat_reservation' funcion.pk %}" data-reservation-status-url="{% url 'seat_reservation_status' funcion.pk %}" aria-label="Seleccionar asientos">
+      {% if screening.seat_map %}
+        <section class="client-seat-map" data-screening-id="{{ screening.pk }}" data-available="{{ screening.tickets_available }}" data-refresh-interval-seconds="{{ cinema.seat_refresh_seconds }}" data-reservation-url="{% url 'seat_reservation' screening.pk %}" data-reservation-batch-url="{% url 'seat_reservation_batch' screening.pk %}" data-reservation-status-url="{% url 'seat_reservation_status' screening.pk %}" data-reservation-batch-delay-ms="1000" aria-label="Seleccionar asientos">
           <div class="client-seat-stage">
             <div class="client-screen-marker" aria-hidden="true">
               <span>Pantalla</span>
@@ -70,12 +70,12 @@
               <div class="client-seat-row client-seat-column-row" aria-hidden="true">
                 <span class="client-seat-row-label"></span>
                 <div class="client-seat-cells">
-                  {% for column in funcion.seat_map.columns %}
+                  {% for column in screening.seat_map.columns %}
                     <span class="client-seat-column-label{% if column.is_aisle %} is-aisle{% endif %}">{{ column.label }}</span>
                   {% endfor %}
                 </div>
               </div>
-              {% for row in funcion.seat_map.rows %}
+              {% for row in screening.seat_map.rows %}
                 <div class="client-seat-row{% if row.is_aisle %} is-aisle-row{% endif %}">
                   <span class="client-seat-row-label">{{ row.label }}</span>
                   <div class="client-seat-cells">
@@ -96,16 +96,16 @@
         </section>
       {% endif %}
 
-        <aside class="purchase-cart" aria-label="Detalle de compra">
-          <h2>Tu compra</h2>
+        <aside class="purchase-cart" aria-label="Detalle de purchase">
+          <h2>Tu purchase</h2>
           <dl>
             <div>
-              <dt>Función</dt>
-              <dd>{{ funcion.fecha_horario|date:"d/m H:i" }}</dd>
+              <dt>FunciÃ³n</dt>
+              <dd>{{ screening.starts_at|date:"d/m H:i" }}</dd>
             </div>
             <div>
               <dt>Sala</dt>
-              <dd>{{ funcion.sala.nombre }}</dd>
+              <dd>{{ screening.room.name }}</dd>
             </div>
             <div>
               <dt>Butacas</dt>
@@ -130,13 +130,13 @@
               type="submit"
               data-singular-label="Comprar entrada"
               data-plural-label="Comprar entradas"
-              data-select-seat-label="Seleccioná tus butacas"
-              data-sold-out-label="Entradas agotadas para esta funcion"
-              {% if funcion.entradas_disponibles <= 0 or funcion.seat_map %}disabled{% endif %}
+              data-select-seat-label="SeleccionÃ¡ tus butacas"
+              data-sold-out-label="Entradas agotadas para esta screening"
+              {% if screening.tickets_available <= 0 or screening.seat_map %}disabled{% endif %}
             >
-              {% if funcion.entradas_disponibles > 0 %}Seleccioná tus butacas{% else %}Entradas agotadas para esta funcion{% endif %}
+              {% if screening.tickets_available > 0 %}SeleccionÃ¡ tus butacas{% else %}Entradas agotadas para esta screening{% endif %}
             </button>
-            {% if purchase_error and funcion.entradas_disponibles > 0 %}
+            {% if purchase_error and screening.tickets_available > 0 %}
               <p class="purchase-error">{{ purchase_error }}</p>
             {% endif %}
           </div>

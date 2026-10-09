@@ -1,20 +1,20 @@
-{% extends "manager_base.html" %}
+﻿{% extends "manager_base.html" %}
 
 {% block content %}
   <section class="page-heading dashboard-heading">
     <div>
-      <h1>Panel de gestión</h1>
+      <h1>Panel de gestiÃ³n</h1>
     </div>
-    {% if manager_role == "gerente" %}
+    {% if manager_role == "manager" %}
       <a class="primary-link" href="{% url 'manager:funciones_create' %}">
         <i data-lucide="plus" aria-hidden="true"></i>
-        <span>Nueva función</span>
+        <span>Nueva funciÃ³n</span>
       </a>
     {% endif %}
   </section>
 
-  {% if manager_role == "gerente" %}
-    <section class="stat-grid" aria-label="Resumen de operación">
+  {% if manager_role == "manager" %}
+    <section class="stat-grid" aria-label="Resumen de operaciÃ³n">
       {% for stat in dashboard_stats %}
         <article class="stat-card stat-{{ stat.tone }}">
           <span class="stat-icon"><i data-lucide="{{ stat.icon }}" aria-hidden="true"></i></span>
@@ -31,43 +31,43 @@
         <section class="panel-section">
           <div class="section-title">
             <div>
-              <h2>Próximas funciones</h2>
+              <h2>PrÃ³ximas funciones</h2>
             </div>
             <a href="{% url 'manager:funciones_list' %}">Ver todo</a>
           </div>
 
           <div class="schedule-list">
-            {% for funcion in next_screenings %}
+            {% for screening in next_screenings %}
               <article class="schedule-item">
                 <div class="schedule-date">
-                  <strong>{{ funcion.fecha_horario|date:"d" }}</strong>
-                  <span>{{ funcion.fecha_horario|date:"M" }}</span>
+                  <strong>{{ screening.starts_at|date:"d" }}</strong>
+                  <span>{{ screening.starts_at|date:"M" }}</span>
                 </div>
                 <div class="schedule-content">
-                  <h3>{{ funcion.pelicula.titulo }}</h3>
-                  <span>{{ funcion.sala.nombre }} · {{ funcion.fecha_horario|date:"H:i" }} · {{ funcion.entradas_vendidas }} vendidas</span>
-                  <div class="schedule-progress" style="--progress: {{ funcion.ocupacion_porcentaje }}%; --progress-value: {{ funcion.ocupacion_porcentaje }}" aria-label="{{ funcion.ocupacion_porcentaje }}% de butacas vendidas">
+                  <h3>{{ screening.movie.title }}</h3>
+                  <span>{{ screening.room.name }} Â· {{ screening.starts_at|date:"H:i" }} Â· {{ screening.tickets_sold }} vendidas</span>
+                  <div class="schedule-progress" style="--progress: {{ screening.ocupacion_porcentaje }}%; --progress-value: {{ screening.ocupacion_porcentaje }}" aria-label="{{ screening.ocupacion_porcentaje }}% de butacas vendidas">
                     <span class="schedule-progress-track" aria-hidden="true">
                       <span class="schedule-progress-fill"></span>
                     </span>
-                    <strong>{{ funcion.ocupacion_porcentaje }}%</strong>
+                    <strong>{{ screening.ocupacion_porcentaje }}%</strong>
                   </div>
                 </div>
-                <span class="status-pill status-{{ funcion.estado }}">{{ funcion.get_estado_display }}</span>
+                <span class="status-pill status-{{ screening.status }}">{{ screening.get_status_display }}</span>
               </article>
             {% empty %}
               <div class="empty-state compact">
                 <i data-lucide="calendar-x" aria-hidden="true"></i>
                 <div>
-                  <h2>No hay funciones próximas</h2>
-                  <p>Creá una función para que el equipo pueda empezar a operar la agenda.</p>
+                  <h2>No hay funciones prÃ³ximas</h2>
+                  <p>CreÃ¡ una funciÃ³n para que el equipo pueda empezar a operar la agenda.</p>
                 </div>
               </div>
             {% endfor %}
           </div>
         </section>
 
-        <section class="action-grid" aria-label="Accesos de gestión">
+        <section class="action-grid" aria-label="Accesos de gestiÃ³n">
           <a class="action-card action-users" href="{% url 'manager:usuarios_list' %}">
             <i data-lucide="users" class="action-icon" aria-hidden="true"></i>
             <strong>Usuarios</strong>
@@ -80,13 +80,13 @@
           </a>
           <a class="action-card action-movies" href="{% url 'manager:peliculas_list' %}">
             <i data-lucide="clapperboard" class="action-icon" aria-hidden="true"></i>
-            <strong>Películas</strong>
-            <span>Catálogo, duración, género y clasificación.</span>
+            <strong>PelÃ­culas</strong>
+            <span>CatÃ¡logo, duraciÃ³n, gÃ©nero y clasificaciÃ³n.</span>
           </a>
-          <a class="action-card action-screenings" href="{% url 'manager:funciones_list' %}">
+          <a class="action-card action-funciones" href="{% url 'manager:funciones_list' %}">
             <i data-lucide="calendar-clock" class="action-icon" aria-hidden="true"></i>
             <strong>Funciones</strong>
-            <span>Publicación, precios y disponibilidad.</span>
+            <span>PublicaciÃ³n, precios y disponibilidad.</span>
           </a>
         </section>
       </div>
@@ -94,15 +94,15 @@
       <aside class="ops-panel">
         <div class="section-title">
           <div>
-            <h2>Recuento funciones</h2>
+            <h2>Recuento de funciones</h2>
           </div>
         </div>
         <div class="ops-metric">
-          <span>Próximas publicadas</span>
+          <span>PrÃ³ximas publicadas</span>
           <strong>{{ published_upcoming_count }}</strong>
         </div>
         <div class="ops-metric warning">
-          <span>Próximas sin publicar</span>
+          <span>PrÃ³ximas sin publicar</span>
           <strong>{{ hidden_upcoming_count }}</strong>
         </div>
         <a class="secondary-link" href="{% url 'manager:funciones_list' %}?order=fecha_asc">
@@ -116,7 +116,7 @@
       <i data-lucide="user-check" aria-hidden="true"></i>
       <div>
         <h2>Panel de acomodador</h2>
-        <p>Todavía no hay tareas habilitadas para este rol.</p>
+        <p>TodavÃ­a no hay tareas habilitadas para este role.</p>
       </div>
     </section>
   {% endif %}

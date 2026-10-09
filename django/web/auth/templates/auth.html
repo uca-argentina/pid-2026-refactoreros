@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ cinema.nombre }} | Acceso</title>
+  <title>{{ cinema.name }} | Acceso</title>
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
   <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
   <link rel="stylesheet" href="{% static 'auth.css' %}">
@@ -13,13 +13,13 @@
 <body>
   <main class="auth-page">
     <section class="auth-shell">
-      <aside class="brand-panel"{% if cinema.imagen_login %} style="background-image: linear-gradient(180deg, rgba(8, 12, 18, .18), rgba(8, 12, 18, .86)), url('{{ cinema.imagen_login.url }}');"{% endif %}>
+      <aside class="brand-panel"{% if cinema.login_image %} style="background-image: linear-gradient(180deg, rgba(8, 12, 18, .18), rgba(8, 12, 18, .86)), url('{{ cinema.login_image.url }}');"{% endif %}>
         <div class="brand-lockup brand-lockup-light">
           {% if cinema.logo %}
-            <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="brand-logo">
+            <img src="{{ cinema.logo.url }}" alt="{{ cinema.name }}" class="brand-logo">
           {% else %}
             <div>
-              <strong>{{ cinema.nombre }}</strong>
+              <strong>{{ cinema.name }}</strong>
             </div>
           {% endif %}
         </div>
@@ -32,21 +32,21 @@
       <section class="form-panel">
         <div class="mobile-brand">
           {% if cinema.logo %}
-            <img src="{{ cinema.logo.url }}" alt="{{ cinema.nombre }}" class="brand-logo">
+            <img src="{{ cinema.logo.url }}" alt="{{ cinema.name }}" class="brand-logo">
           {% else %}
             <div>
-              <strong>{{ cinema.nombre }}</strong>
+              <strong>{{ cinema.name }}</strong>
             </div>
           {% endif %}
         </div>
 
         <nav class="auth-tabs" aria-label="Acceso">
-          <a href="{% url 'login' %}" class="{% if active_tab == 'login' %}is-active{% endif %}">Iniciar sesión</a>
-          <a href="{% url 'signup' %}" class="{% if active_tab == 'signup' %}is-active{% endif %}">Crear cuenta</a>
+          <a href="{% url 'login' %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}" class="{% if active_tab == 'login' %}is-active{% endif %}">Iniciar sesión</a>
+          <a href="{% url 'signup' %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}" class="{% if active_tab == 'signup' %}is-active{% endif %}">Crear cuenta</a>
         </nav>
 
         {% if active_tab == 'login' %}
-          <form class="auth-form" method="post" action="{% url 'login' %}">
+          <form class="auth-form" method="post" action="{% url 'login' %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}">
             {% csrf_token %}
             {% if login_form.non_field_errors %}
               <div class="field-help field-help-error">{{ login_form.non_field_errors }}</div>
@@ -68,7 +68,7 @@
           </form>
 
         {% elif active_tab == 'signup' %}
-          <form class="auth-form" method="post" action="{% url 'signup' %}" data-signup-form novalidate>
+          <form class="auth-form" method="post" action="{% url 'signup' %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}" data-signup-form novalidate>
             {% csrf_token %}
             {% if signup_form.non_field_errors %}
               <div class="form-errors">{{ signup_form.non_field_errors }}</div>
@@ -77,16 +77,16 @@
             <div class="form-row">
               <label>
                 <span>Nombre</span>
-                {{ signup_form.nombre }}
-                <small data-error-for="id_nombre"></small>
-                {{ signup_form.nombre.errors }}
+                {{ signup_form.name }}
+                <small data-error-for="id_name"></small>
+                {{ signup_form.name.errors }}
               </label>
 
               <label>
                 <span>Apellido</span>
-                {{ signup_form.apellido }}
-                <small data-error-for="id_apellido"></small>
-                {{ signup_form.apellido.errors }}
+                {{ signup_form.last_name }}
+                <small data-error-for="id_last_name"></small>
+                {{ signup_form.last_name.errors }}
               </label>
             </div>
 
@@ -95,7 +95,7 @@
               {{ signup_form.email }}
               <small data-error-for="id_email"></small>
               {% if signup_form.email_duplicado %}
-                <small class="field-help"><span>Ese email ya tiene cuenta.</span><a href="{% url 'login' %}?email={{ signup_form.email_duplicado|urlencode }}">Iniciá sesión</a></small>
+                <small class="field-help"><span>Ese email ya tiene cuenta.</span><a href="{% url 'login' %}?email={{ signup_form.email_duplicado|urlencode }}{% if next_url %}&next={{ next_url|urlencode }}{% endif %}">Iniciá sesión</a></small>
               {% else %}
                 {{ signup_form.email.errors }}
               {% endif %}
@@ -118,6 +118,10 @@
             <button type="submit">Crear cuenta</button>
           </form>
         {% endif %}
+
+        <a class="guest-access-link" href="{% url 'home' %}">
+          Sólo quiero ver la cartelera, continuar como invitado/a
+        </a>
       </section>
     </section>
   </main>

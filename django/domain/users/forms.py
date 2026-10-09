@@ -6,7 +6,7 @@ from django.contrib.auth.password_validation import validate_password
 User = get_user_model()
 
 
-class EmailUnicoMixin:
+class UniqueEmailMixin:
     def clean_email(self):
         self.email_duplicado = ""
         email = (self.cleaned_data.get("email") or "").strip().lower()
@@ -28,7 +28,7 @@ class EmailUnicoMixin:
         return email
 
 
-class AdminUsuarioCreationForm(EmailUnicoMixin, UserCreationForm):
+class AdminUserCreationForm(UniqueEmailMixin, UserCreationForm):
     email = forms.EmailField(label="Mail", required=True)
 
     class Meta(UserCreationForm.Meta):
@@ -36,7 +36,7 @@ class AdminUsuarioCreationForm(EmailUnicoMixin, UserCreationForm):
         fields = ("username", "email")
 
 
-class AdminUsuarioChangeForm(EmailUnicoMixin, UserChangeForm):
+class AdminUserChangeForm(UniqueEmailMixin, UserChangeForm):
     email = forms.EmailField(label="Mail", required=True)
 
     class Meta(UserChangeForm.Meta):
@@ -50,8 +50,8 @@ class LoginForm(AuthenticationForm):
         "inactive": "Esta cuenta está inactiva.",
     }
 
-class ClienteSignupForm(EmailUnicoMixin, forms.Form):
-    nombre = forms.CharField(
+class CustomerSignupForm(UniqueEmailMixin, forms.Form):
+    name = forms.CharField(
         label="Nombre",
         max_length=75,
         widget=forms.TextInput(
@@ -61,7 +61,7 @@ class ClienteSignupForm(EmailUnicoMixin, forms.Form):
             }
         ),
     )
-    apellido = forms.CharField(
+    last_name = forms.CharField(
         label="Apellido",
         max_length=75,
         widget=forms.TextInput(
@@ -99,22 +99,22 @@ class ClienteSignupForm(EmailUnicoMixin, forms.Form):
         ),
     )
 
-    def clean_nombre(self):
-        nombre = self.cleaned_data["nombre"].strip()
-        if len(nombre) < 2:
+    def clean_name(self):
+        name = self.cleaned_data["name"].strip()
+        if len(name) < 2:
             raise forms.ValidationError("El nombre debe tener al menos 2 caracteres.")
-        return nombre
+        return name
 
-    def clean_apellido(self):
-        apellido = self.cleaned_data["apellido"].strip()
-        if len(apellido) < 2:
+    def clean_last_name(self):
+        last_name = self.cleaned_data["last_name"].strip()
+        if len(last_name) < 2:
             raise forms.ValidationError("El apellido debe tener al menos 2 caracteres.")
-        return apellido
+        return last_name
 
     def clean(self):
         cleaned_data = super().clean()
-        nombre = cleaned_data.get("nombre")
-        apellido = cleaned_data.get("apellido")
+        name = cleaned_data.get("name")
+        last_name = cleaned_data.get("last_name")
         email = cleaned_data.get("email")
         password1 = cleaned_data.get("password1")
         password2 = cleaned_data.get("password2")
@@ -124,28 +124,28 @@ class ClienteSignupForm(EmailUnicoMixin, forms.Form):
             return cleaned_data
 
         if password1:
-            usuario = User(
+            user = User(
                 username=email or "",
                 email=email or "",
-                first_name=nombre or "",
-                last_name=apellido or "",
+                first_name=name or "",
+                last_name=last_name or "",
             )
             try:
-                validate_password(password1, usuario)
+                validate_password(password1, user)
             except forms.ValidationError as error:
                 self.add_error("password1", error)
 
         return cleaned_data
 
     def save(self):
-        nombre = self.cleaned_data["nombre"]
-        apellido = self.cleaned_data["apellido"]
+        name = self.cleaned_data["name"]
+        last_name = self.cleaned_data["last_name"]
         email = self.cleaned_data["email"]
         password = self.cleaned_data["password1"]
         return User.objects.create_user(
             username=email,
             email=email,
             password=password,
-            first_name=nombre,
-            last_name=apellido,
+            first_name=name,
+            last_name=last_name,
         )

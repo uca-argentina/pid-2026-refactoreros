@@ -4,10 +4,10 @@ from django.utils import timezone
 from decimal import Decimal
 import json
 
-from domain.cinema.models import ConfiguracionCine
-from domain.movies.models import Pelicula
-from domain.rooms.models import Sala
-from domain.screenings.models import Funcion
+from domain.cinema.models import CinemaSettings
+from domain.movies.models import Movie
+from domain.rooms.models import Room
+from domain.screenings.models import Screening
 from domain.seats.models import Seat
 from domain.seat_types.models import SeatType
 
@@ -16,24 +16,24 @@ MAX_MOVIE_IMAGE_SIZE_MB = 2
 MAX_MOVIE_IMAGE_SIZE_BYTES = MAX_MOVIE_IMAGE_SIZE_MB * 1024 * 1024
 
 
-class ConfiguracionCineForm(forms.ModelForm):
-    reserva_asientos_minutos = forms.IntegerField(
+class CinemaSettingsForm(forms.ModelForm):
+    seat_reservation_minutes = forms.IntegerField(
         min_value=1,
         label="Reserva temporal de butacas (minutos)",
         help_text="Tiempo durante el checkout antes de liberar butacas no confirmadas.",
     )
-    recarga_asientos_segundos = forms.IntegerField(
+    seat_refresh_seconds = forms.IntegerField(
         min_value=1,
         label="Recarga automática de butacas (segundos)",
         help_text="Frecuencia con la que el cliente vuelve a consultar disponibilidad.",
     )
 
     class Meta:
-        model = ConfiguracionCine
-        fields = ("reserva_asientos_minutos", "recarga_asientos_segundos")
+        model = CinemaSettings
+        fields = ("seat_reservation_minutes", "seat_refresh_seconds")
 
 
-class UsuarioGestionForm(forms.ModelForm):
+class UserManagementForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ("first_name", "last_name", "email")
@@ -47,25 +47,25 @@ class UsuarioGestionForm(forms.ModelForm):
         email = (self.cleaned_data.get("email") or "").strip().lower()
         if not email:
             raise forms.ValidationError("El email es obligatorio.")
-        usuarios = User.objects.exclude(pk=self.instance.pk)
-        if usuarios.filter(username__iexact=email).exists() or usuarios.filter(
+        users = User.objects.exclude(pk=self.instance.pk)
+        if users.filter(username__iexact=email).exists() or users.filter(
             email__iexact=email
         ).exists():
             raise forms.ValidationError("Ya existe un usuario con ese email.")
         return email
 
 
-class SalaForm(forms.ModelForm):
+class RoomForm(forms.ModelForm):
 
     MAX_ROW, MAX_COLUMN = 100,100
 
-    layout_sala = forms.CharField(
+    room_layout = forms.CharField(
         required=False,
-        widget=forms.HiddenInput(attrs={"id": "id_layout_sala"}),
+        widget=forms.HiddenInput(attrs={"id": "id_room_layout"}),
     )
     class Meta:
-        model = Sala
-        fields = ("nombre", "layout_sala")
+        model = Room
+        fields = ("name", "room_layout")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -73,28 +73,28 @@ class SalaForm(forms.ModelForm):
             return
 
         seats = list(
-            Seat.objects.filter(sala=self.instance)
-            .select_related("tipo")
-            .order_by("fila", "columna")
+            Seat.objects.filter(room=self.instance)
+            .select_related("seat_type")
+            .order_by("row", "column")
         )
-        if self.instance.layout_configuracion:
-            self.initial["layout_sala"] = json.dumps(
-                self._normalize_initial_layout(self.instance.layout_configuracion, seats)
+        if self.instance.layout_configuration:
+            self.initial["room_layout"] = json.dumps(
+                self._normalize_initial_layout(self.instance.layout_configuration, seats)
             )
             return
 
         if seats:
-            self.initial["layout_sala"] = json.dumps(self._layout_from_seats(seats))
+            self.initial["room_layout"] = json.dumps(self._layout_from_seats(seats))
 
     def _layout_from_seats(self, seats):
         return {
-            "rows": max(seat.fila for seat in seats) + 1,
-            "columns": max(seat.columna for seat in seats) + 1,
+            "rows": max(seat.row for seat in seats) + 1,
+            "columns": max(seat.column for seat in seats) + 1,
             "seats": [
                 {
-                    "row": seat.fila,
-                    "column": seat.columna,
-                    "type": seat.tipo.nombre,
+                    "row": seat.row,
+                    "column": seat.column,
+                    "type": seat.seat_type.name,
                 }
                 for seat in seats
             ],
@@ -104,11 +104,11 @@ class SalaForm(forms.ModelForm):
         if not isinstance(layout, dict):
             return self._layout_from_seats(seats) if seats else {}
 
-        seats_by_position = {(seat.fila, seat.columna): seat for seat in seats}
-        seat_type_names = set(SeatType.objects.values_list("nombre", flat=True))
+        seats_by_position = {(seat.row, seat.column): seat for seat in seats}
+        seat_type_names = set(SeatType.objects.values_list("name", flat=True))
         seat_type_names_by_id = {
             str(pk): name
-            for pk, name in SeatType.objects.values_list("pk", "nombre")
+            for pk, name in SeatType.objects.values_list("pk", "name")
         }
 
         normalized_seats = []
@@ -128,7 +128,7 @@ class SalaForm(forms.ModelForm):
             elif str(seat_data.get("type_id")) in seat_type_names_by_id:
                 seat_type_name = seat_type_names_by_id[str(seat_data.get("type_id"))]
             elif (row, column) in seats_by_position:
-                seat_type_name = seats_by_position[(row, column)].tipo.nombre
+                seat_type_name = seats_by_position[(row, column)].seat_type.name
 
             if seat_type_name:
                 normalized_seats.append({"row": row, "column": column, "type": seat_type_name})
@@ -156,8 +156,8 @@ class SalaForm(forms.ModelForm):
     def _to_int(self,value):
         return int(value)
 
-    def clean_layout_sala(self):
-        data_as_string = self.cleaned_data.get("layout_sala")
+    def clean_room_layout(self):
+        data_as_string = self.cleaned_data.get("room_layout")
         if not data_as_string:
             return []
 
@@ -187,7 +187,7 @@ class SalaForm(forms.ModelForm):
             raise forms.ValidationError(f"Máximo {self.MAX_ROW*self.MAX_COLUMN} asientos por sala.")
 
         seats_data, display_seats_data, positions = [] , [] , set()
-        exsisting_seat_types = dict(SeatType.objects.values_list("nombre", "pk"))
+        exsisting_seat_types = dict(SeatType.objects.values_list("name", "pk"))
 
         for seat_data in data:
             try:
@@ -230,69 +230,69 @@ class SalaForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        layout_sala = cleaned_data.get("layout_sala")
+        room_layout = cleaned_data.get("room_layout")
 
-        if layout_sala and layout_sala["seats"]:
-            cleaned_data["layout_configuracion"] = layout_sala["display"]
-        elif layout_sala:
-            self.add_error("layout_sala", "Dibujá al menos un asiento.")
+        if room_layout and room_layout["seats"]:
+            cleaned_data["layout_configuration"] = room_layout["display"]
+        elif room_layout:
+            self.add_error("room_layout", "Dibujá al menos un asiento.")
         else:
-            self.add_error("layout_sala", "DibujÃ¡ al menos un asiento.")
+            self.add_error("room_layout", "DibujÃ¡ al menos un asiento.")
 
         return cleaned_data
 
 
-class PeliculaForm(forms.ModelForm):
+class MovieForm(forms.ModelForm):
     class Meta:
-        model = Pelicula
+        model = Movie
         fields = (
-            "titulo",
-            "sinopsis",
-            "genero",
-            "clasificacion",
-            "duracion_minutos",
-            "imagen",
+            "title",
+            "synopsis",
+            "genre",
+            "rating",
+            "duration_minutes",
+            "image",
         )
         widgets = {
-            "imagen": forms.ClearableFileInput(attrs={"accept": "image/*"}),
+            "image": forms.ClearableFileInput(attrs={"accept": "image/*"}),
         }
         help_texts = {
-            "imagen": f"Peso maximo: {MAX_MOVIE_IMAGE_SIZE_MB} MB.",
+            "image": f"Peso maximo: {MAX_MOVIE_IMAGE_SIZE_MB} MB.",
         }
 
-    def clean_imagen(self):
-        imagen = self.cleaned_data.get("imagen")
-        if imagen and getattr(imagen, "size", 0) > MAX_MOVIE_IMAGE_SIZE_BYTES:
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+        if image and getattr(image, "size", 0) > MAX_MOVIE_IMAGE_SIZE_BYTES:
             raise forms.ValidationError(
                 f"La imagen no puede superar los {MAX_MOVIE_IMAGE_SIZE_MB} MB."
             )
-        return imagen
+        return image
 
 
 class SeatTypeForm(forms.ModelForm):
     class Meta:
         model = SeatType
-        fields = ("nombre", "precio_base", "color", "icono")
+        fields = ("name", "base_price", "color", "icon")
         labels = {
-            "nombre": "Nombre",
-            "precio_base": "Precio",
+            "name": "Nombre",
+            "base_price": "Precio",
             "color": "Color",
-            "icono": "Icono",
+            "icon": "Icono",
         }
         widgets = {
             "color": forms.TextInput(attrs={"type": "color"}),
-            "icono": forms.ClearableFileInput(attrs={"accept": "image/*"}),
+            "icon": forms.ClearableFileInput(attrs={"accept": "image/*"}),
         }
 
-    def clean_precio_base(self):
-        precio = self.cleaned_data["precio_base"]
-        if precio <= 0:
+    def clean_base_price(self):
+        price = self.cleaned_data["base_price"]
+        if price <= 0:
             raise forms.ValidationError("El precio debe ser mayor a cero.")
-        return precio
+        return price
 
 
-class FuncionForm(forms.ModelForm):
-    fecha_horario = forms.DateTimeField(
+class ScreeningForm(forms.ModelForm):
+    starts_at = forms.DateTimeField(
         input_formats=["%Y-%m-%dT%H:%M"],
         widget=forms.DateTimeInput(
             attrs={"type": "datetime-local"},
@@ -300,38 +300,38 @@ class FuncionForm(forms.ModelForm):
         ),
     )
     class Meta:
-        model = Funcion
-        fields = ("pelicula", "sala", "fecha_horario")
+        model = Screening
+        fields = ("movie", "room", "starts_at")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["pelicula"].empty_label = "Seleccioná una película"
-        self.fields["sala"].empty_label = "Seleccioná una sala"
+        self.fields["movie"].empty_label = "Seleccioná una película"
+        self.fields["room"].empty_label = "Seleccioná una sala"
         if self.instance.pk:
-            self.fields["sala"].disabled = True
-            self.fields["sala"].help_text = (
+            self.fields["room"].disabled = True
+            self.fields["room"].help_text = (
                 "La sala queda bloqueada al crear la función para conservar la configuración de butacas publicada."
             )
-            self.fields["sala"].widget.attrs.update({
+            self.fields["room"].widget.attrs.update({
                 "class": "is-locked-field",
                 "data-locked": "true",
             })
-    def clean_fecha_horario(self):
-        fecha_horario = self.cleaned_data["fecha_horario"]
-        if fecha_horario <= timezone.now():
+    def clean_starts_at(self):
+        starts_at = self.cleaned_data["starts_at"]
+        if starts_at <= timezone.now():
             raise forms.ValidationError("La fecha y horario deben ser futuros.")
-        return fecha_horario
+        return starts_at
 
     def clean(self):
         cleaned_data = super().clean()
-        sala = cleaned_data.get("sala")
-        if not sala:
+        room = cleaned_data.get("room")
+        if not room:
             return cleaned_data
 
         required_type_ids = set(
             str(type_id)
-            for type_id in Seat.objects.filter(sala=sala)
-            .values_list("tipo_id", flat=True)
+            for type_id in Seat.objects.filter(room=room)
+            .values_list("seat_type_id", flat=True)
             .distinct()
         )
         if not required_type_ids:
@@ -339,7 +339,7 @@ class FuncionForm(forms.ModelForm):
 
         base_prices = {
             str(pk): str(price)
-            for pk, price in SeatType.objects.values_list("pk", "precio_base")
+            for pk, price in SeatType.objects.values_list("pk", "base_price")
         }
         completed_prices = {}
         missing = []
@@ -353,16 +353,16 @@ class FuncionForm(forms.ModelForm):
         if missing:
             raise forms.ValidationError("Indica el precio para cada tipo de butaca.")
 
-        cleaned_data["precios_por_tipo"] = completed_prices
-        cleaned_data["precio_entrada"] = min(Decimal(str(price)) for price in completed_prices.values())
+        cleaned_data["prices_by_type"] = completed_prices
+        cleaned_data["ticket_price"] = min(Decimal(str(price)) for price in completed_prices.values())
         return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        prices = self.cleaned_data.get("precios_por_tipo") or {}
-        instance.precios_por_tipo = prices
+        prices = self.cleaned_data.get("prices_by_type") or {}
+        instance.prices_by_type = prices
         if prices:
-            instance.precio_entrada = min(Decimal(str(price)) for price in prices.values())
+            instance.ticket_price = min(Decimal(str(price)) for price in prices.values())
         if commit:
             instance.save()
             self.save_m2m()

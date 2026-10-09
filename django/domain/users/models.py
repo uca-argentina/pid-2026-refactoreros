@@ -2,55 +2,58 @@ from django.conf import settings
 from django.db import models
 
 
-class Cliente(models.Model):
-    id_cliente = models.BigAutoField(primary_key=True)
-    usuario = models.OneToOneField(
+class Customer(models.Model):
+    customer_id = models.BigAutoField(primary_key=True, db_column="id_cliente")
+    user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="cliente",
+        related_name="customer_profile",
         db_column="id_usuario",
     )
 
     class Meta:
         verbose_name = "Cliente"
         verbose_name_plural = "Clientes"
-        ordering = ["usuario__username"]
+        db_table = "users_cliente"
+        ordering = ["user__username"]
 
     def __str__(self):
-        return self.usuario.get_username()
+        return self.user.get_username()
 
 
-class Acomodador(models.Model):
-    id_acomodador = models.BigAutoField(primary_key=True)
-    usuario = models.OneToOneField(
+class Usher(models.Model):
+    usher_id = models.BigAutoField(primary_key=True, db_column="id_acomodador")
+    user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="acomodador",
+        related_name="usher_profile",
         db_column="id_usuario",
     )
 
     class Meta:
         verbose_name = "Acomodador"
         verbose_name_plural = "Acomodadores"
-        ordering = ["usuario__username"]
+        db_table = "users_acomodador"
+        ordering = ["user__username"]
 
     def __str__(self):
-        return self.usuario.get_username()
+        return self.user.get_username()
 
 
-class Gerente(models.Model):
-    id_gerente = models.BigAutoField(primary_key=True)
-    usuario = models.OneToOneField(
+class Manager(models.Model):
+    manager_id = models.BigAutoField(primary_key=True, db_column="id_gerente")
+    user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="gerente",
+        related_name="manager_profile",
         db_column="id_usuario",
     )
 
     class Meta:
         verbose_name = "Gerente"
         verbose_name_plural = "Gerentes"
-        ordering = ["usuario__username"]
+        db_table = "users_gerente"
+        ordering = ["user__username"]
 
     def __str__(self):
-        return self.usuario.get_username()
+        return self.user.get_username()
