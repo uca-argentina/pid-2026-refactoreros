@@ -11,6 +11,7 @@ from django.db import transaction
 from django.urls import reverse_lazy
 from django.utils import timezone
 import json
+import logging
 
 from django.views.generic import (
     CreateView,
@@ -40,6 +41,7 @@ from .forms import (
 )
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def manager_role(user):
@@ -71,6 +73,11 @@ class ManagerAccessMixin(LoginRequiredMixin):
         context["manager_role"] = self.manager_role
         context["cinema"] = ConfiguracionCine.actual()
         return context
+
+    def handle_file_upload_error(self, form, error):
+        logger.exception("No se pudo guardar un archivo subido en %s.", self.__class__.__name__)
+        form.add_error(None, f"No se pudo subir la imagen a Cloudinary: {error}")
+        return self.form_invalid(form)
 
 
 class GerenteRequiredMixin(ManagerAccessMixin):
@@ -259,8 +266,11 @@ class GerenteCreateView(GerenteRequiredMixin, CreateView):
         try:
             response = super().form_valid(form)
         except CloudinaryError as error:
-            form.add_error(None, f"No se pudo subir la imagen a Cloudinary: {error}")
-            return self.form_invalid(form)
+            return self.handle_file_upload_error(form, error)
+        except Exception as error:
+            if self.request.FILES:
+                return self.handle_file_upload_error(form, error)
+            raise
         messages.success(self.request, f"{self.object_label} se creó correctamente.")
         return response
 
@@ -281,8 +291,11 @@ class GerenteUpdateView(GerenteRequiredMixin, UpdateView):
         try:
             response = super().form_valid(form)
         except CloudinaryError as error:
-            form.add_error(None, f"No se pudo subir la imagen a Cloudinary: {error}")
-            return self.form_invalid(form)
+            return self.handle_file_upload_error(form, error)
+        except Exception as error:
+            if self.request.FILES:
+                return self.handle_file_upload_error(form, error)
+            raise
         messages.success(self.request, f"{self.object_label} se actualizó correctamente.")
         return response
 
