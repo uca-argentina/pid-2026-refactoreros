@@ -1,4 +1,6 @@
 Django==6.1.1
+cloudinary==1.44.1
+django-cloudinary-storage==0.3.0
 django-environ==0.14.0
 gunicorn==23.0.0
 psycopg==3.3.5

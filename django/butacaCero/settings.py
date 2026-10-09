@@ -21,6 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 REPO_DIR = BASE_DIR.parent
 
 env = environ.Env(
+    CLOUDINARY_URL=(str, ""),
     DJANGO_DEBUG=(bool, False),
     DJANGO_ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
     DJANGO_CSRF_TRUSTED_ORIGINS=(list, []),
@@ -77,7 +78,9 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    "cloudinary_storage",
     'django.contrib.staticfiles',
+    "cloudinary",
     "domain.cinema",
     "domain.movies",
     "domain.rooms",
@@ -173,6 +176,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
+CLOUDINARY_URL = env("CLOUDINARY_URL")
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -185,6 +189,12 @@ STORAGES = {
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 SERVE_MEDIA_FILES = env.bool("DJANGO_SERVE_MEDIA")
+
+if CLOUDINARY_URL:
+    STORAGES["default"] = {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    }
+    SERVE_MEDIA_FILES = False
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"

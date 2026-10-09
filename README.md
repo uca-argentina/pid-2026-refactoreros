@@ -110,16 +110,26 @@ docker compose down -v
 El repo incluye `render.yaml` para crear un Blueprint con:
 
 - un Web Service Docker para Django;
-- una base PostgreSQL administrada;
-- `DATABASE_URL`, `DJANGO_DEBUG=False`, `DJANGO_SECRET_KEY` generado por Render y `DJANGO_ALLOWED_HOSTS` conectado al hostname del servicio;
+- conexion a PostgreSQL externa mediante `DATABASE_URL` (Neon);
+- media persistente externa mediante `CLOUDINARY_URL` (Cloudinary);
+- `DJANGO_DEBUG=False`, `DJANGO_SECRET_KEY` generado por Render y `DJANGO_ALLOWED_HOSTS` conectado al hostname del servicio;
 - health check en `/health/`.
 
 Pasos:
 
-1. Subir la rama con los cambios a GitHub.
-2. En Render, crear un Blueprint desde este repositorio y elegir la rama que contiene `render.yaml`.
-3. Esperar el primer deploy. El contenedor ejecuta `collectstatic` y `migrate` antes de iniciar Gunicorn.
-4. Si el plan permite Shell, crear el superusuario desde la Shell de Render:
+1. Crear una base PostgreSQL en Neon y copiar la connection string.
+2. Crear una cuenta/proyecto en Cloudinary y copiar `CLOUDINARY_URL` con formato `cloudinary://API_KEY:API_SECRET@CLOUD_NAME`.
+3. Subir la rama con los cambios a GitHub.
+4. En Render, crear un Blueprint desde este repositorio y elegir la rama que contiene `render.yaml`.
+5. Cuando Render pida secretos, cargar:
+
+```text
+DATABASE_URL=postgresql://...
+CLOUDINARY_URL=cloudinary://...
+```
+
+6. Esperar el primer deploy. El contenedor ejecuta `collectstatic` y `migrate` antes de iniciar Gunicorn.
+7. Si el plan permite Shell, crear el superusuario desde la Shell de Render:
 
 ```bash
 python manage.py createsuperuser
@@ -146,7 +156,7 @@ En producción, Django usa SMTP por defecto para no depender del backend de cons
 
 Render inyecta `PORT`; el Dockerfile lo usa para iniciar Gunicorn en `0.0.0.0:$PORT`.
 
-Para que las imagenes subidas desde el admin se vean en Render, el Blueprint define `DJANGO_SERVE_MEDIA=True` y Django sirve `/media/`. En el plan free esos archivos viven en el filesystem efimero del servicio: pueden perderse al reiniciar o redeployar. Para uso real conviene migrar media a un storage persistente externo o a un plan con disco persistente.
+Las imagenes subidas desde el admin (peliculas, logos del cine, fondo de login e iconos de butaca) se guardan en Cloudinary cuando `CLOUDINARY_URL` esta configurada. Si esa variable no existe, Django usa el filesystem local en `MEDIA_ROOT`; eso sirve para desarrollo, pero no para Render free porque el filesystem del servicio es efimero.
 
 ## Consideraciones
 
