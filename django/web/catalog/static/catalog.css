@@ -91,6 +91,36 @@ body {
   background: rgba(251, 191, 36, .18);
 }
 
+.client-user-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 220px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, .88);
+  background: rgba(255, 255, 255, .07);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.client-user-pill svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.3;
+}
+
+.client-user-pill span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .client-main {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
@@ -999,6 +1029,12 @@ body {
     font-size: 13px;
   }
 
+  .client-user-pill {
+    max-width: min(100%, 240px);
+    min-height: 32px;
+    font-size: 13px;
+  }
+
   .client-main {
     width: min(100% - 24px, 1180px);
     padding-top: 26px;
@@ -1210,6 +1246,15 @@ body {
   .client-header nav a.client-manager-link:hover {
     color: #fde68a;
     background: transparent;
+  }
+
+  .client-user-pill {
+    order: 3;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, .72);
   }
 
   .client-header nav a.client-logout-link {
