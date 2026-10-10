@@ -1,4 +1,4 @@
-﻿import shutil
+import shutil
 import tempfile
 import json
 from datetime import datetime, timedelta
@@ -20,7 +20,7 @@ from domain.screenings.models import Screening
 from domain.tickets.models import SeatPurchase, TicketPurchase
 from domain.users.models import Usher, Customer, Manager
 
-from .dashboard import DIAS_SEMANA, build_dashboard
+from .dashboard import WEEKDAYS, build_dashboard
 from .forms import MovieForm
 
 
@@ -89,7 +89,7 @@ class ManagerAccessTests(TestCase):
         self.assertContains(response, "Usuarios")
         self.assertContains(response, "Salas")
         self.assertContains(response, "Butacas")
-        self.assertContains(response, "PelÃ­culas")
+        self.assertContains(response, "Películas")
         self.assertContains(response, "Funciones")
 
     def test_home_muestra_ocupacion_de_proximas_funciones(self):
@@ -118,7 +118,7 @@ class ManagerAccessTests(TestCase):
         self.assertContains(response, "3 vendidas")
         self.assertContains(response, "<strong>30%</strong>", html=True)
 
-    def test_link_inicio_del_manager_apunta_al_home_de_gestion(self):
+    def test_link_starts_at_del_manager_apunta_al_home_de_gestion(self):
         self.client.force_login(self.gerente)
 
         response = self.client.get(reverse("manager:home"))
@@ -209,11 +209,11 @@ class ManagerUsuariosTests(TestCase):
         self.assertEqual(self.user.email, "ana@mail.com")
         self.assertEqual(self.user.username, "ana@mail.com")
 
-    def test_edicion_usuario_muestra_boton_bloquear_sin_checkbox_activo(self):
+    def test_edicion_usuario_muestra_boton_bloquear_sin_checkbox_active(self):
         response = self.client.get(reverse("manager:usuarios_update", args=[self.user.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Usuario activo")
+        self.assertNotContains(response, "Usuario active")
         self.assertContains(response, "Bloquear")
         self.assertContains(response, "no va a poder acceder al sitio")
 
@@ -282,12 +282,14 @@ class ManagerSalasTests(TestCase):
 
     def test_sala_duplicada_mantiene_layout_en_formulario(self):
         crear_sala_con_butacas("Sala 1", 120)
+        standard_type = SeatType.objects.order_by("pk").first()
+        preferred_type = SeatType.objects.get(name="Preferencial")
         layout = {
             "rows": 8,
             "columns": 12,
             "seats": [
-                {"row": 0, "column": 0, "type": "Estándar"},
-                {"row": 0, "column": 1, "type": "Preferencial"},
+                {"row": 0, "column": 0, "type": standard_type.name},
+                {"row": 0, "column": 1, "type": preferred_type.name},
             ],
         }
 
@@ -303,12 +305,14 @@ class ManagerSalasTests(TestCase):
         self.assertEqual(response.context["form"]["room_layout"].value(), json.dumps(layout))
 
     def test_gerente_crea_sala_con_pasillos_y_guarda_tamano_de_layout(self):
+        standard_type = SeatType.objects.order_by("pk").first()
+        preferred_type = SeatType.objects.get(name="Preferencial")
         layout = {
             "rows": 3,
             "columns": 4,
             "seats": [
-                {"row": 0, "column": 0, "type": "Estándar"},
-                {"row": 2, "column": 3, "type": "Preferencial"},
+                {"row": 0, "column": 0, "type": standard_type.name},
+                {"row": 2, "column": 3, "type": preferred_type.name},
             ],
         }
 
@@ -348,7 +352,7 @@ class ManagerSalasTests(TestCase):
 
         response = self.client.get(
             reverse("manager:salas_list"),
-            {"order": "capacidad_desc"},
+            {"order": "capacity_desc"},
         )
 
         object_list = list(response.context["page_obj"].object_list)
@@ -366,7 +370,7 @@ class ManagerSalasTests(TestCase):
 
     def test_formulario_edicion_sala_precarga_layout_existente(self):
         room = Room.objects.create(name="Sala 1")
-        tipo_estandar = SeatType.objects.get(name="Estándar")
+        tipo_estandar = SeatType.objects.order_by("pk").first()
         tipo_preferencial = SeatType.objects.get(name="Preferencial")
         Seat.objects.create(room=room, row=0, column=0, seat_type=tipo_estandar)
         Seat.objects.create(room=room, row=1, column=2, seat_type=tipo_preferencial)
@@ -377,11 +381,11 @@ class ManagerSalasTests(TestCase):
         layout = json.loads(layout_value)
         self.assertEqual(layout["rows"], 2)
         self.assertEqual(layout["columns"], 3)
-        self.assertIn({"row": 0, "column": 0, "type": "Estándar"}, layout["seats"])
+        {"row": 0, "column": 0, "type": tipo_estandar.name},
         self.assertIn({"row": 1, "column": 2, "type": "Preferencial"}, layout["seats"])
 
     def test_formulario_edicion_sala_normaliza_layout_guardado_con_ids(self):
-        tipo_estandar = SeatType.objects.get(name="Estándar")
+        tipo_estandar = SeatType.objects.order_by("pk").first()
         room = Room.objects.create(
             name="Sala con layout viejo",
             layout_configuration={
@@ -397,7 +401,7 @@ class ManagerSalasTests(TestCase):
         layout = json.loads(response.context["form"]["room_layout"].value())
         self.assertEqual(layout["rows"], 4)
         self.assertEqual(layout["columns"], 6)
-        self.assertEqual(layout["seats"], [{"row": 2, "column": 5, "type": "Estándar"}])
+        self.assertEqual(layout["seats"], [{"row": 2, "column": 5, "type": tipo_estandar.name}])
 
     def test_gerente_elimina_sala(self):
         room = crear_sala_con_butacas("Sala 1", 120)
@@ -422,7 +426,7 @@ class ManagerSeatTypesTests(TestCase):
         response = self.client.get(reverse("manager:seat_types_list"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Estándar")
+        self.assertContains(response, SeatType.objects.order_by("pk").first().name)
         self.assertContains(response, "Precio")
 
     def test_gerente_crea_tipo_de_butaca_con_precio(self):
@@ -455,7 +459,7 @@ class ManagerSeatTypesTests(TestCase):
 
     def test_no_elimina_tipo_de_butaca_usado_en_sala(self):
         room = Room.objects.create(name="Sala 1")
-        seat_type = SeatType.objects.get(name="Estándar")
+        seat_type = SeatType.objects.order_by("pk").first()
         Seat.objects.create(room=room, row=0, column=0, seat_type=seat_type)
 
         response = self.client.post(
@@ -502,14 +506,14 @@ class ManagerFuncionesTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.media_root = tempfile.mkdtemp()
-        cls.override_media_root = override_settings(MEDIA_ROOT=cls.media_root)
-        cls.override_media_root.enable()
+        cls.meday_root = tempfile.mkdtemp()
+        cls.override_meday_root = override_settings(MEDIA_ROOT=cls.meday_root)
+        cls.override_meday_root.enable()
 
     @classmethod
     def tearDownClass(cls):
-        cls.override_media_root.disable()
-        shutil.rmtree(cls.media_root, ignore_errors=True)
+        cls.override_meday_root.disable()
+        shutil.rmtree(cls.meday_root, ignore_errors=True)
         super().tearDownClass()
 
     def setUp(self):
@@ -534,15 +538,15 @@ class ManagerFuncionesTests(TestCase):
             ),
         )
 
-    def fecha_form(self, fecha):
-        return timezone.localtime(fecha).strftime("%Y-%m-%dT%H:%M")
+    def date_form(self, date):
+        return timezone.localtime(date).strftime("%Y-%m-%dT%H:%M")
 
-    def fecha_futura(self, hora=20, minuto=30):
-        fecha = timezone.datetime.combine(
+    def date_futura(self, hour=20, minuto=30):
+        date = timezone.datetime.combine(
             timezone.localdate() + timedelta(days=30),
             timezone.datetime.min.time(),
-        ).replace(hour=hora, minute=minuto)
-        return timezone.make_aware(fecha)
+        ).replace(hour=hour, minute=minuto)
+        return timezone.make_aware(date)
 
     def precios_por_tipo_form(self, precio="1500.00"):
         return json.dumps({
@@ -556,7 +560,7 @@ class ManagerFuncionesTests(TestCase):
             data={
                 "movie": self.movie.pk,
                 "room": self.room.pk,
-                "starts_at": self.fecha_form(self.fecha_futura()),
+                "starts_at": self.date_form(self.date_futura()),
                 "prices_by_type": self.precios_por_tipo_form(),
             },
         )
@@ -571,7 +575,7 @@ class ManagerFuncionesTests(TestCase):
             data={
                 "movie": self.movie.pk,
                 "room": self.room.pk,
-                "starts_at": self.fecha_form(timezone.now() + timedelta(days=1)),
+                "starts_at": self.date_form(timezone.now() + timedelta(days=1)),
                 "prices_by_type": self.precios_por_tipo_form("0.00"),
             },
         )
@@ -586,7 +590,7 @@ class ManagerFuncionesTests(TestCase):
             data={
                 "movie": self.movie.pk,
                 "room": self.room.pk,
-                "starts_at": self.fecha_form(timezone.now() + timedelta(days=1)),
+                "starts_at": self.date_form(timezone.now() + timedelta(days=1)),
                 "prices_by_type": self.precios_por_tipo_form("-1500.00"),
             },
         )
@@ -595,13 +599,13 @@ class ManagerFuncionesTests(TestCase):
         screening = Screening.objects.get()
         self.assertEqual(screening.ticket_price, Decimal("1000.00"))
 
-    def test_no_permite_crear_funcion_con_fecha_pasada(self):
+    def test_no_permite_crear_funcion_con_date_pasada(self):
         response = self.client.post(
             reverse("manager:funciones_create"),
             data={
                 "movie": self.movie.pk,
                 "room": self.room.pk,
-                "starts_at": self.fecha_form(timezone.now() - timedelta(days=1)),
+                "starts_at": self.date_form(timezone.now() - timedelta(days=1)),
                 "ticket_price": "1500.00",
             },
         )
@@ -612,7 +616,7 @@ class ManagerFuncionesTests(TestCase):
         self.assertIn("deben ser futuros", form.errors["starts_at"][0])
         self.assertEqual(Screening.objects.count(), 0)
 
-    def test_modelo_funcion_valida_precio_y_fecha(self):
+    def test_modelo_funcion_valida_precio_y_date(self):
         screening = Screening(
             movie=self.movie,
             room=self.room,
@@ -630,7 +634,7 @@ class ManagerFuncionesTests(TestCase):
         return Screening.objects.create(
             movie=self.movie,
             room=self.room,
-            starts_at=starts_at or self.fecha_futura(),
+            starts_at=starts_at or self.date_futura(),
             ticket_price="1500.00",
             status=status,
         )
@@ -686,7 +690,7 @@ class ManagerFuncionesTests(TestCase):
         screening.refresh_from_db()
         self.assertEqual(screening.status, Screening.Status.PUBLISHED)
 
-    def test_publicada_con_ventas_no_se_puede_ocultar(self):
+    def test_publicada_con_sales_no_se_puede_ocultar(self):
         screening = self.crear_funcion(Screening.Status.PUBLISHED)
         self.vender_entradas(screening)
 
@@ -695,7 +699,7 @@ class ManagerFuncionesTests(TestCase):
         screening.refresh_from_db()
         self.assertEqual(screening.status, Screening.Status.PUBLISHED)
 
-    def test_no_se_puede_programar_un_borrador_con_fecha_pasada(self):
+    def test_no_se_puede_programar_un_borrador_con_date_pasada(self):
         screening = self.crear_funcion(
             starts_at=timezone.now() - timedelta(days=1),
         )
@@ -704,17 +708,18 @@ class ManagerFuncionesTests(TestCase):
 
         screening.refresh_from_db()
         self.assertEqual(screening.status, Screening.Status.DRAFT)
-        self.assertContains(
-            self.client.get(response.url),
-            "No se puede programar ni publicar una función con fecha pasada.",
+        response = self.client.get(response.url)
+        self.assertIn(
+            "No se puede programar ni publicar una funci\u00f3n con fecha pasada.".encode("utf-8"),
+            response.content,
         )
 
-    def test_gerente_cancela_funcion_publicada_con_ventas(self):
+    def test_gerente_cancela_funcion_publicada_con_sales(self):
         screening = self.crear_funcion(Screening.Status.PUBLISHED)
         self.vender_entradas(screening, 3)
 
         response = self.client.get(reverse("manager:funciones_cancelar", args=[screening.pk]))
-        self.assertContains(response, "Confirmar cancelación")
+        self.assertIn("Confirmar cancelaci\u00f3n".encode("utf-8"), response.content)
         self.assertContains(response, "<strong>3</strong> entradas")
 
         self.change_status(screening, Screening.Status.CANCELED)
@@ -740,7 +745,7 @@ class ManagerFuncionesTests(TestCase):
         screening.refresh_from_db()
         self.assertEqual(screening.status, Screening.Status.DRAFT)
 
-    def test_funcion_publicada_con_ventas_no_se_puede_editar_ni_eliminar(self):
+    def test_funcion_publicada_con_sales_no_se_puede_editar_ni_eliminar(self):
         screening = self.crear_funcion(Screening.Status.PUBLISHED)
         self.vender_entradas(screening)
 
@@ -751,7 +756,7 @@ class ManagerFuncionesTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertTrue(Screening.objects.filter(pk=screening.pk).exists())
 
-    def test_funcion_publicada_sin_ventas_se_puede_editar_pero_no_eliminar(self):
+    def test_funcion_publicada_sin_sales_se_puede_editar_pero_no_eliminar(self):
         screening = self.crear_funcion(Screening.Status.PUBLISHED)
 
         response = self.client.get(reverse("manager:funciones_update", args=[screening.pk]))
@@ -762,7 +767,7 @@ class ManagerFuncionesTests(TestCase):
 
     def test_funciones_cancelada_y_finalizada_son_solo_lectura(self):
         for status in (Screening.Status.CANCELED, Screening.Status.FINISHED):
-            screening = self.crear_funcion(status, starts_at=self.fecha_futura(10, 0))
+            screening = self.crear_funcion(status, starts_at=self.date_futura(10, 0))
 
             response = self.client.get(reverse("manager:funciones_update", args=[screening.pk]))
             self.assertEqual(response.status_code, 403)
@@ -772,14 +777,14 @@ class ManagerFuncionesTests(TestCase):
             screening.delete()
 
     def test_funcion_cancelada_no_ocupa_la_sala(self):
-        self.crear_funcion(Screening.Status.CANCELED, starts_at=self.fecha_futura(20, 0))
+        self.crear_funcion(Screening.Status.CANCELED, starts_at=self.date_futura(20, 0))
 
         response = self.client.post(
             reverse("manager:funciones_create"),
             data={
                 "movie": self.movie.pk,
                 "room": self.room.pk,
-                "starts_at": self.fecha_form(self.fecha_futura(20, 0)),
+                "starts_at": self.date_form(self.date_futura(20, 0)),
                 "ticket_price": "1500.00",
             },
         )
@@ -788,12 +793,12 @@ class ManagerFuncionesTests(TestCase):
         self.assertEqual(Screening.objects.count(), 2)
 
     def test_funcion_terminada_pasa_a_finalizada_al_listar(self):
-        # La pelÃ­cula dura 100 minutos: empezÃ³ hace 3 horas, ya terminÃ³.
+        # The movie lasts 100 minutes: it started 3 hours ago, so it has already finished.
         terminada = self.crear_funcion(
             Screening.Status.PUBLISHED,
             starts_at=timezone.now() - timedelta(hours=3),
         )
-        # EmpezÃ³ hace 30 minutos: todavÃ­a estÃ¡ en curso.
+        # It started 30 minutes ago, so it is still in progress.
         en_curso = self.crear_funcion(
             Screening.Status.PUBLISHED,
             starts_at=timezone.now() - timedelta(minutes=30),
@@ -853,7 +858,7 @@ class ManagerFuncionesTests(TestCase):
     def test_lista_funciones_oculta_expiradas_y_el_historial_las_muestra(self):
         activa = self.crear_funcion(
             Screening.Status.PUBLISHED,
-            starts_at=self.fecha_futura(),
+            starts_at=self.date_futura(),
         )
         expirada = self.crear_funcion(
             Screening.Status.PUBLISHED,
@@ -885,7 +890,7 @@ class ManagerFuncionesTests(TestCase):
         Screening.objects.create(
             movie=self.movie,
             room=self.room,
-            starts_at=self.fecha_futura(),
+            starts_at=self.date_futura(),
             ticket_price="1500.00",
             status=Screening.Status.DRAFT,
         )
@@ -905,14 +910,14 @@ class ManagerFuncionesTests(TestCase):
         barata = Screening.objects.create(
             movie=self.movie,
             room=self.room,
-            starts_at=self.fecha_futura(20, 30),
+            starts_at=self.date_futura(20, 30),
             ticket_price="1.00",
             status=Screening.Status.DRAFT,
         )
         cara = Screening.objects.create(
             movie=self.movie,
             room=sala_cara,
-            starts_at=self.fecha_futura(22, 30),
+            starts_at=self.date_futura(22, 30),
             ticket_price="1.00",
             status=Screening.Status.DRAFT,
         )
@@ -930,7 +935,7 @@ class ManagerFuncionesTests(TestCase):
         screening = Screening.objects.create(
             movie=self.movie,
             room=self.room,
-            starts_at=self.fecha_futura(),
+            starts_at=self.date_futura(),
             ticket_price="1500.00",
             status=Screening.Status.DRAFT,
         )
@@ -943,11 +948,11 @@ class ManagerFuncionesTests(TestCase):
             f'{reverse("manager:funciones_create")}?plantilla={screening.pk}',
         )
 
-    def test_crear_funcion_desde_plantilla_precarga_datos(self):
+    def test_crear_funcion_start_plantilla_precarga_data(self):
         screening = Screening.objects.create(
             movie=self.movie,
             room=self.room,
-            starts_at=self.fecha_futura(),
+            starts_at=self.date_futura(),
             ticket_price="1500.00",
             status=Screening.Status.PUBLISHED,
         )
@@ -967,14 +972,14 @@ class ManagerFuncionesTests(TestCase):
         self.assertNotIn("prices_by_type", response.context["form"].initial)
         self.assertContains(
             response,
-            f'value="{self.fecha_form(screening.starts_at)}"',
+            f'value="{self.date_form(screening.starts_at)}"',
         )
 
-    def test_lista_funciones_muestra_entradas_vendidas_y_disponibles(self):
+    def test_lista_funciones_muestra_entradas_sold_y_disponibles(self):
         screening = Screening.objects.create(
             movie=self.movie,
             room=self.room,
-            starts_at=self.fecha_futura(),
+            starts_at=self.date_futura(),
             ticket_price="1500.00",
             status=Screening.Status.PUBLISHED,
         )
@@ -992,11 +997,11 @@ class ManagerFuncionesTests(TestCase):
         self.assertContains(response, '<td data-label="Vendidas">35</td>', html=True)
         self.assertContains(response, '<td data-label="Disponibles">85</td>', html=True)
 
-    def test_funcion_publicada_mantiene_snapshot_de_capacidad_de_sala(self):
+    def test_funcion_publicada_mantiene_snapshot_de_capacity_de_sala(self):
         screening = Screening.objects.create(
             movie=self.movie,
             room=self.room,
-            starts_at=self.fecha_futura(),
+            starts_at=self.date_futura(),
             ticket_price="1500.00",
             status=Screening.Status.PUBLISHED,
         )
@@ -1008,11 +1013,11 @@ class ManagerFuncionesTests(TestCase):
         self.assertEqual(screening.capacity_snapshot, 120)
         self.assertContains(response, '<td data-label="Disponibles">120</td>', html=True)
 
-    def test_fecha_de_funcion_se_precarga_al_editar(self):
+    def test_date_de_funcion_se_precarga_al_editar(self):
         screening = Screening.objects.create(
             movie=self.movie,
             room=self.room,
-            starts_at=self.fecha_futura(),
+            starts_at=self.date_futura(),
             ticket_price="1500.00",
             status=Screening.Status.DRAFT,
         )
@@ -1021,14 +1026,14 @@ class ManagerFuncionesTests(TestCase):
 
         self.assertContains(
             response,
-            f'value="{self.fecha_form(screening.starts_at)}"',
+            f'value="{self.date_form(screening.starts_at)}"',
         )
 
     def test_no_permite_funciones_solapadas_en_misma_sala(self):
         Screening.objects.create(
             movie=self.movie,
             room=self.room,
-            starts_at=self.fecha_futura(20, 0),
+            starts_at=self.date_futura(20, 0),
             ticket_price="1500.00",
             status=Screening.Status.DRAFT,
         )
@@ -1038,20 +1043,20 @@ class ManagerFuncionesTests(TestCase):
             data={
                 "movie": self.movie.pk,
                 "room": self.room.pk,
-                "starts_at": self.fecha_form(self.fecha_futura(21, 0)),
+                "starts_at": self.date_form(self.date_futura(21, 0)),
                 "ticket_price": "1500.00",
             },
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "La sala ya tiene una función programada")
+        self.assertIn("La sala ya tiene una funci\u00f3n programada".encode("utf-8"), response.content)
         self.assertEqual(Screening.objects.count(), 1)
 
     def test_permite_funciones_en_misma_sala_cuando_no_se_solapan(self):
         Screening.objects.create(
             movie=self.movie,
             room=self.room,
-            starts_at=self.fecha_futura(20, 0),
+            starts_at=self.date_futura(20, 0),
             ticket_price="1500.00",
             status=Screening.Status.DRAFT,
         )
@@ -1061,7 +1066,7 @@ class ManagerFuncionesTests(TestCase):
             data={
                 "movie": self.movie.pk,
                 "room": self.room.pk,
-                "starts_at": self.fecha_form(self.fecha_futura(21, 40)),
+                "starts_at": self.date_form(self.date_futura(21, 40)),
                 "ticket_price": "1500.00",
             },
         )
@@ -1069,12 +1074,12 @@ class ManagerFuncionesTests(TestCase):
         self.assertRedirects(response, reverse("manager:funciones_list"))
         self.assertEqual(Screening.objects.count(), 2)
 
-    def test_permite_funciones_solapadas_en_salas_distintas(self):
+    def test_permite_funciones_solapadas_en_rooms_distintas(self):
         otra_sala = crear_sala_con_butacas("Sala 2", 80)
         Screening.objects.create(
             movie=self.movie,
             room=self.room,
-            starts_at=self.fecha_futura(20, 0),
+            starts_at=self.date_futura(20, 0),
             ticket_price="1500.00",
             status=Screening.Status.DRAFT,
         )
@@ -1084,7 +1089,7 @@ class ManagerFuncionesTests(TestCase):
             data={
                 "movie": self.movie.pk,
                 "room": otra_sala.pk,
-                "starts_at": self.fecha_form(self.fecha_futura(21, 0)),
+                "starts_at": self.date_form(self.date_futura(21, 0)),
                 "ticket_price": "1500.00",
             },
         )
@@ -1096,7 +1101,7 @@ class ManagerFuncionesTests(TestCase):
         screening = Screening.objects.create(
             movie=self.movie,
             room=self.room,
-            starts_at=self.fecha_futura(20, 0),
+            starts_at=self.date_futura(20, 0),
             ticket_price="1500.00",
             status=Screening.Status.DRAFT,
         )
@@ -1107,7 +1112,7 @@ class ManagerFuncionesTests(TestCase):
             data={
                 "movie": self.movie.pk,
                 "room": self.room.pk,
-                "starts_at": self.fecha_form(self.fecha_futura(20, 0)),
+                "starts_at": self.date_form(self.date_futura(20, 0)),
             },
         )
 
@@ -1143,29 +1148,29 @@ class ManagerDashboardTests(TestCase):
             image="peliculas/poster.gif",
         )
 
-    def crear_funcion(self, dias, hora=20, status=Screening.Status.FINISHED, movie=None, now=None):
-        fecha = timezone.localdate(now or self.now) + timedelta(days=dias)
+    def crear_funcion(self, days, hour=20, status=Screening.Status.FINISHED, movie=None, now=None):
+        date = timezone.localdate(now or self.now) + timedelta(days=days)
         return Screening.objects.create(
             movie=movie or self.movie,
             room=self.room,
-            starts_at=timezone.make_aware(datetime.combine(fecha, datetime.min.time()).replace(hour=hora)),
+            starts_at=timezone.make_aware(datetime.combine(date, datetime.min.time()).replace(hour=hour)),
             ticket_price="1000.00",
             status=status,
         )
 
-    def vender(self, screening, quantity, total, utilizadas=0):
+    def vender(self, screening, quantity, total, used=0):
         purchase = TicketPurchase.objects.create(
             user=self.cliente,
             screening=screening,
             quantity=quantity,
             total=Decimal(total),
         )
-        for indice in range(quantity):
+        for index in range(quantity):
             SeatPurchase.objects.create(
                 purchase=purchase,
                 screening=screening,
-                label=f"{purchase.pk}-{indice}",
-                used_at=self.now if indice < utilizadas else None,
+                label=f"{purchase.pk}-{index}",
+                used_at=self.now if index < used else None,
             )
         return purchase
 
@@ -1175,10 +1180,10 @@ class ManagerDashboardTests(TestCase):
         response = self.client.get(reverse("manager:dashboard"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "RecaudaciÃ³n simulada")
+        self.assertIn("Recaudaci\u00f3n simulada".encode("utf-8"), response.content)
         self.assertContains(response, "Vendidas vs. utilizadas")
-        self.assertContains(response, "PelÃ­culas mÃ¡s vistas")
-        self.assertContains(response, "OcupaciÃ³n por sala")
+        self.assertIn("Pel\u00edculas m\u00e1s vistas".encode("utf-8"), response.content)
+        self.assertIn("Ocupaci\u00f3n por sala".encode("utf-8"), response.content)
         self.assertContains(response, "Horarios de mayor demanda")
 
     def test_acomodador_no_puede_ver_dashboard(self):
@@ -1201,113 +1206,113 @@ class ManagerDashboardTests(TestCase):
 
         self.assertContains(response, f'href="{reverse("manager:dashboard")}"')
 
-    def test_resumen_calcula_recaudacion_ocupacion_y_asistencia(self):
+    def test_summary_calcula_revenue_occupancy_y_attendance(self):
         primera = self.crear_funcion(-2)
-        self.vender(primera, 3, "3000.00", utilizadas=2)
+        self.vender(primera, 3, "3000.00", used=2)
         self.vender(primera, 2, "2500.00")
-        segunda = self.crear_funcion(-1, hora=18, status=Screening.Status.PUBLISHED)
+        segunda = self.crear_funcion(-1, hour=18, status=Screening.Status.PUBLISHED)
         self.vender(segunda, 1, "1000.00")
 
-        resumen = build_dashboard("30", now=self.now)["resumen"]
+        summary = build_dashboard("30", now=self.now)["summary"]
 
-        self.assertEqual(resumen["screenings"], 2)
-        self.assertEqual(resumen["vendidas"], 6)
-        self.assertEqual(resumen["recaudacion"], Decimal("6500.00"))
-        self.assertEqual(resumen["capacidad"], 20)
-        self.assertAlmostEqual(resumen["ocupacion"], 30.0)
-        self.assertEqual(resumen["utilizadas"], 2)
-        self.assertEqual(resumen["no_utilizadas"], 4)
-        self.assertAlmostEqual(resumen["asistencia"], 100 / 3)
+        self.assertEqual(summary["screenings"], 2)
+        self.assertEqual(summary["sold"], 6)
+        self.assertEqual(summary["revenue"], Decimal("6500.00"))
+        self.assertEqual(summary["capacity"], 20)
+        self.assertAlmostEqual(summary["occupancy"], 30.0)
+        self.assertEqual(summary["used"], 2)
+        self.assertEqual(summary["unused"], 4)
+        self.assertAlmostEqual(summary["attendance"], 100 / 3)
 
-    def test_excluye_canceladas_y_separa_preventa(self):
+    def test_excluye_canceladas_y_separa_presale(self):
         realizada = self.crear_funcion(-1)
         self.vender(realizada, 2, "2000.00")
-        cancelada = self.crear_funcion(-1, hora=22, status=Screening.Status.CANCELED)
+        cancelada = self.crear_funcion(-1, hour=22, status=Screening.Status.CANCELED)
         self.vender(cancelada, 4, "4000.00")
         proxima = self.crear_funcion(2, status=Screening.Status.PUBLISHED)
         self.vender(proxima, 5, "5000.00")
 
         dashboard = build_dashboard("30", now=self.now)
 
-        self.assertEqual(dashboard["resumen"]["vendidas"], 2)
-        self.assertEqual(dashboard["resumen"]["recaudacion"], Decimal("2000.00"))
-        self.assertEqual(dashboard["preventa"]["screenings"], 1)
-        self.assertEqual(dashboard["preventa"]["vendidas"], 5)
-        self.assertEqual(dashboard["preventa"]["recaudacion"], Decimal("5000.00"))
+        self.assertEqual(dashboard["summary"]["sold"], 2)
+        self.assertEqual(dashboard["summary"]["revenue"], Decimal("2000.00"))
+        self.assertEqual(dashboard["presale"]["screenings"], 1)
+        self.assertEqual(dashboard["presale"]["sold"], 5)
+        self.assertEqual(dashboard["presale"]["revenue"], Decimal("5000.00"))
 
-    def test_periodo_filtra_funciones_por_fecha(self):
+    def test_period_filtra_funciones_por_date(self):
         self.vender(self.crear_funcion(-3), 1, "1000.00")
         self.vender(self.crear_funcion(-20), 2, "2000.00")
 
-        self.assertEqual(build_dashboard("7", now=self.now)["resumen"]["vendidas"], 1)
-        self.assertEqual(build_dashboard("30", now=self.now)["resumen"]["vendidas"], 3)
-        self.assertEqual(build_dashboard("todo", now=self.now)["resumen"]["vendidas"], 3)
+        self.assertEqual(build_dashboard("7", now=self.now)["summary"]["sold"], 1)
+        self.assertEqual(build_dashboard("30", now=self.now)["summary"]["sold"], 3)
+        self.assertEqual(build_dashboard("todo", now=self.now)["summary"]["sold"], 3)
 
-    def test_periodo_invalido_usa_ultimos_30_dias(self):
+    def test_period_invalido_usa_ultimos_30_days(self):
         dashboard = build_dashboard("cualquiera", now=self.now)
 
-        self.assertEqual(dashboard["periodo"], "30")
-        self.assertEqual(dashboard["desde"], timezone.localdate(self.now) - timedelta(days=29))
+        self.assertEqual(dashboard["period"], "30")
+        self.assertEqual(dashboard["start"], timezone.localdate(self.now) - timedelta(days=29))
 
-    def test_variacion_compara_con_el_periodo_anterior(self):
+    def test_variation_compares_with_previous_period(self):
         self.vender(self.crear_funcion(-2), 3, "3000.00")
         self.vender(self.crear_funcion(-9), 2, "2000.00")
 
-        variaciones = build_dashboard("7", now=self.now)["variaciones"]
+        deltas = build_dashboard("7", now=self.now)["deltas"]
 
-        self.assertEqual(variaciones["recaudacion"]["direccion"], "up")
-        self.assertAlmostEqual(variaciones["recaudacion"]["valor"], 50.0)
-        self.assertEqual(variaciones["vendidas"]["signo"], "+")
-        self.assertEqual(variaciones["ocupacion"]["direccion"], "up")
-        self.assertAlmostEqual(variaciones["ocupacion"]["valor"], 10.0)
+        self.assertEqual(deltas["revenue"]["direction"], "up")
+        self.assertAlmostEqual(deltas["revenue"]["value"], 50.0)
+        self.assertEqual(deltas["sold"]["sign"], "+")
+        self.assertEqual(deltas["occupancy"]["direction"], "up")
+        self.assertAlmostEqual(deltas["occupancy"]["value"], 10.0)
 
-    def test_serie_de_recaudacion_agrupa_por_dia_o_semana(self):
+    def test_serie_de_revenue_agrupa_por_day_o_semana(self):
         self.vender(self.crear_funcion(-1), 2, "2000.00")
-        self.vender(self.crear_funcion(-1, hora=22), 1, "1500.00")
+        self.vender(self.crear_funcion(-1, hour=22), 1, "1500.00")
 
-        serie_mensual = build_dashboard("30", now=self.now)["recaudacion"]
-        serie_trimestral = build_dashboard("90", now=self.now)["recaudacion"]
+        serie_mensual = build_dashboard("30", now=self.now)["revenue"]
+        serie_trimestral = build_dashboard("90", now=self.now)["revenue"]
 
-        self.assertEqual(serie_mensual["granularidad"], "dia")
-        self.assertEqual(len(serie_mensual["columnas"]), 30)
-        pico = [column for column in serie_mensual["columnas"] if column["es_maximo"]]
+        self.assertEqual(serie_mensual["granularity"], "day")
+        self.assertEqual(len(serie_mensual["columns"]), 30)
+        pico = [column for column in serie_mensual["columns"] if column["is_peak"]]
         self.assertEqual(len(pico), 1)
-        self.assertEqual(pico[0]["recaudacion"], Decimal("3500.00"))
-        self.assertEqual(pico[0]["altura_css"], "87.50%")
-        self.assertEqual(serie_trimestral["granularidad"], "semana")
+        self.assertEqual(pico[0]["revenue"], Decimal("3500.00"))
+        self.assertEqual(pico[0]["height_css"], "87.50%")
+        self.assertEqual(serie_trimestral["granularity"], "week")
         self.assertEqual(
-            sum(column["recaudacion"] for column in serie_trimestral["columnas"]),
+            sum(column["revenue"] for column in serie_trimestral["columns"]),
             Decimal("3500.00"),
         )
 
-    def test_peliculas_mas_vistas_ordena_por_entradas_vendidas(self):
+    def test_top_movies_ordena_por_entradas_sold(self):
         otra = self.crear_pelicula("Pelicula B")
         self.vender(self.crear_funcion(-2), 2, "2000.00")
         self.vender(self.crear_funcion(-1, movie=otra), 5, "5000.00")
 
         ranking = build_dashboard("30", now=self.now)["movies"]
 
-        self.assertEqual([datos["movie"].title for datos in ranking], ["Pelicula B", "Pelicula A"])
-        self.assertEqual(ranking[0]["ancho_css"], "100.00%")
-        self.assertEqual(ranking[1]["ancho_css"], "40.00%")
+        self.assertEqual([data["movie"].title for data in ranking], ["Pelicula B", "Pelicula A"])
+        self.assertEqual(ranking[0]["width_css"], "100.00%")
+        self.assertEqual(ranking[1]["width_css"], "40.00%")
 
-    def test_horarios_destaca_la_franja_con_mas_entradas(self):
-        self.vender(self.crear_funcion(-2, hora=16), 1, "1000.00")
-        noche = self.crear_funcion(-1, hora=21)
+    def test_time_slots_destaca_la_slot_con_mas_entradas(self):
+        self.vender(self.crear_funcion(-2, hour=16), 1, "1000.00")
+        noche = self.crear_funcion(-1, hour=21)
         self.vender(noche, 6, "6000.00")
 
-        horarios = build_dashboard("30", now=self.now)["horarios"]
+        time_slots = build_dashboard("30", now=self.now)["time_slots"]
 
-        self.assertEqual(horarios["horas"], list(range(16, 22)))
-        franja = horarios["top"][0]
-        self.assertEqual(franja["hora"], 21)
-        self.assertEqual(franja["dia"], DIAS_SEMANA[timezone.localtime(noche.starts_at).weekday()])
-        self.assertEqual(franja["vendidas"], 6)
-        self.assertAlmostEqual(franja["ocupacion"], 60.0)
+        self.assertEqual(time_slots["hours"], list(range(16, 22)))
+        slot = time_slots["top"][0]
+        self.assertEqual(slot["hour"], 21)
+        self.assertEqual(slot["day"], WEEKDAYS[timezone.localtime(noche.starts_at).weekday()])
+        self.assertEqual(slot["sold"], 6)
+        self.assertAlmostEqual(slot["occupancy"], 60.0)
 
     def test_dashboard_renderiza_anchos_css_con_punto_decimal(self):
         screening = self.crear_funcion(-1, now=timezone.now())
-        self.vender(screening, 3, "3000.00", utilizadas=1)
+        self.vender(screening, 3, "3000.00", used=1)
         self.client.force_login(self.gerente)
 
         response = self.client.get(reverse("manager:dashboard"))

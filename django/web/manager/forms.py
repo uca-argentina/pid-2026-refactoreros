@@ -66,6 +66,7 @@ class RoomForm(forms.ModelForm):
     class Meta:
         model = Room
         fields = ("name", "room_layout")
+        labels = {"name": "Nombre"}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -237,7 +238,7 @@ class RoomForm(forms.ModelForm):
         elif room_layout:
             self.add_error("room_layout", "Dibujá al menos un asiento.")
         else:
-            self.add_error("room_layout", "DibujÃ¡ al menos un asiento.")
+            self.add_error("room_layout", "Dibujá al menos un asiento.")
 
         return cleaned_data
 
@@ -255,6 +256,14 @@ class MovieForm(forms.ModelForm):
         )
         widgets = {
             "image": forms.ClearableFileInput(attrs={"accept": "image/*"}),
+        }
+        labels = {
+            "title": "Título",
+            "synopsis": "Sinopsis",
+            "genre": "Género",
+            "rating": "Clasificación",
+            "duration_minutes": "Duración en minutos",
+            "image": "Imagen del cartel",
         }
         help_texts = {
             "image": f"Peso maximo: {MAX_MOVIE_IMAGE_SIZE_MB} MB.",
@@ -302,6 +311,11 @@ class ScreeningForm(forms.ModelForm):
     class Meta:
         model = Screening
         fields = ("movie", "room", "starts_at")
+        labels = {
+            "movie": "Película",
+            "room": "Sala",
+            "starts_at": "Fecha y horario",
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

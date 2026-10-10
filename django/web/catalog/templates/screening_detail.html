@@ -1,4 +1,4 @@
-﻿{% load static %}
+{% load static %}
 <!doctype html>
 <html lang="es">
 <head>
@@ -19,19 +19,19 @@
       {% endif %}
     </a>
     <nav>
-      <a href="{% url 'home' %}"><i data-lucide="clapperboard" aria-hidden="true"></i><span>PelÃ­culas</span></a>
+      <a href="{% url 'home' %}"><i data-lucide="clapperboard" aria-hidden="true"></i><span>Películas</span></a>
       {% if request.user.is_authenticated %}
         <a href="{% url 'my_tickets' %}"><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>
       {% else %}
         <a href="{% url 'login' %}?next={% url 'my_tickets' %}"><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>
       {% endif %}
       {% if manager_role %}
-        <a class="client-manager-link" href="{% url 'manager:home' %}"><i data-lucide="settings-2" aria-hidden="true"></i><span>GestiÃ³n</span></a>
+        <a class="client-manager-link" href="{% url 'manager:home' %}"><i data-lucide="settings-2" aria-hidden="true"></i><span>Gestión</span></a>
       {% endif %}
       {% if request.user.is_authenticated %}
-        <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesiÃ³n</span></a>
+        <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesión</span></a>
       {% else %}
-        <a href="{% url 'login' %}"><i data-lucide="log-in" aria-hidden="true"></i><span>Iniciar sesiÃ³n</span></a>
+        <a href="{% url 'login' %}"><i data-lucide="log-in" aria-hidden="true"></i><span>Iniciar sesión</span></a>
       {% endif %}
     </nav>
   </header>
@@ -53,15 +53,15 @@
 
         <dl class="screening-facts">
           <div>
-            <dt>GÃ©nero</dt>
+            <dt>Género</dt>
             <dd>{{ movie.get_genre_display }}</dd>
           </div>
           <div>
-            <dt>ClasificaciÃ³n</dt>
+            <dt>Clasificación</dt>
             <dd>{{ movie.get_rating_display }}</dd>
           </div>
           <div>
-            <dt>DuraciÃ³n</dt>
+            <dt>Duración</dt>
             <dd>{{ movie.runtime_label }}</dd>
           </div>
           <div>
@@ -71,7 +71,7 @@
         </dl>
 
         <section class="screening-options" aria-label="Funciones disponibles">
-          <h2>ElegÃ­ tu funciÃ³n</h2>
+          <h2>Elegí tu función</h2>
           {% regroup screenings by starts_at.date as screenings_by_day %}
           <div class="screening-day-list">
             {% for day in screenings_by_day %}
@@ -82,10 +82,10 @@
                     {% if item.tickets_available > 0 %}
                       <a class="screening-time-chip" href="{% url 'seat_selection' item.pk %}" title="{{ item.room.name }} - desde ${{ item.price_from }}">
                         <span>{{ item.starts_at|date:"H:i" }}</span>
-                        <small>{{ item.room.name }} Â· ${{ item.price_from }}</small>
+                        <small>{{ item.room.name }} · ${{ item.price_from }}</small>
                       </a>
                     {% else %}
-                      <span class="screening-time-chip is-sold-out" aria-disabled="true" title="FunciÃ³n agotada">
+                      <span class="screening-time-chip is-sold-out" aria-disabled="true" title="Función agotada">
                         <span>{{ item.starts_at|date:"H:i" }}</span>
                         <small>Agotada</small>
                       </span>

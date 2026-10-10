@@ -142,8 +142,8 @@ class SignupClienteFormTests(TestCase):
     def test_signup_form_crea_usuario_con_email_como_username(self):
         form = CustomerSignupForm(
             data={
-                "nombre": "Ana",
-                "apellido": "Gomez",
+                "name": "Ana",
+                "last_name": "Gomez",
                 "email": "ANA@mail.com",
                 "password1": "PasswordSegura123!",
                 "password2": "PasswordSegura123!",
@@ -163,8 +163,8 @@ class SignupClienteFormTests(TestCase):
     def test_si_un_usuario_se_registra_con_password_invalida_entonces_devuelve_error(self):
         form = CustomerSignupForm(
             data={
-                "nombre": "Ana",
-                "apellido": "Gomez",
+                "name": "Ana",
+                "last_name": "Gomez",
                 "email": "ana@mail.com",
                 "password1": "12345678",
                 "password2": "12345678",
@@ -177,8 +177,8 @@ class SignupClienteFormTests(TestCase):
     def test_si_un_usuario_se_registra_sin_numero_entonces_devuelve_error(self):
         form = CustomerSignupForm(
             data={
-                "nombre": "Ana",
-                "apellido": "Gomez",
+                "name": "Ana",
+                "last_name": "Gomez",
                 "email": "ana@mail.com",
                 "password1": "PasswordSegura!",
                 "password2": "PasswordSegura!",
@@ -195,8 +195,8 @@ class SignupClienteFormTests(TestCase):
     def test_si_un_usuario_se_registra_sin_caracter_especial_entonces_devuelve_error(self):
         form = CustomerSignupForm(
             data={
-                "nombre": "Ana",
-                "apellido": "Gomez",
+                "name": "Ana",
+                "last_name": "Gomez",
                 "email": "ana@mail.com",
                 "password1": "PasswordSegura123",
                 "password2": "PasswordSegura123",

@@ -17,12 +17,12 @@ class SeatPurchaseAdmin(admin.ModelAdmin):
     list_display = ("screening", "label", "purchase", "created_at", "used_at")
     list_filter = ("screening__room", "created_at", ("used_at", admin.EmptyFieldListFilter))
     search_fields = ("label", "screening__movie__title", "purchase__user__email")
-    actions = ("marcar_utilizadas",)
+    actions = ("mark_used",)
 
     @admin.action(description="Marcar como utilizadas")
-    def marcar_utilizadas(self, request, queryset):
-        actualizadas = queryset.filter(utilizada_en__isnull=True).update(used_at=timezone.now())
-        self.message_user(request, f"{actualizadas} entradas marcadas como utilizadas.")
+    def mark_used(self, request, queryset):
+        updated = queryset.filter(used_at__isnull=True).update(used_at=timezone.now())
+        self.message_user(request, f"{updated} entradas marcadas como utilizadas.")
 
 
 @admin.register(SeatReservation)

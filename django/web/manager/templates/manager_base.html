@@ -1,10 +1,10 @@
-﻿{% load static %}
+{% load static %}
 <!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Butaca Cero | GestiÃ³n</title>
+  <title>Butaca Cero | Gestión</title>
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
   <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
   <link rel="stylesheet" href="{% static 'manager.css' %}">
@@ -19,7 +19,7 @@
 </head>
 <body>
   <div class="manager-shell">
-    <aside class="manager-sidebar" aria-label="Panel de gestiÃ³n">
+    <aside class="manager-sidebar" aria-label="Panel de gestión">
       <a class="brand" href="{% url 'manager:home' %}" aria-label="Butaca Cero y {{ cinema.name }}">
         <img src="{% static 'butaca-cero-logo.png' %}" alt="Butaca Cero" class="brand-logo">
         <span class="cinema-mark" aria-hidden="true">
@@ -31,7 +31,7 @@
         </span>
       </a>
 
-      <nav class="manager-nav" aria-label="GestiÃ³n">
+      <nav class="manager-nav" aria-label="Gestión">
         <a href="{% url 'manager:home' %}" class="nav-dashboard {% if not section %}is-active{% endif %}">
           <i data-lucide="layout-dashboard" aria-hidden="true"></i>
           <span>Inicio</span>
@@ -53,17 +53,17 @@
             <i data-lucide="armchair" aria-hidden="true"></i>
             <span>Butacas</span>
           </a>
-          <a href="{% url 'manager:peliculas_list' %}" class="nav-movies {% if section == 'PelÃ­culas' or section == 'Peliculas' %}is-active{% endif %}">
+          <a href="{% url 'manager:peliculas_list' %}" class="nav-movies {% if section == 'Películas' or section == 'Peliculas' %}is-active{% endif %}">
             <i data-lucide="clapperboard" aria-hidden="true"></i>
-            <span>PelÃ­culas</span>
+            <span>Películas</span>
           </a>
           <a href="{% url 'manager:funciones_list' %}" class="nav-screenings {% if section == 'Funciones' %}is-active{% endif %}">
             <i data-lucide="calendar-clock" aria-hidden="true"></i>
             <span>Funciones</span>
           </a>
-          <a href="{% url 'manager:configuracion' %}" class="nav-settings {% if section == 'ConfiguraciÃ³n' or section == 'Configuracion' %}is-active{% endif %}">
+          <a href="{% url 'manager:configuracion' %}" class="nav-settings {% if section == 'Configuración' or section == 'Configuracion' %}is-active{% endif %}">
             <i data-lucide="settings" aria-hidden="true"></i>
-            <span>ConfiguraciÃ³n</span>
+            <span>Configuración</span>
           </a>
         {% endif %}
       </nav>

@@ -164,7 +164,7 @@ class DashboardView(ManagerRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         Screening.finalize_expired()
         context["section"] = "Dashboard"
-        context["dashboard"] = build_dashboard(self.request.GET.get("periodo"))
+        context["dashboard"] = build_dashboard(self.request.GET.get("period"))
         return context
 
 
@@ -419,8 +419,8 @@ class RoomsListView(ManagerListView):
     ordering_options = (
         ("nombre_asc", "Nombre A-Z", ("name",)),
         ("nombre_desc", "Nombre Z-A", ("-name",)),
-        ("capacidad_desc", "Mayor capacidad", ("-_capacity", "name")),
-        ("capacidad_asc", "Menor capacidad", ("_capacity", "name")),
+        ("capacity_desc", "Mayor capacidad", ("-_capacity", "name")),
+        ("capacity_asc", "Menor capacidad", ("_capacity", "name")),
     )
 
     def get_queryset(self):
@@ -656,12 +656,12 @@ class ScreeningsListView(ManagerListView):
     )
     search_placeholder = "Buscar por película o sala"
     ordering_options = (
-        ("fecha_asc", "Fecha más próxima", ("starts_at",)),
-        ("fecha_desc", "Fecha más lejana", ("-starts_at",)),
+        ("date_asc", "Fecha más próxima", ("starts_at",)),
+        ("date_desc", "Fecha más lejana", ("-starts_at",)),
         ("pelicula_asc", "Película A-Z", ("movie__title", "starts_at")),
         ("sala_asc", "Sala A-Z", ("room__name", "starts_at")),
-        ("precio_desc", "Mayor precio desde", ("-ticket_price", "starts_at")),
-        ("precio_asc", "Menor precio desde", ("ticket_price", "starts_at")),
+        ("precio_desc", "Mayor precio inicial", ("-ticket_price", "starts_at")),
+        ("precio_asc", "Menor precio inicial", ("ticket_price", "starts_at")),
     )
     is_history = False
 
@@ -745,12 +745,12 @@ class ScreeningsHistoryListView(ScreeningsListView):
     create_url_name = ""
     is_history = True
     ordering_options = (
-        ("fecha_desc", "Fecha mas reciente", ("-starts_at",)),
-        ("fecha_asc", "Fecha mas antigua", ("starts_at",)),
+        ("date_desc", "Fecha mas reciente", ("-starts_at",)),
+        ("date_asc", "Fecha mas antigua", ("starts_at",)),
         ("pelicula_asc", "Pelicula A-Z", ("movie__title", "-starts_at")),
         ("sala_asc", "Sala A-Z", ("room__name", "-starts_at")),
-        ("precio_desc", "Mayor precio desde", ("-ticket_price", "-starts_at")),
-        ("precio_asc", "Menor precio desde", ("ticket_price", "-starts_at")),
+        ("precio_desc", "Mayor precio inicial", ("-ticket_price", "-starts_at")),
+        ("precio_asc", "Menor precio inicial", ("ticket_price", "-starts_at")),
     )
 
     def get_context_data(self, **kwargs):
@@ -771,16 +771,16 @@ class ScreeningCreateView(ManagerCreateView):
 
     def get_initial(self):
         initial = super().get_initial()
-        plantilla_id = self.request.GET.get("plantilla")
-        if not plantilla_id:
+        template_screening_id = self.request.GET.get("plantilla")
+        if not template_screening_id:
             return initial
 
-        plantilla = get_object_or_404(Screening, pk=plantilla_id)
+        template_screening = get_object_or_404(Screening, pk=template_screening_id)
         initial.update(
             {
-                "movie": plantilla.movie,
-                "room": plantilla.room,
-                "starts_at": plantilla.starts_at,
+                "movie": template_screening.movie,
+                "room": template_screening.room,
+                "starts_at": template_screening.starts_at,
             }
         )
         return initial

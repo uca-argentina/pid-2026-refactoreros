@@ -1,4 +1,4 @@
-﻿const rowInput = document.getElementById("rows");
+const rowInput = document.getElementById("rows");
 const columnInput = document.getElementById("columns");
 const table  = document.getElementById("room_layout_table");
 const layoutInput = document.getElementById("id_room_layout");
@@ -44,7 +44,7 @@ function getDimensionInput(target) {
 }
 
 function getDefaultSeatTypeName() {
-    return seatModeButtons[0]?.dataset.name || selectedSeatType?.dataset?.nombre || "EstÃ¡ndar";
+    return seatModeButtons[0]?.dataset.name || selectedSeatType?.dataset?.name || "Estándar";
 }
 
 function resizeLayoutState(nextRows, nextColumns, fillNewSeats = true) {
@@ -729,7 +729,7 @@ function exportBackup() {
 function applyBackupData(backupData) {
     const seats = Array.isArray(backupData) ? backupData : backupData.seats;
     if (!Array.isArray(seats)) {
-        window.alert("El backup no tiene un formato vÃ¡lido.");
+        window.alert("El backup no tiene un formato válido.");
         return;
     }
 
@@ -803,7 +803,7 @@ function setupDoubleConfirm(button, defaultLabel, confirmLabel, action) {
     });
 }
 
-setupDoubleConfirm(selectAllButton, "Seleccionar todo", "Confirmar selecciÃ³n", fillAllSeats);
+setupDoubleConfirm(selectAllButton, "Seleccionar todo", "Confirmar selección", fillAllSeats);
 setupDoubleConfirm(clearAllButton, "Borrar todo", "Confirmar borrado", clearAllSeats);
 
 undoButton.addEventListener("click", () => {restoreHistory(historyIndex - 1);});

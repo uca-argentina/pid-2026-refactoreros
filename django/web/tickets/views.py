@@ -71,12 +71,12 @@ def ticket_purchase_view(request, pk):
                     f"Solo tenemos disponibles {available} entradas para esta función.",
                 )
             else:
-                entrada_label = "entrada" if purchase.quantity == 1 else "entradas"
+                ticket_label = "entrada" if purchase.quantity == 1 else "entradas"
                 messages.success(
                     request,
                     (
                         "Pago aprobado. "
-                        f"Compraste {purchase.quantity} {entrada_label} "
+                        f"Compraste {purchase.quantity} {ticket_label} "
                         f"para {screening.movie.title}. ¡Te esperamos!"
                     ),
                 )
@@ -89,11 +89,11 @@ def ticket_purchase_view(request, pk):
     return redirect("seat_selection", pk=screening.pk)
 
 
-def reservation_payload(reserva):
-    seconds_left = max(int((reserva.expires_at - timezone.now()).total_seconds()), 0)
+def reservation_payload(reservation):
+    seconds_left = max(int((reservation.expires_at - timezone.now()).total_seconds()), 0)
     return {
-        "label": reserva.label,
-        "expires_at": reserva.expires_at.isoformat(),
+        "label": reservation.label,
+        "expires_at": reservation.expires_at.isoformat(),
         "seconds_left": seconds_left,
     }
 
@@ -104,7 +104,7 @@ def reservation_state_payload(screening, user):
         "unavailable": list(
             TicketPurchase.blocked_seats(screening, user=user)
         ),
-        "reserved": [reservation_payload(reserva) for reserva in own_reservations],
+        "reserved": [reservation_payload(reservation) for reservation in own_reservations],
     }
 
 
@@ -127,7 +127,7 @@ def seat_reservation_view(request, pk):
         return JsonResponse({"ok": True, "label": label})
 
     try:
-        reserva = SeatReservation.reserve(request.user, screening, label)
+        reservation = SeatReservation.reserve(request.user, screening, label)
     except ValidationError as error:
         return JsonResponse(
             {
@@ -140,7 +140,7 @@ def seat_reservation_view(request, pk):
             },
             status=409,
         )
-    return JsonResponse({"ok": True, "reservation": reservation_payload(reserva)})
+    return JsonResponse({"ok": True, "reservation": reservation_payload(reservation)})
 
 
 @login_required
@@ -175,7 +175,7 @@ def seat_reservation_batch_view(request, pk):
             continue
 
         try:
-            reserva = SeatReservation.reserve(request.user, screening, label)
+            reservation = SeatReservation.reserve(request.user, screening, label)
         except ValidationError as error:
             errors.append({"label": label, "error": "; ".join(error.messages)})
         else:
@@ -183,7 +183,7 @@ def seat_reservation_batch_view(request, pk):
                 {
                     "label": label,
                     "action": action,
-                    "reservation": reservation_payload(reserva),
+                    "reservation": reservation_payload(reservation),
                 }
             )
 

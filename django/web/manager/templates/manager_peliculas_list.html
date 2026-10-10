@@ -1,14 +1,14 @@
-﻿{% extends "manager_base.html" %}
+{% extends "manager_base.html" %}
 
 {% block content %}
   <section class="page-heading page-heading-row">
     <div>
-      <h1>PelÃ­culas</h1>
+      <h1>Películas</h1>
     </div>
     {% if create_url_name %}
       <a class="primary-link" href="{% url create_url_name %}">
         <i data-lucide="plus" aria-hidden="true"></i>
-        <span>Nueva pelÃ­cula</span>
+        <span>Nueva película</span>
       </a>
     {% endif %}
   </section>
@@ -19,18 +19,18 @@
     <table>
       <thead>
         <tr>
-          <th>TÃ­tulo</th>
+          <th>Título</th>
           <th>Imagen</th>
-          <th>GÃ©nero</th>
-          <th>ClasificaciÃ³n</th>
-          <th>DuraciÃ³n</th>
+          <th>Género</th>
+          <th>Clasificación</th>
+          <th>Duración</th>
           <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
         {% for movie in object_list %}
           <tr>
-            <td data-label="TÃ­tulo"><strong class="cell-title">{{ movie.title }}</strong></td>
+            <td data-label="Título"><strong class="cell-title">{{ movie.title }}</strong></td>
             <td data-label="Imagen">
               {% if movie.image %}
                 <img class="table-thumb" src="{{ movie.image.url }}" alt="{{ movie.title }}">
@@ -38,9 +38,9 @@
                 <span class="muted-text">Sin imagen</span>
               {% endif %}
             </td>
-            <td data-label="GÃ©nero">{{ movie.get_genre_display }}</td>
-            <td data-label="ClasificaciÃ³n"><span class="status-pill status-neutral">{{ movie.get_rating_display }}</span></td>
-            <td data-label="DuraciÃ³n">{{ movie.duration_minutes }} min</td>
+            <td data-label="Género">{{ movie.get_genre_display }}</td>
+            <td data-label="Clasificación"><span class="status-pill status-neutral">{{ movie.get_rating_display }}</span></td>
+            <td data-label="Duración">{{ movie.duration_minutes }} min</td>
             <td class="table-actions" data-label="Acciones">
               <a href="{% url 'manager:peliculas_update' movie.pk %}">
                 <i data-lucide="pencil" aria-hidden="true"></i>
@@ -53,7 +53,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="6">No se encontrÃ³ ninguna pelÃ­cula.</td></tr>
+          <tr><td colspan="6">No se encontró ninguna película.</td></tr>
         {% endfor %}
       </tbody>
     </table>

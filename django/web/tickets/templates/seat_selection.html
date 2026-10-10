@@ -1,4 +1,4 @@
-﻿{% load static %}
+{% load static %}
 <!doctype html>
 <html lang="es">
 <head>
@@ -20,12 +20,12 @@
       {% endif %}
     </a>
     <nav>
-      <a href="{% url 'home' %}"><i data-lucide="clapperboard" aria-hidden="true"></i><span>PelÃ­culas</span></a>
+      <a href="{% url 'home' %}"><i data-lucide="clapperboard" aria-hidden="true"></i><span>Películas</span></a>
       <a href="{% url 'my_tickets' %}"><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>
-      {% if manager_rolee %}
-        <a class="client-manager-link" href="{% url 'manager:home' %}"><i data-lucide="settings-2" aria-hidden="true"></i><span>GestiÃ³n</span></a>
+      {% if manager_role %}
+        <a class="client-manager-link" href="{% url 'manager:home' %}"><i data-lucide="settings-2" aria-hidden="true"></i><span>Gestión</span></a>
       {% endif %}
-      <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesiÃ³n</span></a>
+      <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesión</span></a>
     </nav>
   </header>
 
@@ -100,7 +100,7 @@
           <h2>Tu purchase</h2>
           <dl>
             <div>
-              <dt>FunciÃ³n</dt>
+              <dt>Función</dt>
               <dd>{{ screening.starts_at|date:"d/m H:i" }}</dd>
             </div>
             <div>
@@ -130,11 +130,11 @@
               type="submit"
               data-singular-label="Comprar entrada"
               data-plural-label="Comprar entradas"
-              data-select-seat-label="SeleccionÃ¡ tus butacas"
-              data-sold-out-label="Entradas agotadas para esta screening"
+              data-select-seat-label="Seleccioná tus butacas"
+              data-sold-out-label="Entradas agotadas para esta función"
               {% if screening.tickets_available <= 0 or screening.seat_map %}disabled{% endif %}
             >
-              {% if screening.tickets_available > 0 %}SeleccionÃ¡ tus butacas{% else %}Entradas agotadas para esta screening{% endif %}
+              {% if screening.tickets_available > 0 %}Seleccioná tus butacas{% else %}Entradas agotadas para esta función{% endif %}
             </button>
             {% if purchase_error and screening.tickets_available > 0 %}
               <p class="purchase-error">{{ purchase_error }}</p>
