@@ -5,3 +5,4 @@ django-environ==0.14.0
 psycopg==3.3.5
 psycopg-binary==3.3.5
 Pillow==10.4.0
+whitenoise
