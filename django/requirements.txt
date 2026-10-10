@@ -6,3 +6,4 @@ psycopg==3.3.5
 psycopg-binary==3.3.5
 Pillow==10.4.0
 whitenoise
+gunicorn>=23.0,<24.0
