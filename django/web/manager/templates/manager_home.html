@@ -5,7 +5,7 @@
     <div>
       <h1>Panel de gestión</h1>
     </div>
-    {% if manager_role == "gerente" %}
+    {% if manager_role == "manager" %}
       <a class="primary-link" href="{% url 'manager:funciones_create' %}">
         <i data-lucide="plus" aria-hidden="true"></i>
         <span>Nueva función</span>
@@ -13,7 +13,7 @@
     {% endif %}
   </section>
 
-  {% if manager_role == "gerente" %}
+  {% if manager_role == "manager" %}
     <section class="stat-grid" aria-label="Resumen de operación">
       {% for stat in dashboard_stats %}
         <article class="stat-card stat-{{ stat.tone }}">
@@ -37,23 +37,23 @@
           </div>
 
           <div class="schedule-list">
-            {% for funcion in next_screenings %}
+            {% for screening in next_screenings %}
               <article class="schedule-item">
                 <div class="schedule-date">
-                  <strong>{{ funcion.fecha_horario|date:"d" }}</strong>
-                  <span>{{ funcion.fecha_horario|date:"M" }}</span>
+                  <strong>{{ screening.starts_at|date:"d" }}</strong>
+                  <span>{{ screening.starts_at|date:"M" }}</span>
                 </div>
                 <div class="schedule-content">
-                  <h3>{{ funcion.pelicula.titulo }}</h3>
-                  <span>{{ funcion.sala.nombre }} · {{ funcion.fecha_horario|date:"H:i" }} · {{ funcion.entradas_vendidas }} vendidas</span>
-                  <div class="schedule-progress" style="--progress: {{ funcion.ocupacion_porcentaje }}%; --progress-value: {{ funcion.ocupacion_porcentaje }}" aria-label="{{ funcion.ocupacion_porcentaje }}% de butacas vendidas">
+                  <h3>{{ screening.movie.title }}</h3>
+                  <span>{{ screening.room.name }} · {{ screening.starts_at|date:"H:i" }} · {{ screening.tickets_sold }} vendidas</span>
+                  <div class="schedule-progress" style="--progress: {{ screening.occupancy_percentage }}%; --progress-value: {{ screening.occupancy_percentage }}" aria-label="{{ screening.occupancy_percentage }}% de butacas vendidas">
                     <span class="schedule-progress-track" aria-hidden="true">
                       <span class="schedule-progress-fill"></span>
                     </span>
-                    <strong>{{ funcion.ocupacion_porcentaje }}%</strong>
+                    <strong>{{ screening.occupancy_percentage }}%</strong>
                   </div>
                 </div>
-                <span class="status-pill status-{{ funcion.estado }}">{{ funcion.get_estado_display }}</span>
+                <span class="status-pill status-{{ screening.status }}">{{ screening.get_status_display }}</span>
               </article>
             {% empty %}
               <div class="empty-state compact">
@@ -83,7 +83,7 @@
             <strong>Películas</strong>
             <span>Catálogo, duración, género y clasificación.</span>
           </a>
-          <a class="action-card action-screenings" href="{% url 'manager:funciones_list' %}">
+          <a class="action-card action-funciones" href="{% url 'manager:funciones_list' %}">
             <i data-lucide="calendar-clock" class="action-icon" aria-hidden="true"></i>
             <strong>Funciones</strong>
             <span>Publicación, precios y disponibilidad.</span>
@@ -94,7 +94,7 @@
       <aside class="ops-panel">
         <div class="section-title">
           <div>
-            <h2>Recuento funciones</h2>
+            <h2>Recuento de funciones</h2>
           </div>
         </div>
         <div class="ops-metric">

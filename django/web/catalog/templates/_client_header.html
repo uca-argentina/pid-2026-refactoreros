@@ -1,0 +1,31 @@
+<header class="client-header">
+  <a class="client-brand" href="{% url 'home' %}">
+    {% if cinema.logo %}
+      <img src="{{ cinema.logo.url }}" alt="{{ cinema.name }}" class="client-logo">
+    {% else %}
+      <strong>{{ cinema.name }}</strong>
+    {% endif %}
+  </a>
+  <nav>
+    {% if show_movies_link %}
+      <a href="{% url 'home' %}"><i data-lucide="clapperboard" aria-hidden="true"></i><span>Películas</span></a>
+    {% endif %}
+    {% if request.user.is_authenticated %}
+      <a href="{% url 'my_tickets' %}"><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>
+    {% else %}
+      <a href="{% url 'login' %}?next={% url 'my_tickets' %}"><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>
+    {% endif %}
+    {% if manager_role %}
+      <a class="client-manager-link" href="{% url 'manager:home' %}"><i data-lucide="settings-2" aria-hidden="true"></i><span>Gestión</span></a>
+    {% endif %}
+    {% if request.user.is_authenticated %}
+      <span class="client-user-pill" title="{{ request.user.email|default:request.user.username }}">
+        <i data-lucide="circle-user-round" aria-hidden="true"></i>
+        <span>{{ request.user.get_full_name|default:request.user.email|default:request.user.username }}</span>
+      </span>
+      <a class="client-logout-link" href="{% url 'logout' %}"><i data-lucide="log-out" aria-hidden="true"></i><span>Cerrar sesión</span></a>
+    {% else %}
+      <a href="{% url 'login' %}"><i data-lucide="log-in" aria-hidden="true"></i><span>Iniciar sesión</span></a>
+    {% endif %}
+  </nav>
+</header>

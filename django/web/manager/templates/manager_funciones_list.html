@@ -3,8 +3,19 @@
 {% block content %}
   <section class="page-heading page-heading-row">
     <div>
-      <h1>Funciones</h1>
+      <h1>{% if is_history %}Historial de funciones{% else %}Funciones{% endif %}</h1>
     </div>
+    {% if is_history %}
+      <a class="secondary-inline-link" href="{% url 'manager:funciones_list' %}">
+        <i data-lucide="arrow-left" aria-hidden="true"></i>
+        <span>Volver a funciones</span>
+      </a>
+    {% else %}
+      <a class="secondary-inline-link" href="{% url 'manager:funciones_historial' %}">
+        <i data-lucide="history" aria-hidden="true"></i>
+        <span>Historial de funciones</span>
+      </a>
+    {% endif %}
     {% if create_url_name %}
       <a class="primary-link" href="{% url create_url_name %}">
         <i data-lucide="plus" aria-hidden="true"></i>
@@ -14,7 +25,7 @@
   </section>
 
   {% if hidden_priority_functions %}
-    <section class="priority-screenings" aria-label="Funciones ocultas">
+    <section class="priority-funciones" aria-label="Funciones ocultas">
       <div class="priority-screenings-header">
         <div>
           <h2>Funciones ocultas</h2>
@@ -23,26 +34,30 @@
         <span>{{ hidden_priority_count }} pendiente{% if hidden_priority_count != 1 %}s{% endif %}</span>
       </div>
       <div class="priority-screenings-grid">
-        {% for funcion in hidden_priority_functions %}
+        {% for screening in hidden_priority_functions %}
           <article class="priority-screening-card">
             <div>
               <span class="status-pill status-draft">Oculta</span>
-              <h3>{{ funcion.pelicula.titulo }}</h3>
-              <p>{{ funcion.sala.nombre }} | {{ funcion.fecha_horario|date:"d/m/Y H:i" }} | desde ${{ funcion.precio_desde }}</p>
+              <h3>{{ screening.movie.title }}</h3>
+              <p>{{ screening.room.name }} | {{ screening.starts_at|date:"d/m/Y H:i" }} | desde ${{ screening.price_from }}</p>
             </div>
-            {% if funcion.estado == "borrador" %}
-              <form method="post" action="{% url 'manager:funciones_estado' funcion.pk %}">
+            {% if screening.status == "borrador" %}
+              <form method="post" action="{% url 'manager:funciones_estado' screening.pk %}">
                 {% csrf_token %}
-                <input type="hidden" name="estado" value="programada">
+                <input type="hidden" name="status" value="publicada">
                 <button type="submit" class="publish-action">
-                  <i data-lucide="calendar-check" aria-hidden="true"></i>
-                  <span>Programar</span>
+                  <i data-lucide="send" aria-hidden="true"></i>
+                  <span>Publicar</span>
                 </button>
               </form>
-            {% elif funcion.estado == "programada" %}
-              <form method="post" action="{% url 'manager:funciones_estado' funcion.pk %}">
+              <button type="button" class="disabled-action" disabled>
+                <i data-lucide="calendar-clock" aria-hidden="true"></i>
+                <span>Programar</span>
+              </button>
+            {% elif screening.status == "programada" %}
+              <form method="post" action="{% url 'manager:funciones_estado' screening.pk %}">
                 {% csrf_token %}
-                <input type="hidden" name="estado" value="publicada">
+                <input type="hidden" name="status" value="publicada">
                 <button type="submit" class="publish-action">
                   <i data-lucide="send" aria-hidden="true"></i>
                   <span>Publicar</span>
@@ -56,13 +71,6 @@
   {% endif %}
 
   {% include "_list_controls.html" %}
-
-  <div class="table-action-reference" aria-label="Referencia de acciones">
-    <span><i data-lucide="pencil" aria-hidden="true"></i> Editar</span>
-    <span><i data-lucide="copy" aria-hidden="true"></i> Usar como plantilla</span>
-    <span><i data-lucide="send" aria-hidden="true"></i> Publicar</span>
-    <span><i data-lucide="eye-off" aria-hidden="true"></i> Ocultar</span>
-  </div>
 
   <section class="table-shell">
     <table>
@@ -79,40 +87,44 @@
         </tr>
       </thead>
       <tbody>
-        {% for funcion in object_list %}
+        {% for screening in object_list %}
           <tr>
-            <td data-label="Película"><strong class="cell-title">{{ funcion.pelicula.titulo }}</strong></td>
-            <td data-label="Sala">{{ funcion.sala.nombre }}</td>
-            <td data-label="Fecha">{{ funcion.fecha_horario|date:"d/m/Y H:i" }}</td>
+            <td data-label="Película"><strong class="cell-title">{{ screening.movie.title }}</strong></td>
+            <td data-label="Sala">{{ screening.room.name }}</td>
+            <td data-label="Fecha">{{ screening.starts_at|date:"d/m/Y H:i" }}</td>
             <td data-label="Estado">
-              <span class="status-pill status-{{ funcion.estado }}">{{ funcion.get_estado_display }}</span>
+              <span class="status-pill status-{{ screening.status }}">{{ screening.get_status_display }}</span>
             </td>
-            <td data-label="Desde">${{ funcion.precio_desde }}</td>
-            <td data-label="Vendidas">{{ funcion.entradas_vendidas }}</td>
-            <td data-label="Disponibles">{{ funcion.entradas_disponibles }}</td>
+            <td data-label="Desde">${{ screening.price_from }}</td>
+            <td data-label="Vendidas">{{ screening.tickets_sold }}</td>
+            <td data-label="Disponibles">{{ screening.tickets_available }}</td>
             <td class="table-actions" data-label="Acciones">
-              {% with transiciones=funcion.transiciones_disponibles %}
+              {% with transitions=screening.available_transitions %}
                 <div class="row-actions">
-                  {% if funcion.es_editable %}
-                    <a href="{% url 'manager:funciones_update' funcion.pk %}">
+                  {% if screening.is_editable %}
+                    <a href="{% url 'manager:funciones_update' screening.pk %}">
                       <i data-lucide="pencil" aria-hidden="true"></i>
                       <span>Editar</span>
                     </a>
                   {% endif %}
-                  {% if funcion.estado == "borrador" and "programada" in transiciones %}
-                    <form method="post" action="{% url 'manager:funciones_estado' funcion.pk %}">
+                  {% if screening.status == "borrador" and "publicada" in transitions %}
+                    <form method="post" action="{% url 'manager:funciones_estado' screening.pk %}">
                       {% csrf_token %}
-                      <input type="hidden" name="estado" value="programada">
+                      <input type="hidden" name="status" value="publicada">
                       <button type="submit" class="publish-action">
-                        <i data-lucide="calendar-check" aria-hidden="true"></i>
-                        <span>Programar</span>
+                        <i data-lucide="send" aria-hidden="true"></i>
+                        <span>Publicar</span>
                       </button>
                     </form>
+                    <button type="button" class="disabled-action" disabled>
+                      <i data-lucide="calendar-clock" aria-hidden="true"></i>
+                      <span>Programar</span>
+                    </button>
                   {% endif %}
-                  {% if "publicada" in transiciones %}
-                    <form method="post" action="{% url 'manager:funciones_estado' funcion.pk %}">
+                  {% if screening.status != "borrador" and "publicada" in transitions %}
+                    <form method="post" action="{% url 'manager:funciones_estado' screening.pk %}">
                       {% csrf_token %}
-                      <input type="hidden" name="estado" value="publicada">
+                      <input type="hidden" name="status" value="publicada">
                       <button type="submit" class="publish-action">
                         <i data-lucide="send" aria-hidden="true"></i>
                         <span>Publicar</span>
@@ -120,8 +132,8 @@
                     </form>
                   {% endif %}
 
-                  {% if not transiciones and not funcion.es_eliminable %}
-                    <a href="{% url 'manager:funciones_create' %}?plantilla={{ funcion.pk }}">
+                  {% if not transitions and not screening.is_deletable %}
+                    <a href="{% url 'manager:funciones_create' %}?plantilla={{ screening.pk }}">
                       <i data-lucide="copy" aria-hidden="true"></i>
                       <span>Usar como plantilla</span>
                     </a>
@@ -131,41 +143,41 @@
                         <i data-lucide="ellipsis-vertical" aria-hidden="true"></i>
                       </summary>
                       <div class="row-menu-list">
-                        <a href="{% url 'manager:funciones_create' %}?plantilla={{ funcion.pk }}">
+                        <a href="{% url 'manager:funciones_create' %}?plantilla={{ screening.pk }}">
                           <i data-lucide="copy" aria-hidden="true"></i>
                           <span>Usar como plantilla</span>
                         </a>
-                        {% if funcion.estado == "publicada" and "programada" in transiciones %}
-                          <form method="post" action="{% url 'manager:funciones_estado' funcion.pk %}">
+                        {% if screening.status == "publicada" and "programada" in transitions %}
+                          <form method="post" action="{% url 'manager:funciones_estado' screening.pk %}">
                             {% csrf_token %}
-                            <input type="hidden" name="estado" value="programada">
+                            <input type="hidden" name="status" value="programada">
                             <button type="submit">
                               <i data-lucide="eye-off" aria-hidden="true"></i>
                               <span>Ocultar</span>
                             </button>
                           </form>
                         {% endif %}
-                        {% if "borrador" in transiciones %}
-                          <form method="post" action="{% url 'manager:funciones_estado' funcion.pk %}">
+                        {% if "borrador" in transitions %}
+                          <form method="post" action="{% url 'manager:funciones_estado' screening.pk %}">
                             {% csrf_token %}
-                            <input type="hidden" name="estado" value="borrador">
+                            <input type="hidden" name="status" value="borrador">
                             <button type="submit">
                               <i data-lucide="undo-2" aria-hidden="true"></i>
                               <span>Volver a borrador</span>
                             </button>
                           </form>
                         {% endif %}
-                        {% if "cancelada" in transiciones or funcion.es_eliminable %}
+                        {% if "cancelada" in transitions or screening.is_deletable %}
                           <hr>
                         {% endif %}
-                        {% if "cancelada" in transiciones %}
-                          <a href="{% url 'manager:funciones_cancelar' funcion.pk %}" class="danger-link">
+                        {% if "cancelada" in transitions %}
+                          <a href="{% url 'manager:funciones_cancelar' screening.pk %}" class="danger-link">
                             <i data-lucide="ban" aria-hidden="true"></i>
                             <span>Cancelar función</span>
                           </a>
                         {% endif %}
-                        {% if funcion.es_eliminable %}
-                          <a href="{% url 'manager:funciones_delete' funcion.pk %}" class="danger-link">
+                        {% if screening.is_deletable %}
+                          <a href="{% url 'manager:funciones_delete' screening.pk %}" class="danger-link">
                             <i data-lucide="trash-2" aria-hidden="true"></i>
                             <span>Eliminar</span>
                           </a>

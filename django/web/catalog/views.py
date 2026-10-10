@@ -1,11 +1,10 @@
-from django.contrib.auth.decorators import login_required
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 
-from domain.cinema.models import ConfiguracionCine
-from domain.movies.models import Pelicula
-from domain.screenings.models import Funcion
-from domain.tickets.models import CompraEntrada
+from domain.cinema.models import CinemaSettings
+from domain.movies.models import Movie
+from domain.screenings.models import Screening
+from domain.tickets.models import TicketPurchase
 from web.manager.views import manager_role
 
 
@@ -18,8 +17,8 @@ def index_to_letters(index):
     return label
 
 
-def build_seat_map(funcion, usuario=None):
-    snapshot = funcion.sala_configuracion_snapshot or {}
+def build_seat_map(screening, user=None):
+    snapshot = screening.room_layout_snapshot or {}
     if not snapshot:
         return None
 
@@ -52,7 +51,7 @@ def build_seat_map(funcion, usuario=None):
         (seat["row"], seat["column"]): seat
         for seat in seats
     }
-    unavailable_labels = CompraEntrada.asientos_bloqueados(funcion, usuario=usuario)
+    unavailable_labels = TicketPurchase.blocked_seats(screening, user=user)
     legend_by_type = {}
     rows = []
     for row_index in range(rows_count):
@@ -96,58 +95,55 @@ def build_seat_map(funcion, usuario=None):
     return {"columns": columns, "rows": rows, "legend": list(legend_by_type.values())}
 
 
-@login_required
 def home_view(request):
-    Funcion.finalizar_vencidas()
-    funciones_publicadas = Funcion.funciones_publicadas()
-    peliculas = Pelicula.objects.filter(
-        funciones__estado=Funcion.Estado.PUBLICADA
+    Screening.finalize_expired()
+    published = Screening.published()
+    movies = Movie.objects.filter(
+        screenings__status=Screening.Status.PUBLISHED
     ).prefetch_related(
-        Prefetch("funciones", queryset=funciones_publicadas, to_attr="publicadas")
+        Prefetch("screenings", queryset=published, to_attr="published_screenings")
     ).distinct()
     return render(
         request,
         "home.html",
         {
-            "cinema": ConfiguracionCine.actual(),
-            "peliculas": peliculas,
+            "cinema": CinemaSettings.current(),
+            "movies": movies,
             "manager_role": manager_role(request.user),
         },
     )
 
 
-@login_required
 def movie_detail_view(request, pk):
-    Funcion.finalizar_vencidas()
-    funciones_publicadas = Funcion.funciones_publicadas()
-    pelicula = get_object_or_404(
-        Pelicula.objects.filter(
-            funciones__estado=Funcion.Estado.PUBLICADA
+    Screening.finalize_expired()
+    published = Screening.published()
+    movie = get_object_or_404(
+        Movie.objects.filter(
+            screenings__status=Screening.Status.PUBLISHED
         ).prefetch_related(
-            Prefetch("funciones", queryset=funciones_publicadas, to_attr="publicadas")
+            Prefetch("screenings", queryset=published, to_attr="published_screenings")
         ).distinct(),
         pk=pk,
     )
-    funcion = pelicula.publicadas[0]
-    for item in pelicula.publicadas:
-        item.entradas_disponibles = CompraEntrada.disponibles_para(item)
-        item.seat_map = build_seat_map(item, usuario=request.user)
+    screening = movie.published_screenings[0]
+    for item in movie.published_screenings:
+        item.tickets_available = TicketPurchase.available_for(item)
+        item.seat_map = build_seat_map(item, user=request.user)
     return render(
         request,
         "screening_detail.html",
         {
-            "cinema": ConfiguracionCine.actual(),
-            "pelicula": pelicula,
-            "funcion": funcion,
-            "funciones": pelicula.publicadas,
-            "entradas_disponibles": funcion.entradas_disponibles,
+            "cinema": CinemaSettings.current(),
+            "movie": movie,
+            "screening": screening,
+            "screenings": movie.published_screenings,
+            "tickets_available": screening.tickets_available,
             "manager_role": manager_role(request.user),
         },
     )
 
 
-@login_required
 def screening_detail_view(request, pk):
-    Funcion.finalizar_vencidas()
-    funcion = get_object_or_404(Funcion.funciones_publicadas(), pk=pk)
-    return redirect("seat_selection", pk=funcion.pk)
+    Screening.finalize_expired()
+    screening = get_object_or_404(Screening.published(), pk=pk)
+    return redirect("seat_selection", pk=screening.pk)

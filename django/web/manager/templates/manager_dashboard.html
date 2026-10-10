@@ -6,7 +6,7 @@
 {% endblock %}
 
 {% block content %}
-  {% with resumen=dashboard.resumen variaciones=dashboard.variaciones %}
+  {% with summary=dashboard.summary deltas=dashboard.deltas %}
     <section class="page-heading dashboard-heading">
       <div>
         <h1>Dashboard</h1>
@@ -15,9 +15,9 @@
 
     <nav class="period-filter" aria-label="Período del dashboard">
       <div class="period-options">
-        {% for periodo in dashboard.periodos %}
-          <a href="?periodo={{ periodo.clave }}" class="period-option{% if periodo.activo %} is-active{% endif %}"{% if periodo.activo %} aria-current="page"{% endif %}>
-            <span>{% if periodo.clave != "todo" %}<span class="period-option-prefix">Últimos </span>{% endif %}{{ periodo.etiqueta }}</span>
+        {% for period in dashboard.periods %}
+          <a href="?period={{ period.key }}" class="period-option{% if period.active %} is-active{% endif %}"{% if period.active %} aria-current="page"{% endif %}>
+            <span>{% if period.key != "todo" %}<span class="period-option-prefix">Últimos </span>{% endif %}{{ period.label }}</span>
           </a>
         {% endfor %}
       </div>
@@ -25,7 +25,7 @@
         <i data-lucide="calendar-range" aria-hidden="true"></i>
         <span>
           Funciones realizadas
-          {% if dashboard.desde %}del {{ dashboard.desde|date:"d/m/Y" }} al {{ dashboard.hasta|date:"d/m/Y" }}{% else %}hasta hoy{% endif %}
+          {% if dashboard.start %}del {{ dashboard.start|date:"d/m/Y" }} al {{ dashboard.end|date:"d/m/Y" }}{% else %}hasta hoy{% endif %}
         </span>
       </p>
     </nav>
@@ -33,26 +33,26 @@
     <section class="kpi-grid" aria-label="Indicadores del período">
       <article class="kpi-card">
         <span class="kpi-label"><i data-lucide="banknote" aria-hidden="true"></i>Recaudación simulada</span>
-        <strong class="kpi-value">${{ resumen.recaudacion|floatformat:"0g" }}</strong>
-        {% include "_dashboard_delta.html" with delta=variaciones.recaudacion comparable=variaciones %}
-        <span class="kpi-meta">Pagos simulados de {{ resumen.funciones }} {{ resumen.funciones|pluralize:"función,funciones" }}</span>
+        <strong class="kpi-value">${{ summary.revenue|floatformat:"0g" }}</strong>
+        {% include "_dashboard_delta.html" with delta=deltas.revenue comparable=deltas %}
+        <span class="kpi-meta">Pagos simulados de {{ summary.screenings }} {{ summary.screenings|pluralize:"función,funciones" }}</span>
       </article>
       <article class="kpi-card">
         <span class="kpi-label"><i data-lucide="ticket" aria-hidden="true"></i>Entradas vendidas</span>
-        <strong class="kpi-value">{{ resumen.vendidas|floatformat:"0g" }}</strong>
-        {% include "_dashboard_delta.html" with delta=variaciones.vendidas comparable=variaciones %}
-        <span class="kpi-meta">Ticket promedio ${{ resumen.ticket_promedio|floatformat:"0g" }}</span>
+        <strong class="kpi-value">{{ summary.sold|floatformat:"0g" }}</strong>
+        {% include "_dashboard_delta.html" with delta=deltas.sold comparable=deltas %}
+        <span class="kpi-meta">Ticket promedio ${{ summary.average_ticket|floatformat:"0g" }}</span>
       </article>
       <article class="kpi-card">
         <span class="kpi-label"><i data-lucide="armchair" aria-hidden="true"></i>Ocupación</span>
-        <strong class="kpi-value">{{ resumen.ocupacion|floatformat:"-1" }}%</strong>
-        {% include "_dashboard_delta.html" with delta=variaciones.ocupacion comparable=variaciones %}
-        <span class="kpi-meta">{{ resumen.vendidas|floatformat:"0g" }} de {{ resumen.capacidad|floatformat:"0g" }} butacas</span>
+        <strong class="kpi-value">{{ summary.occupancy|floatformat:"-1" }}%</strong>
+        {% include "_dashboard_delta.html" with delta=deltas.occupancy comparable=deltas %}
+        <span class="kpi-meta">{{ summary.sold|floatformat:"0g" }} de {{ summary.capacity|floatformat:"0g" }} butacas</span>
       </article>
       <article class="kpi-card">
         <span class="kpi-label"><i data-lucide="scan-line" aria-hidden="true"></i>Asistencia</span>
-        <strong class="kpi-value">{% if resumen.vendidas %}{{ resumen.asistencia|floatformat:"-1" }}%{% else %}—{% endif %}</strong>
-        <span class="kpi-meta">{{ resumen.utilizadas|floatformat:"0g" }} {{ resumen.utilizadas|pluralize:"entrada utilizada,entradas utilizadas" }}</span>
+        <strong class="kpi-value">{% if summary.sold %}{{ summary.attendance|floatformat:"-1" }}%{% else %}—{% endif %}</strong>
+        <span class="kpi-meta">{{ summary.used|floatformat:"0g" }} {{ summary.used|pluralize:"entrada utilizada,entradas utilizadas" }}</span>
       </article>
     </section>
 
@@ -62,47 +62,47 @@
           <div>
             <h2>Recaudación simulada</h2>
             <p>
-              {% if dashboard.recaudacion.granularidad == "semana" %}Por semana{% elif dashboard.recaudacion.granularidad == "mes" %}Por mes{% else %}Por día{% endif %}
+              {% if dashboard.revenue.granularity == "week" %}Por semana{% elif dashboard.revenue.granularity == "month" %}Por mes{% else %}Por día{% endif %}
               de función
             </p>
           </div>
         </header>
 
-        {% with serie=dashboard.recaudacion %}
+        {% with serie=dashboard.revenue %}
           {% if serie %}
             <div class="column-chart">
               <div class="column-chart-y" aria-hidden="true">
                 {% for tick in serie.ticks %}
-                  <span style="bottom: {{ tick.posicion_css }}">${{ tick.valor|floatformat:"0g" }}</span>
+                  <span style="bottom: {{ tick.position_css }}">${{ tick.value|floatformat:"0g" }}</span>
                 {% endfor %}
               </div>
               <div class="column-chart-plot">
                 {% for tick in serie.ticks %}
-                  <span class="column-chart-grid{% if forloop.first %} is-baseline{% endif %}" style="bottom: {{ tick.posicion_css }}" aria-hidden="true"></span>
+                  <span class="column-chart-grid{% if forloop.first %} is-baseline{% endif %}" style="bottom: {{ tick.position_css }}" aria-hidden="true"></span>
                 {% endfor %}
-                <div class="column-chart-bars" style="--columns: {{ serie.columnas|length }}" role="list" aria-label="Recaudación simulada por período">
-                  {% for columna in serie.columnas %}
+                <div class="column-chart-bars" style="--columns: {{ serie.columns|length }}" role="list" aria-label="Recaudación simulada por período">
+                  {% for column in serie.columns %}
                     <div
                       class="column-slot"
                       role="listitem"
                       tabindex="0"
-                      data-tip-title="{% if serie.granularidad == 'semana' %}Semana del {{ columna.fecha|date:'d/m/Y' }}{% elif serie.granularidad == 'mes' %}{{ columna.fecha|date:'F Y' }}{% else %}{{ columna.fecha|date:'l d/m' }}{% endif %}"
-                      data-tip-value="${{ columna.recaudacion|floatformat:'0g' }}"
-                      data-tip-meta="{{ columna.vendidas }} {{ columna.vendidas|pluralize:'entrada,entradas' }} · {{ columna.funciones }} {{ columna.funciones|pluralize:'función,funciones' }}"
-                      aria-label="{% if serie.granularidad == 'semana' %}Semana del {{ columna.fecha|date:'d/m/Y' }}{% elif serie.granularidad == 'mes' %}{{ columna.fecha|date:'F Y' }}{% else %}{{ columna.fecha|date:'l d/m' }}{% endif %}: ${{ columna.recaudacion|floatformat:'0g' }}"
+                      data-tip-title="{% if serie.granularity == 'week' %}Semana del {{ column.date|date:'d/m/Y' }}{% elif serie.granularity == 'month' %}{{ column.date|date:'F Y' }}{% else %}{{ column.date|date:'l d/m' }}{% endif %}"
+                      data-tip-value="${{ column.revenue|floatformat:'0g' }}"
+                      data-tip-meta="{{ column.sold }} {{ column.sold|pluralize:'entrada,entradas' }} · {{ column.screenings }} {{ column.screenings|pluralize:'función,funciones' }}"
+                      aria-label="{% if serie.granularity == 'week' %}Semana del {{ column.date|date:'d/m/Y' }}{% elif serie.granularity == 'month' %}{{ column.date|date:'F Y' }}{% else %}{{ column.date|date:'l d/m' }}{% endif %}: ${{ column.revenue|floatformat:'0g' }}"
                     >
-                      <span class="column-bar" style="height: {{ columna.altura_css }}">
-                        {% if columna.es_maximo %}
-                          <span class="column-peak{% if forloop.counter <= 2 %} is-start{% elif forloop.revcounter <= 2 %} is-end{% endif %}">${{ columna.recaudacion|floatformat:"0g" }}</span>
+                      <span class="column-bar" style="height: {{ column.height_css }}">
+                        {% if column.is_peak %}
+                          <span class="column-peak{% if forloop.counter <= 2 %} is-start{% elif forloop.revcounter <= 2 %} is-end{% endif %}">${{ column.revenue|floatformat:"0g" }}</span>
                         {% endif %}
                       </span>
                     </div>
                   {% endfor %}
                 </div>
               </div>
-              <div class="column-chart-x" style="--columns: {{ serie.columnas|length }}" aria-hidden="true">
-                {% for columna in serie.columnas %}
-                  <span{% if columna.etiqueta_secundaria %} class="is-secondary"{% endif %}>{% if columna.mostrar_etiqueta %}{% if serie.granularidad == "mes" %}{{ columna.fecha|date:"b y" }}{% else %}{{ columna.fecha|date:"d/m" }}{% endif %}{% endif %}</span>
+              <div class="column-chart-x" style="--columns: {{ serie.columns|length }}" aria-hidden="true">
+                {% for column in serie.columns %}
+                  <span{% if column.secondary_label %} class="is-secondary"{% endif %}>{% if column.show_label %}{% if serie.granularity == "month" %}{{ column.date|date:"b y" }}{% else %}{{ column.date|date:"d/m" }}{% endif %}{% endif %}</span>
                 {% endfor %}
               </div>
             </div>
@@ -113,19 +113,19 @@
                 <table>
                   <thead>
                     <tr>
-                      <th scope="col">{% if serie.granularidad == "semana" %}Semana del{% elif serie.granularidad == "mes" %}Mes{% else %}Día{% endif %}</th>
+                      <th scope="col">{% if serie.granularity == "week" %}Semana del{% elif serie.granularity == "month" %}Mes{% else %}Día{% endif %}</th>
                       <th scope="col">Recaudación</th>
                       <th scope="col">Entradas</th>
                       <th scope="col">Funciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {% for columna in serie.columnas %}
+                    {% for column in serie.columns %}
                       <tr>
-                        <td data-label="Fecha">{% if serie.granularidad == "mes" %}{{ columna.fecha|date:"F Y" }}{% else %}{{ columna.fecha|date:"d/m/Y" }}{% endif %}</td>
-                        <td data-label="Recaudación">${{ columna.recaudacion|floatformat:"0g" }}</td>
-                        <td data-label="Entradas">{{ columna.vendidas }}</td>
-                        <td data-label="Funciones">{{ columna.funciones }}</td>
+                        <td data-label="Fecha">{% if serie.granularity == "month" %}{{ column.date|date:"F Y" }}{% else %}{{ column.date|date:"d/m/Y" }}{% endif %}</td>
+                        <td data-label="Recaudación">${{ column.revenue|floatformat:"0g" }}</td>
+                        <td data-label="Entradas">{{ column.sold }}</td>
+                        <td data-label="Funciones">{{ column.screenings }}</td>
                       </tr>
                     {% endfor %}
                   </tbody>
@@ -153,30 +153,30 @@
             </div>
           </header>
 
-          {% if resumen.vendidas %}
+          {% if summary.sold %}
             <p class="attendance-figure">
-              <strong>{{ resumen.asistencia|floatformat:"-1" }}%</strong>
+              <strong>{{ summary.attendance|floatformat:"-1" }}%</strong>
               <span>de las entradas vendidas se utilizaron</span>
             </p>
-            <div class="attendance-meter" role="img" aria-label="{{ resumen.utilizadas }} entradas utilizadas de {{ resumen.vendidas }} vendidas">
-              {% if resumen.utilizadas %}<span class="attendance-used" style="width: {{ resumen.asistencia_css }}"></span>{% endif %}
-              {% if resumen.no_utilizadas %}<span class="attendance-unused"></span>{% endif %}
+            <div class="attendance-meter" role="img" aria-label="{{ summary.used }} entradas utilizadas de {{ summary.sold }} vendidas">
+              {% if summary.used %}<span class="attendance-used" style="width: {{ summary.attendance_css }}"></span>{% endif %}
+              {% if summary.unused %}<span class="attendance-unused"></span>{% endif %}
             </div>
             <dl class="viz-legend">
               <div>
                 <dt><span class="legend-swatch is-total" aria-hidden="true"></span>Vendidas</dt>
-                <dd>{{ resumen.vendidas|floatformat:"0g" }}</dd>
+                <dd>{{ summary.sold|floatformat:"0g" }}</dd>
               </div>
               <div>
                 <dt><span class="legend-swatch is-used" aria-hidden="true"></span>Utilizadas</dt>
-                <dd>{{ resumen.utilizadas|floatformat:"0g" }}</dd>
+                <dd>{{ summary.used|floatformat:"0g" }}</dd>
               </div>
               <div>
                 <dt><span class="legend-swatch is-unused" aria-hidden="true"></span>Sin utilizar</dt>
-                <dd>{{ resumen.no_utilizadas|floatformat:"0g" }}</dd>
+                <dd>{{ summary.unused|floatformat:"0g" }}</dd>
               </div>
             </dl>
-            {% if not resumen.utilizadas %}
+            {% if not summary.used %}
               <p class="viz-note">Todavía no hay entradas marcadas como utilizadas en este período.</p>
             {% endif %}
           {% else %}
@@ -184,7 +184,7 @@
               <i data-lucide="ticket-x" aria-hidden="true"></i>
               <div>
                 <h3>Sin entradas vendidas</h3>
-                <p>Las funciones del período no registraron ventas.</p>
+                <p>las funciones del período no registraron ventas.</p>
               </div>
             </div>
           {% endif %}
@@ -200,15 +200,15 @@
           <dl class="presale-figures">
             <div>
               <dt>Recaudado</dt>
-              <dd>${{ dashboard.preventa.recaudacion|floatformat:"0g" }}</dd>
+              <dd>${{ dashboard.presale.revenue|floatformat:"0g" }}</dd>
             </div>
             <div>
               <dt>Entradas</dt>
-              <dd>{{ dashboard.preventa.vendidas|floatformat:"0g" }}</dd>
+              <dd>{{ dashboard.presale.sold|floatformat:"0g" }}</dd>
             </div>
             <div>
               <dt>Funciones</dt>
-              <dd>{{ dashboard.preventa.funciones }}</dd>
+              <dd>{{ dashboard.presale.screenings }}</dd>
             </div>
           </dl>
           <p class="viz-note">No se suma a los indicadores del período hasta que la función se realiza.</p>
@@ -225,20 +225,20 @@
           </div>
         </header>
 
-        {% if dashboard.peliculas %}
+        {% if dashboard.movies %}
           <ol class="bar-list">
-            {% for datos in dashboard.peliculas %}
+            {% for data in dashboard.movies %}
               <li class="bar-item">
                 <div class="bar-item-head">
                   <span class="bar-item-rank">{{ forloop.counter }}</span>
-                  <span class="bar-item-name">{{ datos.pelicula.titulo }}</span>
-                  <strong class="bar-item-value">{{ datos.vendidas|floatformat:"0g" }}</strong>
+                  <span class="bar-item-name">{{ data.movie.title }}</span>
+                  <strong class="bar-item-value">{{ data.sold|floatformat:"0g" }}</strong>
                 </div>
-                <div class="bar-track"><span class="bar-fill" style="width: {{ datos.ancho_css }}"></span></div>
+                <div class="bar-track"><span class="bar-fill" style="width: {{ data.width_css }}"></span></div>
                 <span class="bar-item-meta">
-                  ${{ datos.recaudacion|floatformat:"0g" }}
-                  · {{ datos.funciones }} {{ datos.funciones|pluralize:"función,funciones" }}
-                  · {{ datos.utilizadas }} {{ datos.utilizadas|pluralize:"utilizada,utilizadas" }}
+                  ${{ data.revenue|floatformat:"0g" }}
+                  · {{ data.screenings }} {{ data.screenings|pluralize:"función,funciones" }}
+                  · {{ data.used }} {{ data.used|pluralize:"utilizada,utilizadas" }}
                 </span>
               </li>
             {% endfor %}
@@ -262,18 +262,18 @@
           </div>
         </header>
 
-        {% if dashboard.salas %}
+        {% if dashboard.rooms %}
           <ol class="bar-list">
-            {% for datos in dashboard.salas %}
+            {% for data in dashboard.rooms %}
               <li class="bar-item">
                 <div class="bar-item-head">
-                  <span class="bar-item-name">{{ datos.sala.nombre }}</span>
-                  <strong class="bar-item-value">{{ datos.ocupacion|floatformat:"-1" }}%</strong>
+                  <span class="bar-item-name">{{ data.room.name }}</span>
+                  <strong class="bar-item-value">{{ data.occupancy|floatformat:"-1" }}%</strong>
                 </div>
-                <div class="bar-track is-meter"><span class="bar-fill" style="width: {{ datos.ancho_css }}"></span></div>
+                <div class="bar-track is-meter"><span class="bar-fill" style="width: {{ data.width_css }}"></span></div>
                 <span class="bar-item-meta">
-                  {{ datos.vendidas|floatformat:"0g" }} de {{ datos.capacidad|floatformat:"0g" }} butacas
-                  · {{ datos.funciones }} {{ datos.funciones|pluralize:"función,funciones" }}
+                  {{ data.sold|floatformat:"0g" }} de {{ data.capacity|floatformat:"0g" }} butacas
+                  · {{ data.screenings }} {{ data.screenings|pluralize:"función,funciones" }}
                 </span>
               </li>
             {% endfor %}
@@ -296,7 +296,7 @@
           <h2>Horarios de mayor demanda</h2>
           <p>Entradas vendidas por día y hora de inicio</p>
         </div>
-        {% if dashboard.horarios %}
+        {% if dashboard.time_slots %}
           <div class="heatmap-scale" aria-hidden="true">
             <span>Menos</span>
             <span class="heatmap-scale-ramp"></span>
@@ -305,28 +305,28 @@
         {% endif %}
       </header>
 
-      {% with horarios=dashboard.horarios %}
-        {% if horarios %}
+      {% with time_slots=dashboard.time_slots %}
+        {% if time_slots %}
           <div class="heatmap-layout">
             <div class="heatmap-scroll">
-              <div class="heatmap" style="--hours: {{ horarios.horas|length }}" role="list" aria-label="Entradas vendidas por día y hora">
+              <div class="heatmap" style="--hours: {{ time_slots.hours|length }}" role="list" aria-label="Entradas vendidas por día y hora">
                 <span class="heatmap-corner" aria-hidden="true"></span>
-                {% for hora in horarios.horas %}
-                  <span class="heatmap-hour" aria-hidden="true">{{ hora }} h</span>
+                {% for hour in time_slots.hours %}
+                  <span class="heatmap-hour" aria-hidden="true">{{ hour }} h</span>
                 {% endfor %}
-                {% for dia in horarios.dias %}
-                  <span class="heatmap-day" aria-hidden="true">{{ dia.dia_corto }}</span>
-                  {% for franja in dia.franjas %}
-                    {% if franja.funciones %}
+                {% for day in time_slots.days %}
+                  <span class="heatmap-day" aria-hidden="true">{{ day.short_day }}</span>
+                  {% for slot in day.slots %}
+                    {% if slot.screenings %}
                       <span
                         class="heatmap-cell"
                         role="listitem"
                         tabindex="0"
-                        style="--level: {{ franja.intensidad_css }}"
-                        data-tip-title="{{ franja.dia }} · {{ franja.hora }} h"
-                        data-tip-value="{{ franja.vendidas }} {{ franja.vendidas|pluralize:'entrada,entradas' }}"
-                        data-tip-meta="{{ franja.funciones }} {{ franja.funciones|pluralize:'función,funciones' }} · {{ franja.ocupacion|floatformat:'-1' }}% de ocupación"
-                        aria-label="{{ franja.dia }} {{ franja.hora }} h: {{ franja.vendidas }} entradas, {{ franja.funciones }} funciones"
+                        style="--level: {{ slot.intensity_css }}"
+                        data-tip-title="{{ slot.day }} · {{ slot.hour }} h"
+                        data-tip-value="{{ slot.sold }} {{ slot.sold|pluralize:'entrada,entradas' }}"
+                        data-tip-meta="{{ slot.screenings }} {{ slot.screenings|pluralize:'función,funciones' }} · {{ slot.occupancy|floatformat:'-1' }}% de ocupación"
+                        aria-label="{{ slot.day }} {{ slot.hour }} h: {{ slot.sold }} entradas, {{ slot.screenings }} funciones"
                       ></span>
                     {% else %}
                       <span class="heatmap-cell is-empty" aria-hidden="true"></span>
@@ -338,14 +338,14 @@
 
             <div class="peak-panel">
               <h3>Franjas más demandadas</h3>
-              {% if horarios.top %}
+              {% if time_slots.top %}
                 <ol class="peak-list">
-                  {% for franja in horarios.top %}
+                  {% for slot in time_slots.top %}
                     <li>
                       <span class="peak-rank">{{ forloop.counter }}</span>
                       <div>
-                        <strong>{{ franja.dia }} · {{ franja.hora }} h</strong>
-                        <span>{{ franja.vendidas|floatformat:"0g" }} entradas · {{ franja.ocupacion|floatformat:"-1" }}% de ocupación</span>
+                        <strong>{{ slot.day }} · {{ slot.hour }} h</strong>
+                        <span>{{ slot.sold|floatformat:"0g" }} entradas · {{ slot.occupancy|floatformat:"-1" }}% de ocupación</span>
                       </div>
                     </li>
                   {% endfor %}
@@ -370,13 +370,13 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {% for franja in horarios.detalle %}
+                  {% for slot in time_slots.detail %}
                     <tr>
-                      <td data-label="Día">{{ franja.dia }}</td>
-                      <td data-label="Hora">{{ franja.hora }} h</td>
-                      <td data-label="Entradas">{{ franja.vendidas }}</td>
-                      <td data-label="Funciones">{{ franja.funciones }}</td>
-                      <td data-label="Ocupación">{{ franja.ocupacion|floatformat:"-1" }}%</td>
+                      <td data-label="Día">{{ slot.day }}</td>
+                      <td data-label="Hora">{{ slot.hour }} h</td>
+                      <td data-label="Entradas">{{ slot.sold }}</td>
+                      <td data-label="Funciones">{{ slot.screenings }}</td>
+                      <td data-label="Ocupación">{{ slot.occupancy|floatformat:"-1" }}%</td>
                     </tr>
                   {% endfor %}
                 </tbody>

@@ -1,173 +1,173 @@
-from datetime import timedelta
+﻿from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
-from domain.movies.models import Pelicula
-from domain.rooms.models import Sala
+from domain.movies.models import Movie
+from domain.rooms.models import Room
 
 
-class Funcion(models.Model):
-    class Estado(models.TextChoices):
-        BORRADOR = "borrador", "Borrador"
-        PROGRAMADA = "programada", "Programada"
-        PUBLICADA = "publicada", "Publicada"
-        CANCELADA = "cancelada", "Cancelada"
-        FINALIZADA = "finalizada", "Finalizada"
+class Screening(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "borrador", "Borrador"
+        SCHEDULED = "programada", "Programada"
+        PUBLISHED = "publicada", "Publicada"
+        CANCELED = "cancelada", "Cancelada"
+        FINISHED = "finalizada", "Finalizada"
 
-    TRANSICIONES = {
-        Estado.BORRADOR: (Estado.PROGRAMADA,),
-        Estado.PROGRAMADA: (Estado.BORRADOR, Estado.PUBLICADA, Estado.CANCELADA),
-        Estado.PUBLICADA: (Estado.PROGRAMADA, Estado.CANCELADA),
-        Estado.CANCELADA: (),
-        Estado.FINALIZADA: (),
+    TRANSITIONS = {
+        Status.DRAFT: (Status.SCHEDULED, Status.PUBLISHED),
+        Status.SCHEDULED: (Status.DRAFT, Status.PUBLISHED, Status.CANCELED),
+        Status.PUBLISHED: (Status.SCHEDULED, Status.CANCELED),
+        Status.CANCELED: (),
+        Status.FINISHED: (),
     }
 
-    pelicula = models.ForeignKey(
-        Pelicula,
+    movie = models.ForeignKey(
+        Movie,
         on_delete=models.CASCADE,
-        related_name="funciones",
+        related_name="screenings",
         verbose_name="Pelicula",
+        db_column="pelicula_id",
     )
-    sala = models.ForeignKey(Sala, on_delete=models.CASCADE, related_name="funciones")
-    fecha_horario = models.DateTimeField()
-    estado = models.CharField(
-        max_length=20, choices=Estado.choices, default=Estado.BORRADOR
-    )
-    precio_entrada = models.DecimalField(max_digits=8, decimal_places=2)
-    precios_por_tipo = models.JSONField(default=dict, blank=True)
-    sala_configuracion_snapshot = models.JSONField(default=list, blank=True)
-    capacidad_snapshot = models.PositiveIntegerField(default=0)
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="screenings", db_column="sala_id")
+    starts_at = models.DateTimeField(db_column="fecha_horario")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT, db_column="estado")
+    ticket_price = models.DecimalField(max_digits=8, decimal_places=2, db_column="precio_entrada")
+    prices_by_type = models.JSONField(default=dict, blank=True, db_column="precios_por_tipo")
+    room_layout_snapshot = models.JSONField(default=list, blank=True, db_column="sala_configuracion_snapshot")
+    capacity_snapshot = models.PositiveIntegerField(default=0, db_column="capacidad_snapshot")
 
     class Meta:
-        verbose_name = "Funcion"
-        verbose_name_plural = "Funciones"
-        ordering = ["fecha_horario"]
+        verbose_name = "función"
+        verbose_name_plural = "funciones"
+        db_table = "screenings_funcion"
+        ordering = ["starts_at"]
 
     def __str__(self):
-        return f"{self.pelicula.titulo} - {self.sala.nombre} - {self.fecha_horario:%d/%m/%Y %H:%M}"
+        return f"{self.movie.title} - {self.room.name} - {self.starts_at:%d/%m/%Y %H:%M}"
 
     @property
-    def fecha_fin(self):
-        return self.fecha_horario + timedelta(minutes=self.pelicula.duracion_minutos)
+    def ends_at(self):
+        return self.starts_at + timedelta(minutes=self.movie.duration_minutes)
 
     @property
-    def capacidad_disponible(self):
-        return self.capacidad_snapshot or self.sala.capacidad
+    def available_capacity(self):
+        return self.capacity_snapshot or self.room.capacity
 
     @property
-    def precio_desde(self):
-        prices = [Decimal(str(price)) for price in (self.precios_por_tipo or {}).values()]
+    def price_from(self):
+        prices = [Decimal(str(price)) for price in (self.prices_by_type or {}).values()]
         if prices:
             return min(prices)
-        return self.precio_entrada
+        return self.ticket_price
 
-    def precio_para_tipo(self, type_id):
-        price = (self.precios_por_tipo or {}).get(str(type_id))
+    def price_for_type(self, type_id):
+        price = (self.prices_by_type or {}).get(str(type_id))
         if price is not None:
             return Decimal(str(price))
-        return self.precio_entrada
+        return self.ticket_price
 
-    def capturar_configuracion_sala(self):
-        seats = self.sala.seats.select_related("tipo").order_by("fila", "columna")
+    def capture_room_configuration(self):
+        seats = self.room.seats.select_related("seat_type").order_by("row", "column")
         price_config = {}
         seat_snapshot = []
         for seat in seats:
-            seat_price = str(seat.tipo.precio_base)
-            price_config[str(seat.tipo_id)] = seat_price
+            seat_price = str(seat.seat_type.base_price)
+            price_config[str(seat.seat_type_id)] = seat_price
             seat_snapshot.append(
                 {
-                    "row": seat.fila,
-                    "column": seat.columna,
-                    "type": seat.tipo.nombre,
-                    "type_id": seat.tipo_id,
+                    "row": seat.row,
+                    "column": seat.column,
+                    "type": seat.seat_type.name,
+                    "type_id": seat.seat_type_id,
                     "price": str(seat_price),
-                    "color": seat.tipo.color,
+                    "color": seat.seat_type.color,
                 }
             )
-        layout = self.sala.layout_configuracion or {}
+        layout = self.room.layout_configuration or {}
         rows = layout.get("rows") or max((seat["row"] for seat in seat_snapshot), default=-1) + 1
         columns = layout.get("columns") or max((seat["column"] for seat in seat_snapshot), default=-1) + 1
-        self.sala_configuracion_snapshot = {
+        self.room_layout_snapshot = {
             "rows": rows,
             "columns": columns,
             "seats": seat_snapshot,
         }
-        self.capacidad_snapshot = len(seat_snapshot) if seat_snapshot else self.sala.capacidad
+        self.capacity_snapshot = len(seat_snapshot) if seat_snapshot else self.room.capacity
         if price_config:
-            self.precios_por_tipo = {
+            self.prices_by_type = {
                 str(type_id): str(price)
                 for type_id, price in price_config.items()
             }
-            self.precio_entrada = min(
-                Decimal(str(price)) for price in self.precios_por_tipo.values()
+            self.ticket_price = min(
+                Decimal(str(price)) for price in self.prices_by_type.values()
             )
 
     def save(self, *args, **kwargs):
-        if self.sala_id and not self.capacidad_snapshot:
-            self.capturar_configuracion_sala()
+        if self.room_id and not self.capacity_snapshot:
+            self.capture_room_configuration()
         super().save(*args, **kwargs)
 
     @property
-    def tiene_ventas(self):
-        vendidas = getattr(self, "entradas_vendidas", None)
-        if vendidas is not None:
-            return vendidas > 0
-        return self.compras_entradas.exists()
+    def has_sales(self):
+        sold = getattr(self, "tickets_sold", None)
+        if sold is not None:
+            return sold > 0
+        return self.ticket_purchases.exists()
 
     @property
-    def es_editable(self):
-        if self.estado in (self.Estado.BORRADOR, self.Estado.PROGRAMADA):
+    def is_editable(self):
+        if self.status in (self.Status.DRAFT, self.Status.SCHEDULED):
             return True
-        return self.estado == self.Estado.PUBLICADA and not self.tiene_ventas
+        return self.status == self.Status.PUBLISHED and not self.has_sales
 
     @property
-    def es_eliminable(self):
-        return self.estado in (self.Estado.BORRADOR, self.Estado.PROGRAMADA)
+    def is_deletable(self):
+        return self.status in (self.Status.DRAFT, self.Status.SCHEDULED)
 
-    def puede_pasar_a(self, nuevo_estado):
-        if nuevo_estado not in self.TRANSICIONES[self.estado]:
+    def can_transition_to(self, new_status):
+        if new_status not in self.TRANSITIONS[self.status]:
             return False
         if (
-            self.estado == self.Estado.PUBLICADA
-            and nuevo_estado == self.Estado.PROGRAMADA
+            self.status == self.Status.PUBLISHED
+            and new_status == self.Status.SCHEDULED
         ):
-            return not self.tiene_ventas
+            return not self.has_sales
         return True
 
     @property
-    def transiciones_disponibles(self):
+    def available_transitions(self):
         return [
-            estado
-            for estado in self.TRANSICIONES[self.estado]
-            if self.puede_pasar_a(estado)
+            status
+            for status in self.TRANSITIONS[self.status]
+            if self.can_transition_to(status)
         ]
 
-    def cambiar_estado(self, nuevo_estado):
-        if not self.puede_pasar_a(nuevo_estado):
+    def change_status(self, new_status):
+        if not self.can_transition_to(new_status):
             raise ValidationError(
-                f"No se puede pasar una función {self.get_estado_display().lower()} "
-                f"a {self.Estado(nuevo_estado).label.lower()}."
+                f"No se puede pasar una función {self.get_status_display().lower()} "
+                f"a {self.Status(new_status).label.lower()}."
             )
         if (
-            nuevo_estado in (self.Estado.PROGRAMADA, self.Estado.PUBLICADA)
-            and self.fecha_horario <= timezone.now()
+            new_status in (self.Status.SCHEDULED, self.Status.PUBLISHED)
+            and self.starts_at <= timezone.now()
         ):
             raise ValidationError(
                 "No se puede programar ni publicar una función con fecha pasada."
             )
-        self.estado = nuevo_estado
-        update_fields = ["estado"]
-        if nuevo_estado == self.Estado.PUBLICADA:
-            self.capturar_configuracion_sala()
+        self.status = new_status
+        update_fields = ["status"]
+        if new_status == self.Status.PUBLISHED:
+            self.capture_room_configuration()
             update_fields.extend(
                 [
-                    "sala_configuracion_snapshot",
-                    "capacidad_snapshot",
-                    "precios_por_tipo",
-                    "precio_entrada",
+                    "room_layout_snapshot",
+                    "capacity_snapshot",
+                    "prices_by_type",
+                    "ticket_price",
                 ]
             )
         self.save(update_fields=update_fields)
@@ -176,56 +176,56 @@ class Funcion(models.Model):
         super().clean()
         errors = {}
 
-        if self.precios_por_tipo:
-            for price in self.precios_por_tipo.values():
+        if self.prices_by_type:
+            for price in self.prices_by_type.values():
                 try:
                     normalized_price = Decimal(str(price))
                 except (InvalidOperation, TypeError, ValueError):
-                    errors["precios_por_tipo"] = "Todos los precios por tipo de asiento deben ser numericos."
+                    errors["prices_by_type"] = "Todos los precios por tipo de asiento deben ser numericos."
                     break
                 if normalized_price <= 0:
-                    errors["precios_por_tipo"] = "Todos los precios por tipo de asiento deben ser mayores a cero."
+                    errors["prices_by_type"] = "Todos los precios por tipo de asiento deben ser mayores a cero."
                     break
-        elif self.precio_entrada is not None and self.precio_entrada <= 0:
-            errors["precio_entrada"] = "El precio debe ser mayor a cero."
+        elif self.ticket_price is not None and self.ticket_price <= 0:
+            errors["ticket_price"] = "El precio debe ser mayor a cero."
 
-        if self.fecha_horario and self.fecha_horario <= timezone.now():
-            errors["fecha_horario"] = "La fecha y horario deben ser futuros."
+        if self.starts_at and self.starts_at <= timezone.now():
+            errors["starts_at"] = "La fecha y horario deben ser futuros."
 
         if errors:
             raise ValidationError(errors)
 
-        if not self.pelicula_id or not self.sala_id or not self.fecha_horario:
+        if not self.movie_id or not self.room_id or not self.starts_at:
             return
 
-        inicio = self.fecha_horario
-        fin = self.fecha_fin
-        funciones_misma_sala = (
-            Funcion.objects.filter(sala=self.sala)
-            .exclude(estado=self.Estado.CANCELADA)
-            .select_related("pelicula")
+        start = self.starts_at
+        end = self.ends_at
+        same_room_screenings = (
+            Screening.objects.filter(room=self.room)
+            .exclude(status=self.Status.CANCELED)
+            .select_related("movie")
             .exclude(pk=self.pk)
         )
 
-        for funcion in funciones_misma_sala:
-            if funcion.fecha_horario < fin and funcion.fecha_fin > inicio:
+        for screening in same_room_screenings:
+            if screening.starts_at < end and screening.ends_at > start:
                 raise ValidationError(
-                    "La sala ya tiene una funcion programada en ese horario."
+                    "La sala ya tiene una función programada en ese horario."
                 )
 
     @classmethod
-    def finalizar_vencidas(cls):
-        ahora = timezone.now()
-        candidatas = cls.objects.filter(
-            estado__in=(cls.Estado.PROGRAMADA, cls.Estado.PUBLICADA),
-            fecha_horario__lte=ahora,
-        ).select_related("pelicula")
-        vencidas = [funcion.pk for funcion in candidatas if funcion.fecha_fin <= ahora]
-        if vencidas:
-            cls.objects.filter(pk__in=vencidas).update(estado=cls.Estado.FINALIZADA)
+    def finalize_expired(cls):
+        now = timezone.now()
+        candidates = cls.objects.filter(
+            status__in=(cls.Status.SCHEDULED, cls.Status.PUBLISHED),
+            starts_at__lte=now,
+        ).select_related("movie")
+        expired = [screening.pk for screening in candidates if screening.ends_at <= now]
+        if expired:
+            cls.objects.filter(pk__in=expired).update(status=cls.Status.FINISHED)
 
     @classmethod
-    def funciones_publicadas(cls):
-        return cls.objects.filter(estado=cls.Estado.PUBLICADA).select_related(
-            "pelicula", "sala"
+    def published(cls):
+        return cls.objects.filter(status=cls.Status.PUBLISHED).select_related(
+            "movie", "room"
         )

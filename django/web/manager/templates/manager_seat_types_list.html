@@ -1,4 +1,4 @@
-{% extends "manager_base.html" %}
+﻿{% extends "manager_base.html" %}
 
 {% block content %}
   <section class="page-heading page-heading-row">
@@ -29,15 +29,15 @@
       <tbody>
         {% for seat_type in object_list %}
           <tr>
-            <td data-label="Nombre"><strong class="cell-title">{{ seat_type.nombre }}</strong></td>
-            <td data-label="Precio">${{ seat_type.precio_base|floatformat:2 }}</td>
+            <td data-label="Nombre"><strong class="cell-title">{{ seat_type.name }}</strong></td>
+            <td data-label="Precio">${{ seat_type.base_price|floatformat:2 }}</td>
             <td data-label="Color">
               <span class="seat-type-color">
                 <span style="background: {{ seat_type.color }};"></span>
                 {{ seat_type.color }}
               </span>
             </td>
-            <td data-label="Butacas">{{ seat_type.cantidad_butacas }}</td>
+            <td data-label="Butacas">{{ seat_type.seat_count }}</td>
             <td class="table-actions" data-label="Acciones">
               <a href="{% url 'manager:seat_types_update' seat_type.pk %}">
                 <i data-lucide="pencil" aria-hidden="true"></i>

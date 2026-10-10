@@ -28,25 +28,25 @@
         </tr>
       </thead>
       <tbody>
-        {% for pelicula in object_list %}
+        {% for movie in object_list %}
           <tr>
-            <td data-label="Título"><strong class="cell-title">{{ pelicula.titulo }}</strong></td>
+            <td data-label="Título"><strong class="cell-title">{{ movie.title }}</strong></td>
             <td data-label="Imagen">
-              {% if pelicula.imagen %}
-                <img class="table-thumb" src="{{ pelicula.imagen.url }}" alt="{{ pelicula.titulo }}">
+              {% if movie.image %}
+                <img class="table-thumb" src="{{ movie.image.url }}" alt="{{ movie.title }}">
               {% else %}
                 <span class="muted-text">Sin imagen</span>
               {% endif %}
             </td>
-            <td data-label="Género">{{ pelicula.get_genero_display }}</td>
-            <td data-label="Clasificación"><span class="status-pill status-neutral">{{ pelicula.get_clasificacion_display }}</span></td>
-            <td data-label="Duración">{{ pelicula.duracion_minutos }} min</td>
+            <td data-label="Género">{{ movie.get_genre_display }}</td>
+            <td data-label="Clasificación"><span class="status-pill status-neutral">{{ movie.get_rating_display }}</span></td>
+            <td data-label="Duración">{{ movie.duration_minutes }} min</td>
             <td class="table-actions" data-label="Acciones">
-              <a href="{% url 'manager:peliculas_update' pelicula.pk %}">
+              <a href="{% url 'manager:peliculas_update' movie.pk %}">
                 <i data-lucide="pencil" aria-hidden="true"></i>
                 <span>Editar</span>
               </a>
-              <a href="{% url 'manager:peliculas_delete' pelicula.pk %}" class="danger-link">
+              <a href="{% url 'manager:peliculas_delete' movie.pk %}" class="danger-link">
                 <i data-lucide="trash-2" aria-hidden="true"></i>
                 <span>Eliminar</span>
               </a>

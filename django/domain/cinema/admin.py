@@ -1,20 +1,20 @@
 from django.contrib import admin
 
-from .models import ConfiguracionCine
+from .models import CinemaSettings
 
 
-@admin.register(ConfiguracionCine)
-class ConfiguracionCineAdmin(admin.ModelAdmin):
+@admin.register(CinemaSettings)
+class CinemaSettingsAdmin(admin.ModelAdmin):
     list_display = (
-        "nombre",
+        "name",
         "slogan",
-        "reserva_asientos_minutos",
-        "recarga_asientos_segundos",
-        "actualizado_en",
+        "seat_reservation_minutes",
+        "seat_refresh_seconds",
+        "updated_at",
     )
-    readonly_fields = ("actualizado_en",)
+    readonly_fields = ("updated_at",)
 
     def has_add_permission(self, request):
-        if ConfiguracionCine.objects.exists():
+        if CinemaSettings.objects.exists():
             return False
         return super().has_add_permission(request)

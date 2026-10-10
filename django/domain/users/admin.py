@@ -3,39 +3,39 @@ from django.contrib.admin.sites import NotRegistered
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from .forms import AdminUsuarioChangeForm, AdminUsuarioCreationForm
-from .models import Acomodador, Cliente, Gerente
+from .forms import AdminUserChangeForm, AdminUserCreationForm
+from .models import Usher, Customer, Manager
 
 User = get_user_model()
 
 
-class ClienteInline(admin.StackedInline):
-    model = Cliente
+class CustomerInline(admin.StackedInline):
+    model = Customer
     extra = 1
     max_num = 1
     can_delete = True
-    readonly_fields = ("id_cliente",)
+    readonly_fields = ("customer_id",)
 
 
-class AcomodadorInline(admin.StackedInline):
-    model = Acomodador
+class UsherInline(admin.StackedInline):
+    model = Usher
     extra = 1
     max_num = 1
     can_delete = True
-    readonly_fields = ("id_acomodador",)
+    readonly_fields = ("usher_id",)
 
 
-class GerenteInline(admin.StackedInline):
-    model = Gerente
+class ManagerInline(admin.StackedInline):
+    model = Manager
     extra = 1
     max_num = 1
     can_delete = True
-    readonly_fields = ("id_gerente",)
+    readonly_fields = ("manager_id",)
 
 
 class UserAdmin(DjangoUserAdmin):
-    form = AdminUsuarioChangeForm
-    add_form = AdminUsuarioCreationForm
+    form = AdminUserChangeForm
+    add_form = AdminUserCreationForm
     add_fieldsets = (
         (
             None,
@@ -45,7 +45,7 @@ class UserAdmin(DjangoUserAdmin):
             },
         ),
     )
-    inlines = (ClienteInline, AcomodadorInline, GerenteInline)
+    inlines = (CustomerInline, UsherInline, ManagerInline)
 
 
 try:
@@ -56,61 +56,61 @@ except NotRegistered:
 admin.site.register(User, UserAdmin)
 
 
-@admin.register(Cliente)
-class ClienteAdmin(admin.ModelAdmin):
-    list_display = ("id_cliente", "usuario", "email", "is_active")
+@admin.register(Customer)
+class CustomerAdmin(admin.ModelAdmin):
+    list_display = ("customer_id", "user", "email", "is_active")
     search_fields = (
-        "usuario__username",
-        "usuario__email",
-        "usuario__first_name",
-        "usuario__last_name",
+        "user__username",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
     )
-    list_select_related = ("usuario",)
+    list_select_related = ("user",)
 
     @admin.display(description="Email")
     def email(self, obj):
-        return obj.usuario.email
+        return obj.user.email
 
     @admin.display(description="Activo", boolean=True)
     def is_active(self, obj):
-        return obj.usuario.is_active
+        return obj.user.is_active
 
 
-@admin.register(Acomodador)
-class AcomodadorAdmin(admin.ModelAdmin):
-    list_display = ("id_acomodador", "usuario", "email", "is_active")
+@admin.register(Usher)
+class UsherAdmin(admin.ModelAdmin):
+    list_display = ("usher_id", "user", "email", "is_active")
     search_fields = (
-        "usuario__username",
-        "usuario__email",
-        "usuario__first_name",
-        "usuario__last_name",
+        "user__username",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
     )
-    list_select_related = ("usuario",)
+    list_select_related = ("user",)
 
     @admin.display(description="Email")
     def email(self, obj):
-        return obj.usuario.email
+        return obj.user.email
 
     @admin.display(description="Activo", boolean=True)
     def is_active(self, obj):
-        return obj.usuario.is_active
+        return obj.user.is_active
 
 
-@admin.register(Gerente)
-class GerenteAdmin(admin.ModelAdmin):
-    list_display = ("id_gerente", "usuario", "email", "is_active")
+@admin.register(Manager)
+class ManagerAdmin(admin.ModelAdmin):
+    list_display = ("manager_id", "user", "email", "is_active")
     search_fields = (
-        "usuario__username",
-        "usuario__email",
-        "usuario__first_name",
-        "usuario__last_name",
+        "user__username",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
     )
-    list_select_related = ("usuario",)
+    list_select_related = ("user",)
 
     @admin.display(description="Email")
     def email(self, obj):
-        return obj.usuario.email
+        return obj.user.email
 
     @admin.display(description="Activo", boolean=True)
     def is_active(self, obj):
-        return obj.usuario.is_active
+        return obj.user.is_active

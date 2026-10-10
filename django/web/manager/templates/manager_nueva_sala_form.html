@@ -26,8 +26,8 @@
         {% else %}
           <label{% if field.field.widget.input_type == "checkbox" %} class="checkbox-field"{% endif %}>
             <span>{{ field.label }}</span>
-            {% if field.name == "imagen" and object.imagen %}
-              <img class="image-preview" src="{{ object.imagen.url }}" alt="{{ object.titulo }}">
+            {% if field.name == "image" and object.image %}
+              <img class="image-preview" src="{{ object.image.url }}" alt="{{ object.title }}">
             {% endif %}
             {{ field }}
             {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
@@ -38,7 +38,7 @@
 
 
       <div class="controles">
-        <label class="dimension-control">
+        <label class="dimension-controle">
           <span>Filas</span>
           <div class="number-stepper">
             <button type="button" class="dimension-step-button" data-dimension-target="rows" data-dimension-step="-1" aria-label="Restar una fila">
@@ -50,7 +50,7 @@
             </button>
           </div>
         </label>
-        <label class="dimension-control">
+        <label class="dimension-controle">
           <span>Asientos por fila</span>
           <div class="number-stepper">
             <button type="button" class="dimension-step-button" data-dimension-target="columns" data-dimension-step="-1" aria-label="Restar un asiento por fila">
@@ -69,12 +69,12 @@
 
       <div class="tool-selector">
         {% for seat_type in seat_types %}
-          <button type="button" id="tool-{{ seat_type.nombre }}-button" class="tool-btn seat" data-type-id="{{ seat_type.pk }}" data-color="{{ seat_type.color }}" data-nombre="{{seat_type.nombre}}" {% if seat_type.icono %}data-icon="{{ seat_type.icono.url }}"{% endif %}>
+          <button type="button" id="tool-{{ seat_type.name }}-button" class="tool-btn seat" data-type-id="{{ seat_type.pk }}" data-color="{{ seat_type.color }}" data-name="{{seat_type.name}}" {% if seat_type.icon %}data-icon="{{ seat_type.icon.url }}"{% endif %}>
             <i data-lucide="armchair" aria-hidden="true"></i>
-            <span>{{ seat_type.nombre }}</span>
+            <span>{{ seat_type.name }}</span>
           </button>
         {% endfor %}
-        <button type="button" id="tool-eraser-button" class="tool-btn erase" data-color="#64748b" data-nombre="eraser">
+        <button type="button" id="tool-eraser-button" class="tool-btn erase" data-color="#64748b" data-name="eraser">
           <i data-lucide="x" aria-hidden="true"></i>
           <span>Borrar / Pasillo</span>
         </button>

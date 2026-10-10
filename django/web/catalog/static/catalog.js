@@ -10,6 +10,10 @@ const cartTotal = document.querySelector("[data-cart-total]");
 const seatMaps = document.querySelectorAll(".client-seat-map");
 let reservationExpiresAt = null;
 let reservationTimer = null;
+let submitAfterReservationFlush = false;
+const pendingSeatOperations = new WeakMap();
+const pendingSeatTimers = new WeakMap();
+const pendingSeatFlushes = new WeakMap();
 
 function getActiveSeatMap() {
   return Array.from(seatMaps).find((seatMap) => !seatMap.classList.contains("is-hidden"));
@@ -48,6 +52,11 @@ function csrfToken() {
 function refreshIntervalMs(seatMap) {
   const seconds = Number(seatMap?.dataset.refreshIntervalSeconds || 5);
   return Math.max(seconds, 1) * 1000;
+}
+
+function reservationBatchDelayMs(seatMap) {
+  const milliseconds = Number(seatMap?.dataset.reservationBatchDelayMs || 1000);
+  return Math.max(milliseconds, 0);
 }
 
 function formatTimeLeft(milliseconds) {
@@ -119,6 +128,21 @@ function markUnavailableSeats(seatMap, labels) {
   });
 }
 
+function applyReservationState(seatMap, payload) {
+  markUnavailableSeats(seatMap, payload.unavailable);
+  const ownReserved = new Set((payload.reserved || []).map((reservation) => reservation.label));
+  seatMap?.querySelectorAll("button.client-seat").forEach((seat) => {
+    if (ownReserved.has(seat.dataset.seatLabel) && !seat.classList.contains("is-unavailable")) {
+      seat.classList.add("is-selected");
+    } else if (seat.classList.contains("is-selected") && !seat.classList.contains("is-pending")) {
+      seat.classList.remove("is-selected");
+    }
+  });
+  setReservationExpiration(payload.reserved);
+  serializeSelectedSeats(seatMap);
+  updateSeatDrivenPurchaseState();
+}
+
 async function syncSeatStatus(seatMap) {
   const statusUrl = seatMap?.dataset.reservationStatusUrl;
   if (!statusUrl) {
@@ -129,21 +153,10 @@ async function syncSeatStatus(seatMap) {
     return;
   }
   const payload = await response.json();
-  markUnavailableSeats(seatMap, payload.unavailable);
-  const ownReserved = new Set((payload.reserved || []).map((reservation) => reservation.label));
-  seatMap?.querySelectorAll("button.client-seat").forEach((seat) => {
-    if (ownReserved.has(seat.dataset.seatLabel) && !seat.classList.contains("is-unavailable")) {
-      seat.classList.add("is-selected");
-    } else if (seat.classList.contains("is-selected")) {
-      seat.classList.remove("is-selected");
-    }
-  });
-  setReservationExpiration(payload.reserved);
-  serializeSelectedSeats(seatMap);
-  updateSeatDrivenPurchaseState();
+  applyReservationState(seatMap, payload);
 }
 
-async function requestSeatReservation(seat, action) {
+async function requestSingleSeatReservation(seat, action) {
   const seatMap = seat.closest(".client-seat-map");
   const reservationUrl = seatMap?.dataset.reservationUrl;
   if (!reservationUrl) {
@@ -163,8 +176,110 @@ async function requestSeatReservation(seat, action) {
     markUnavailableSeats(seatMap, payload.unavailable || [seat.dataset.seatLabel]);
     throw new Error(payload.error || "La butaca ya no está disponible.");
   }
-  await syncSeatStatus(seatMap);
   return payload;
+}
+
+function queuedOperationsFor(seatMap) {
+  let queue = pendingSeatOperations.get(seatMap);
+  if (!queue) {
+    queue = new Map();
+    pendingSeatOperations.set(seatMap, queue);
+  }
+  return queue;
+}
+
+async function sendSeatOperations(seatMap, operations) {
+  const batchUrl = seatMap?.dataset.reservationBatchUrl;
+  if (!batchUrl) {
+    const processed = [];
+    for (const operation of operations) {
+      const seat = seatMap.querySelector(`[data-seat-label="${operation.label}"]`);
+      await requestSingleSeatReservation(seat, operation.action);
+      processed.push(operation);
+    }
+    await syncSeatStatus(seatMap);
+    return {ok: true, processed};
+  }
+
+  const response = await fetch(batchUrl, {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrfToken(),
+    },
+    body: JSON.stringify({operations}),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (payload.unavailable || payload.reserved) {
+    applyReservationState(seatMap, payload);
+  }
+  if (!response.ok || !payload.ok) {
+    const firstError = (payload.errors || [])[0]?.error;
+    throw new Error(firstError || payload.error || "Algunas butacas ya no estan disponibles.");
+  }
+  return payload;
+}
+
+function clearPendingState(seatMap, operations) {
+  operations.forEach((operation) => {
+    const seat = seatMap.querySelector(`[data-seat-label="${operation.label}"]`);
+    seat?.classList.remove("is-pending");
+  });
+}
+
+async function flushSeatReservations(seatMap) {
+  if (!seatMap) {
+    return {ok: true};
+  }
+
+  const activeFlush = pendingSeatFlushes.get(seatMap);
+  if (activeFlush) {
+    return activeFlush;
+  }
+
+  window.clearTimeout(pendingSeatTimers.get(seatMap));
+  pendingSeatTimers.delete(seatMap);
+
+  const queue = queuedOperationsFor(seatMap);
+  if (!queue.size) {
+    return {ok: true};
+  }
+
+  const operations = Array.from(queue.values()).map(({action, label}) => ({action, label}));
+  queue.clear();
+  const flush = sendSeatOperations(seatMap, operations)
+    .finally(() => {
+      clearPendingState(seatMap, operations);
+      pendingSeatFlushes.delete(seatMap);
+      updateSeatDrivenPurchaseState();
+    });
+  pendingSeatFlushes.set(seatMap, flush);
+  return flush;
+}
+
+function showReservationError(error) {
+  if (purchaseSummary) {
+    purchaseSummary.hidden = false;
+    purchaseSummary.textContent = error.message;
+  }
+}
+
+function queueSeatReservation(seat, action) {
+  const seatMap = seat.closest(".client-seat-map");
+  const queue = queuedOperationsFor(seatMap);
+  queue.set(seat.dataset.seatLabel, {
+    action,
+    label: seat.dataset.seatLabel,
+  });
+  seat.classList.add("is-pending");
+  window.clearTimeout(pendingSeatTimers.get(seatMap));
+  pendingSeatTimers.set(
+    seatMap,
+    window.setTimeout(() => {
+      flushSeatReservations(seatMap).catch(showReservationError);
+    }, reservationBatchDelayMs(seatMap)),
+  );
 }
 
 function updateSeatDrivenPurchaseState() {
@@ -272,7 +387,7 @@ if (!document.querySelector('input[name="funcion"]')) {
 }
 
 document.querySelectorAll("button.client-seat").forEach((seat) => {
-  seat.addEventListener("click", async () => {
+  seat.addEventListener("click", () => {
     if (seat.disabled || seat.classList.contains("is-unavailable") || seat.classList.contains("is-pending")) {
       return;
     }
@@ -285,25 +400,15 @@ document.querySelectorAll("button.client-seat").forEach((seat) => {
       return;
     }
 
-    seat.classList.add("is-pending");
-    try {
-      if (seat.classList.contains("is-selected")) {
-        await requestSeatReservation(seat, "release");
-        seat.classList.remove("is-selected");
-      } else {
-        await requestSeatReservation(seat, "reserve");
-        seat.classList.add("is-selected");
-      }
-      serializeSelectedSeats(seatMap);
-      updateSeatDrivenPurchaseState();
-    } catch (error) {
-      if (purchaseSummary) {
-        purchaseSummary.hidden = false;
-        purchaseSummary.textContent = error.message;
-      }
-    } finally {
-      seat.classList.remove("is-pending");
+    if (seat.classList.contains("is-selected")) {
+      seat.classList.remove("is-selected");
+      queueSeatReservation(seat, "release");
+    } else {
+      seat.classList.add("is-selected");
+      queueSeatReservation(seat, "reserve");
     }
+    serializeSelectedSeats(seatMap);
+    updateSeatDrivenPurchaseState();
   });
 });
 
@@ -312,10 +417,30 @@ seatMaps.forEach((seatMap) => {
   window.setInterval(() => syncSeatStatus(seatMap), refreshIntervalMs(seatMap));
 });
 
-purchaseForm?.addEventListener("submit", (event) => {
+purchaseForm?.addEventListener("submit", async (event) => {
+  if (submitAfterReservationFlush) {
+    submitAfterReservationFlush = false;
+    return;
+  }
+
   const activeSeatMap = getActiveSeatMap();
   if (activeSeatMap && selectedSeatsFor(activeSeatMap).length === 0) {
     event.preventDefault();
     updateSeatDrivenPurchaseState();
+    return;
+  }
+
+  const hasPendingOperations = activeSeatMap && queuedOperationsFor(activeSeatMap).size;
+  if (hasPendingOperations) {
+    event.preventDefault();
+    try {
+      await flushSeatReservations(activeSeatMap);
+      if (selectedSeatsFor(activeSeatMap).length > 0) {
+        submitAfterReservationFlush = true;
+        purchaseForm.requestSubmit();
+      }
+    } catch (error) {
+      showReservationError(error);
+    }
   }
 });

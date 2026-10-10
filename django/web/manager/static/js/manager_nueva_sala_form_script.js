@@ -1,7 +1,7 @@
-const inputFilas = document.getElementById("rows");
-const inputColumnas = document.getElementById("columns");
-const tabla  = document.getElementById("room_layout_table");
-const layoutInput = document.getElementById("id_layout_sala");
+const rowInput = document.getElementById("rows");
+const columnInput = document.getElementById("columns");
+const table  = document.getElementById("room_layout_table");
+const layoutInput = document.getElementById("id_room_layout");
 const undoButton = document.getElementById("undo-layout");
 const redoButton = document.getElementById("redo-layout");
 const selectAllButton = document.getElementById("select-all-seats");
@@ -9,12 +9,12 @@ const clearAllButton = document.getElementById("clear-all-seats");
 const exportBackupButton = document.getElementById("export-layout-backup");
 const importBackupButton = document.getElementById("import-layout-backup");
 const importBackupInput = document.getElementById("layout-backup-file");
-const roomNameInput = document.getElementById("id_nombre");
+const roomNameInput = document.getElementById("id_name");
 const dimensionStepperButtons = document.querySelectorAll(".dimension-step-button");
 
 let isMouseClicking = false;
 let toolMode = "seat"; 
-let estado = {};
+let state = {};
 let history = [];
 let historyIndex = -1;
 let isRestoringHistory = false;
@@ -40,23 +40,23 @@ function normalizeDimensionInput(input) {
 }
 
 function getDimensionInput(target) {
-    return target === "rows" ? inputFilas : inputColumnas;
+    return target === "rows" ? rowInput : columnInput;
 }
 
 function getDefaultSeatTypeName() {
-    return seatModeButtons[0]?.dataset.nombre || selectedSeatType?.dataset?.nombre || "Estándar";
+    return seatModeButtons[0]?.dataset.name || selectedSeatType?.dataset?.name || "Estándar";
 }
 
 function resizeLayoutState(nextRows, nextColumns, fillNewSeats = true) {
     const previousRows = currentDimensions.rows;
     const previousColumns = currentDimensions.columns;
     const defaultSeatType = getDefaultSeatTypeName();
-    const nextEstado = {};
+    const nextState = {};
 
-    for (const [key, seat] of Object.entries(estado)) {
+    for (const [key, seat] of Object.entries(state)) {
         const [row, column] = key.split("-").map((value) => parseInt(value, 10));
         if (row < nextRows && column < nextColumns && seat?.checked) {
-            nextEstado[key] = seat;
+            nextState[key] = seat;
         }
     }
 
@@ -66,14 +66,14 @@ function resizeLayoutState(nextRows, nextColumns, fillNewSeats = true) {
                 const isNewRow = row >= previousRows;
                 const isNewColumn = column >= previousColumns;
                 const key = `${row}-${column}`;
-                if ((isNewRow || isNewColumn) && !nextEstado[key]) {
-                    nextEstado[key] = {checked: true, type: defaultSeatType};
+                if ((isNewRow || isNewColumn) && !nextState[key]) {
+                    nextState[key] = {checked: true, type: defaultSeatType};
                 }
             }
         }
     }
 
-    estado = nextEstado;
+    state = nextState;
     currentDimensions = {rows: nextRows, columns: nextColumns};
 }
 
@@ -85,18 +85,18 @@ function fillMissingSeats(rows, columns) {
     for (let row = 0; row < rows; row++) {
         for (let column = 0; column < columns; column++) {
             const key = `${row}-${column}`;
-            if (!estado[key]) {
-                estado[key] = {checked: true, type: defaultSeatType};
+            if (!state[key]) {
+                state[key] = {checked: true, type: defaultSeatType};
             }
         }
     }
 }
 
 function applyDimensionChange(shouldRecordHistory = true) {
-    const rows = normalizeDimensionInput(inputFilas);
-    const columns = normalizeDimensionInput(inputColumnas);
+    const rows = normalizeDimensionInput(rowInput);
+    const columns = normalizeDimensionInput(columnInput);
     resizeLayoutState(rows, columns);
-    dibujarTabla();
+    dibujartable();
     if (shouldRecordHistory) {
         recordHistory();
     }
@@ -130,15 +130,15 @@ function stopDimensionRepeat() {
     }
 }
 
-function cloneEstado() {
-    return JSON.parse(JSON.stringify(estado));
+function cloneState() {
+    return JSON.parse(JSON.stringify(state));
 }
 
 function getSnapshot() {
     return {
-        rows: limitSize(inputFilas.value),
-        columns: limitSize(inputColumnas.value),
-        estado: cloneEstado(),
+        rows: limitSize(rowInput.value),
+        columns: limitSize(columnInput.value),
+        state: cloneState(),
     };
 }
 
@@ -169,12 +169,12 @@ function restoreHistory(nextIndex) {
     }
     isRestoringHistory = true;
     const snapshot = history[nextIndex];
-    inputFilas.value = snapshot.rows;
-    inputColumnas.value = snapshot.columns;
-    estado = JSON.parse(JSON.stringify(snapshot.estado));
+    rowInput.value = snapshot.rows;
+    columnInput.value = snapshot.columns;
+    state = JSON.parse(JSON.stringify(snapshot.state));
     currentDimensions = {rows: snapshot.rows, columns: snapshot.columns};
     historyIndex = nextIndex;
-    dibujarTabla();
+    dibujartable();
     isRestoringHistory = false;
     updateHistoryButtons();
 }
@@ -191,11 +191,11 @@ function getColumnLabel(index) {
 }
 
 function hasSeatAt(row, column) {
-    return Boolean(estado[`${row}-${column}`]?.checked);
+    return Boolean(state[`${row}-${column}`]?.checked);
 }
 
 function getVisibleColumnLabels(columns) {
-    const rows = normalizeDimensionInput(inputFilas);
+    const rows = normalizeDimensionInput(rowInput);
     const labels = {};
     let nextLabelIndex = 0;
     for (let column = 0; column < columns; column++) {
@@ -213,34 +213,34 @@ function getVisibleColumnLabels(columns) {
 }
 
 function setColumnPreview(column, isActive) {
-    tabla.querySelectorAll(`.seat_checkbox[data-column="${column}"]`).forEach((cb) => {
+    table.querySelectorAll(`.seat_checkbox[data-column="${column}"]`).forEach((cb) => {
         cb.closest(".celda-checkbox")?.classList.toggle("is-column-preview", isActive);
     });
-    tabla.querySelector(`.column-label-header[data-column="${column}"]`)?.classList.toggle("is-column-preview", isActive);
+    table.querySelector(`.column-label-header[data-column="${column}"]`)?.classList.toggle("is-column-preview", isActive);
 }
 
 function refreshVisibleColumnLabels() {
-    const rows = normalizeDimensionInput(inputFilas);
-    const columns = normalizeDimensionInput(inputColumnas);
+    const rows = normalizeDimensionInput(rowInput);
+    const columns = normalizeDimensionInput(columnInput);
     const visibleColumnLabels = getVisibleColumnLabels(columns);
 
     for (let column = 0; column < columns; column++) {
         const columnLabel = visibleColumnLabels[column];
-        const columnHeader = tabla.querySelector(`.column-label-header[data-column="${column}"]`);
+        const columnHeader = table.querySelector(`.column-label-header[data-column="${column}"]`);
         if (columnHeader) {
             columnHeader.textContent = columnLabel;
             columnHeader.classList.toggle("is-aisle", !columnLabel);
             columnHeader.title = columnLabel ? `Columna ${columnLabel}` : "Pasillo vertical";
         }
 
-        const columnButton = tabla.querySelector(`.column-select-button[data-column="${column}"]`);
+        const columnButton = table.querySelector(`.column-select-button[data-column="${column}"]`);
         if (columnButton) {
             columnButton.title = columnLabel ? `Aplicar herramienta a toda la columna ${columnLabel}` : "Aplicar herramienta a esta columna pasillo";
             columnButton.setAttribute("aria-label", columnButton.title);
         }
 
         for (let row = 0; row < rows; row++) {
-            const cb = tabla.querySelector(`.seat_checkbox[data-row="${row}"][data-column="${column}"]`);
+            const cb = table.querySelector(`.seat_checkbox[data-row="${row}"][data-column="${column}"]`);
             const label = cb?.closest(".celda-checkbox");
             if (!label) {
                 continue;
@@ -278,12 +278,12 @@ function flushColumnLabelRefresh() {
     refreshVisibleColumnLabels();
 }
 
-function dibujarTabla() {
-    const filas    = normalizeDimensionInput(inputFilas);
-    const columnas = normalizeDimensionInput(inputColumnas);
+function dibujartable() {
+    const filas    = normalizeDimensionInput(rowInput);
+    const columnas = normalizeDimensionInput(columnInput);
     const visibleColumnLabels = getVisibleColumnLabels(columnas);
 
-    tabla.innerHTML = "";
+    table.innerHTML = "";
     const headerRow = document.createElement("tr");
     headerRow.className = "column-header-row";
 
@@ -310,7 +310,7 @@ function dibujarTabla() {
         columnHeader.title = columnLabel ? `Columna ${columnLabel}` : "Pasillo vertical";
         headerRow.appendChild(columnHeader);
     }
-    tabla.appendChild(headerRow);
+    table.appendChild(headerRow);
 
     for (let f = 0; f < filas; f++) {
     const tr = document.createElement("tr");
@@ -352,7 +352,7 @@ function dibujarTabla() {
         cb.type = "checkbox";
         cb.dataset.row = f;
         cb.dataset.column = c;
-        cb.dataset.type = estado[key]?.type || "none";
+        cb.dataset.type = state[key]?.type || "none";
         cb.className = "seat_checkbox"
         cb.checked = hasSeatAt(f, c);
         
@@ -369,7 +369,7 @@ function dibujarTabla() {
         updateVisual(cb, label);
         tr.appendChild(td);
     }
-    tabla.appendChild(tr);
+    table.appendChild(tr);
     }
 
     const columnControlRow = document.createElement("tr");
@@ -400,7 +400,7 @@ function dibujarTabla() {
         columnControlCell.appendChild(columnButton);
         columnControlRow.appendChild(columnControlCell);
     }
-    tabla.appendChild(columnControlRow);
+    table.appendChild(columnControlRow);
 
     if (window.lucide) {
         lucide.createIcons();
@@ -448,8 +448,8 @@ function applyToolToSeat(cb,label,key) {
         const previousType = cb.dataset.type;
         const wasChecked = cb.checked;
         cb.checked = true;
-        cb.dataset.type = selectedSeatType.dataset.nombre;
-        estado[key] = {"checked":cb.checked,"type":selectedSeatType.dataset.nombre};
+        cb.dataset.type = selectedSeatType.dataset.name;
+        state[key] = {"checked":cb.checked,"type":selectedSeatType.dataset.name};
         updateVisual(cb, label);
         hasPendingHistoryEntry = hasPendingHistoryEntry || !wasChecked || previousType !== cb.dataset.type;
         if (!wasChecked || previousType !== cb.dataset.type) {
@@ -459,7 +459,7 @@ function applyToolToSeat(cb,label,key) {
         const wasChecked = cb.checked;
         cb.checked = false;
         cb.dataset.type = "none";
-        delete estado[key];
+        delete state[key];
         updateVisual(cb, label);
         hasPendingHistoryEntry = hasPendingHistoryEntry || wasChecked;
         requestColumnLabelRefresh();
@@ -469,10 +469,10 @@ function applyToolToSeat(cb,label,key) {
 function applyToolToRow(row, shouldRecordHistory = true) {
     hasPendingHistoryEntry = false;
     suppressColumnLabelRefresh = true;
-    const columns = normalizeDimensionInput(inputColumnas);
+    const columns = normalizeDimensionInput(columnInput);
     for (let column = 0; column < columns; column++) {
         const key = `${row}-${column}`;
-        const cb = tabla.querySelector(`.seat_checkbox[data-row="${row}"][data-column="${column}"]`);
+        const cb = table.querySelector(`.seat_checkbox[data-row="${row}"][data-column="${column}"]`);
         if (!cb) {
             continue;
         }
@@ -489,10 +489,10 @@ function applyToolToRow(row, shouldRecordHistory = true) {
 function applyToolToColumn(column, shouldRecordHistory = true) {
     hasPendingHistoryEntry = false;
     suppressColumnLabelRefresh = true;
-    const rows = normalizeDimensionInput(inputFilas);
+    const rows = normalizeDimensionInput(rowInput);
     for (let row = 0; row < rows; row++) {
         const key = `${row}-${column}`;
-        const cb = tabla.querySelector(`.seat_checkbox[data-row="${row}"][data-column="${column}"]`);
+        const cb = table.querySelector(`.seat_checkbox[data-row="${row}"][data-column="${column}"]`);
         if (!cb) {
             continue;
         }
@@ -507,17 +507,17 @@ function applyToolToColumn(column, shouldRecordHistory = true) {
 }
 
 function getToolButtonByType(type) {
-    return Array.from(seatModeButtons).find((toolButton) => toolButton.dataset.nombre === type);
+    return Array.from(seatModeButtons).find((toolButton) => toolButton.dataset.name === type);
 }
 
 function resolveSeatTypeName(seat) {
     const rawType = seat.type;
     const matchingButton = Array.from(seatModeButtons).find((button) => (
-        button.dataset.nombre === rawType ||
+        button.dataset.name === rawType ||
         button.dataset.typeId === String(rawType) ||
         button.dataset.typeId === String(seat.type_id)
     ));
-    return matchingButton?.dataset.nombre || null;
+    return matchingButton?.dataset.name || null;
 }
 
 
@@ -624,17 +624,17 @@ document.addEventListener("visibilitychange", () => {
 const form = document.querySelector(".manager-form");
 
 form.addEventListener("submit",(event) => {
-    normalizeDimensionInput(inputFilas);
-    normalizeDimensionInput(inputColumnas);
+    normalizeDimensionInput(rowInput);
+    normalizeDimensionInput(columnInput);
 
     layoutInput.value = JSON.stringify({
-        rows: normalizeDimensionInput(inputFilas),
-        columns: normalizeDimensionInput(inputColumnas),
+        rows: normalizeDimensionInput(rowInput),
+        columns: normalizeDimensionInput(columnInput),
         seats: getSeatsFromEstado(),
     });
 });
 
-[inputFilas, inputColumnas].forEach((input) => {
+[rowInput, columnInput].forEach((input) => {
     input.addEventListener("input", () => {
         applyDimensionChange();
     });
@@ -652,7 +652,7 @@ function fillAllSeats() {
         changeSelectedSeatType(seatModeButtons[0]);
     }
 
-    const rows = normalizeDimensionInput(inputFilas);
+    const rows = normalizeDimensionInput(rowInput);
     hasPendingHistoryEntry = false;
     for (let row = 0; row < rows; row++) {
         applyToolToRow(row, false);
@@ -664,13 +664,13 @@ function fillAllSeats() {
 }
 
 function clearAllSeats() {
-    estado = {};
-    dibujarTabla();
+    state = {};
+    dibujartable();
     recordHistory();
 }
 
 function getSeatsFromEstado() {
-    return Object.entries(estado)
+    return Object.entries(state)
         .filter(([_key, seat]) => seat?.checked)
         .map(([key, seat]) => {
             const [row, column] = key.split("-").map((value) => parseInt(value, 10));
@@ -713,8 +713,8 @@ function getBackupFilename() {
 function exportBackup() {
     const backup = {
         version: 1,
-        rows: normalizeDimensionInput(inputFilas),
-        columns: normalizeDimensionInput(inputColumnas),
+        rows: normalizeDimensionInput(rowInput),
+        columns: normalizeDimensionInput(columnInput),
         seats: getSeatsFromEstado(),
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], {type: "application/json"});
@@ -733,7 +733,7 @@ function applyBackupData(backupData) {
         return;
     }
 
-    const nextEstado = {};
+    const nextState = {};
     let maxRow = 0;
     let maxColumn = 0;
     for (const seat of seats) {
@@ -743,18 +743,18 @@ function applyBackupData(backupData) {
         if (Number.isNaN(row) || Number.isNaN(column) || row < 0 || column < 0 || !type) {
             continue;
         }
-        nextEstado[`${row}-${column}`] = {checked: true, type};
+        nextState[`${row}-${column}`] = {checked: true, type};
         maxRow = Math.max(maxRow, row + 1);
         maxColumn = Math.max(maxColumn, column + 1);
     }
 
-    const rows = limitSize(backupData.rows || maxRow || inputFilas.value);
-    const columns = limitSize(backupData.columns || maxColumn || inputColumnas.value);
-    inputFilas.value = rows;
-    inputColumnas.value = columns;
-    estado = nextEstado;
+    const rows = limitSize(backupData.rows || maxRow || rowInput.value);
+    const columns = limitSize(backupData.columns || maxColumn || columnInput.value);
+    rowInput.value = rows;
+    columnInput.value = columns;
+    state = nextState;
     currentDimensions = {rows, columns};
-    dibujarTabla();
+    dibujartable();
     recordHistory();
 }
 
@@ -778,7 +778,7 @@ function loadLayoutFromHiddenInput() {
         applyBackupData(JSON.parse(layoutInput.value));
         return true;
     } catch (_error) {
-        estado = {};
+        state = {};
         return false;
     }
 }
@@ -818,10 +818,10 @@ importBackupInput.addEventListener("change", () => {
     importBackupInput.value = "";
 });
 if (!loadLayoutFromHiddenInput()) {
-    const rows = normalizeDimensionInput(inputFilas);
-    const columns = normalizeDimensionInput(inputColumnas);
+    const rows = normalizeDimensionInput(rowInput);
+    const columns = normalizeDimensionInput(columnInput);
     fillMissingSeats(rows, columns);
     currentDimensions = {rows, columns};
 }
-dibujarTabla();
+dibujartable();
 recordHistory();
