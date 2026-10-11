@@ -9,6 +9,7 @@
 @keyframes validation-button-spinner { to { transform: rotate(360deg); } }
 .reservation-code { display: flex; gap: 8px; }
 .reservation-code input { width: 46px; height: 54px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--input-bg); color: var(--ink); font: 800 25px/1 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; text-transform: uppercase; }
+:root:not([data-theme="light"]) .reservation-code input { border-color: #59677a; }
 .reservation-code input:focus { outline: 0; border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 24%, transparent); }
 .validation-layout .errorlist { color: var(--danger); }
 .validation-result { grid-column: 1 / -1; display: grid; gap: 10px; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--success); scroll-margin-top: 112px; }
