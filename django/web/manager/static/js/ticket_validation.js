@@ -23,6 +23,7 @@
     if (previewSubmitting) return;
 
     previewSubmitting = true;
+    if (start) start.disabled = true;
     if (!previewButton) return;
 
     previewButton.disabled = true;
@@ -248,6 +249,7 @@
   }
 
   start.addEventListener('click', () => {
+    if (previewSubmitting) return;
     if (stream) {
       stopCamera();
       setStatus('Cámara cerrada.');
