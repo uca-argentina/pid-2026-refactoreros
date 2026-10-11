@@ -314,11 +314,18 @@ function queueSeatReservation(seat, action, flushImmediately = false) {
   );
 }
 
+function hasPendingSeatOperations(seatMap) {
+  return Boolean(seatMap && (
+    queuedOperationsFor(seatMap).size || pendingSeatFlushes.get(seatMap)
+  ));
+}
+
 function updateSeatDrivenPurchaseState() {
   const activeSeatMap = getActiveSeatMap();
   const selectedSeats = selectedSeatsFor(activeSeatMap);
   const requiresSeatSelection = Boolean(activeSeatMap);
   const selectedCount = selectedSeats.length;
+  const seatStateUpdating = hasPendingSeatOperations(activeSeatMap);
   const total = selectedSeats.reduce(
     (sum, seat) => sum + Number(seat.dataset.seatPrice || 0),
     0,
@@ -359,9 +366,13 @@ function updateSeatDrivenPurchaseState() {
   }
 
   if (purchaseButton && requiresSeatSelection && !purchaseSubmitting && !purchasePreparing) {
-    purchaseButton.disabled = selectedCount === 0;
+    purchaseButton.disabled = selectedCount === 0 || seatStateUpdating;
+    purchaseButton.classList.toggle("is-processing", seatStateUpdating && selectedCount > 0);
+    purchaseButton.setAttribute("aria-busy", String(seatStateUpdating && selectedCount > 0));
     if (selectedCount === 0) {
       purchaseButton.textContent = purchaseButton.dataset.selectSeatLabel;
+    } else if (seatStateUpdating) {
+      purchaseButton.innerHTML = '<span class="purchase-loading-clock" aria-hidden="true"></span>Actualizando butacas…';
     } else {
       purchaseButton.textContent = selectedCount >= 2
         ? purchaseButton.dataset.pluralLabel
@@ -469,9 +480,7 @@ purchaseForm?.addEventListener("submit", async (event) => {
     return;
   }
 
-  const hasPendingOperations = activeSeatMap && (
-    queuedOperationsFor(activeSeatMap).size || pendingSeatFlushes.get(activeSeatMap)
-  );
+  const hasPendingOperations = hasPendingSeatOperations(activeSeatMap);
   if (hasPendingOperations) {
     event.preventDefault();
     purchasePreparing = true;
