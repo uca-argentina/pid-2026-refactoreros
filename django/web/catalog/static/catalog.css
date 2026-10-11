@@ -1216,6 +1216,28 @@ body {
     display: none;
   }
 
+  .client-header > nav > .client-nav-account.has-management {
+    grid-template-columns: auto auto auto auto;
+    justify-content: start;
+  }
+
+  .client-header > nav > .client-nav-account:not(.has-management):not(.is-anonymous) {
+    grid-template-columns: auto auto auto;
+    justify-content: start;
+  }
+
+  .client-user-pill {
+    display: inline-flex;
+    justify-content: center;
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+  }
+
+  .client-user-pill > span {
+    display: none;
+  }
+
   .client-nav-primary {
     position: fixed;
     z-index: 30;
@@ -1382,6 +1404,28 @@ body {
 
   .client-header nav a.client-logout-link span,
   .client-header .client-notifications-label {
+    display: none;
+  }
+
+  .client-header > nav > .client-nav-account.has-management {
+    grid-template-columns: auto auto auto auto;
+    justify-content: start;
+  }
+
+  .client-header > nav > .client-nav-account:not(.has-management):not(.is-anonymous) {
+    grid-template-columns: auto auto auto;
+    justify-content: start;
+  }
+
+  .client-user-pill {
+    display: inline-flex;
+    justify-content: center;
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+  }
+
+  .client-user-pill > span {
     display: none;
   }
 
@@ -1630,9 +1674,9 @@ body {
   }
 
   .client-user-pill {
-    width: 100%;
-    max-width: none;
-    min-width: 0;
+    width: 36px;
+    max-width: 36px;
+    min-width: 36px;
     padding: 0;
     border: 0;
     background: transparent;
