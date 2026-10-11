@@ -15,16 +15,6 @@
   {% include "_client_header.html" %}
   <main class="client-main">
     <article class="ticket-qr-card"{% if available %} data-ticket-status-url="{% url 'ticket_admission_status' purchase.pk %}" data-used-count="{{ used_count }}"{% endif %}>
-      {% if available %}
-        <div class="ticket-qr-image" data-qr-payload="{{ purchase.qr_payload }}" aria-label="QR de esta compra para validar el ingreso"></div>
-      {% endif %}
-      <div class="ticket-qr-summary">
-        <h1>{{ purchase.screening.movie.title }}</h1>
-        <p>{{ purchase.screening.room.name }} · {{ purchase.screening.starts_at|date:"d/m/Y H:i" }}</p>
-      </div>
-      {% if available %}
-        <p class="ticket-code"><span>Código de reserva</span><strong>{{ purchase.validation_code }}</strong></p>
-      {% endif %}
       {% if used_count %}
         <section class="ticket-admission-update is-visible" data-admission-update aria-live="polite">
           <span class="ticket-admission-kicker"><i data-lucide="sparkles" aria-hidden="true"></i>Ingreso registrado</span>
@@ -39,6 +29,16 @@
           <p data-admission-detail></p>
           <p data-admission-remaining></p>
         </section>
+      {% endif %}
+      {% if available %}
+        <div class="ticket-qr-image" data-qr-payload="{{ purchase.qr_payload }}" aria-label="QR de esta compra para validar el ingreso"></div>
+      {% endif %}
+      <div class="ticket-qr-summary">
+        <h1>{{ purchase.screening.movie.title }}</h1>
+        <p>{{ purchase.screening.room.name }} · {{ purchase.screening.starts_at|date:"d/m/Y H:i" }}</p>
+      </div>
+      {% if available %}
+        <p class="ticket-code"><span>Código de reserva</span><strong>{{ purchase.validation_code }}</strong></p>
       {% endif %}
       {% if available %}
         <p class="ticket-sharing-notice"><strong>¿Necesitás compartir tu entrada?</strong> Podés compartir el QR o el código de reserva, pero tené en cuenta que, al hacerlo, otra persona podría usarla antes que vos.</p>

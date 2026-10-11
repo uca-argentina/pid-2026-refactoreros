@@ -123,14 +123,14 @@
 }
 .ticket-code span { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .ticket-code strong { color: #ffaaa3; font-family: monospace; font-size: 28px; letter-spacing: .18em; line-height: 1; }
-.ticket-admission-update { display: grid; gap: 7px; max-width: 420px; margin: 4px auto 22px; padding: 15px 17px; border: 1px solid rgba(255, 150, 143, .42); border-radius: 10px; background: linear-gradient(135deg, rgba(180, 35, 24, .26), rgba(255, 112, 98, .08)); box-shadow: 0 10px 30px rgba(180, 35, 24, .12); text-align: left; }
+.ticket-admission-update { display: grid; gap: 7px; max-width: 420px; margin: 4px auto 22px; padding: 15px 17px; border: 1px solid rgba(74, 222, 128, .45); border-radius: 10px; background: linear-gradient(135deg, rgba(7, 109, 66, .62), rgba(34, 197, 94, .2)); box-shadow: 0 10px 30px rgba(7, 109, 66, .22); text-align: left; }
 .ticket-admission-update[hidden] { display: none; }
 .ticket-admission-update.is-arriving { animation: ticket-admission-arrival .45s ease-out both; }
-.ticket-admission-kicker { display: inline-flex; align-items: center; gap: 6px; color: #ffb1ab; font-size: 11px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.ticket-admission-kicker { display: inline-flex; align-items: center; gap: 6px; color: #bbf7d0; font-size: 11px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
 .ticket-admission-kicker svg { width: 15px; height: 15px; }
 .ticket-admission-update strong { color: #fff; font-size: 18px; }
 .ticket-admission-update p { margin: 0; color: rgba(255, 255, 255, .78); font-size: 14px; line-height: 1.4; }
-.ticket-admission-update [data-admission-remaining] { color: #ffd4d0; font-weight: 700; }
+.ticket-admission-update [data-admission-remaining] { color: #d1fae5; font-weight: 700; }
 @keyframes ticket-admission-arrival { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .ticket-purchase-details {
   margin-top: 28px;
@@ -174,7 +174,7 @@
   .ticket-qr-summary h1 { margin: 0; font-size: clamp(26px, 8vw, 34px); }
   .ticket-qr-summary > p { margin: 8px 0; font-size: 15px; }
   .ticket-code { order: 3; align-self: center; margin-bottom: 14px; }
-  .ticket-admission-update { order: 4; margin: 0 6px 16px; }
+  .ticket-admission-update { order: 0; margin: 0 6px 16px; }
   .ticket-qr-card > p { order: 4; margin: 0 6px; font-size: 14px; }
   .ticket-qr-card > p.ticket-sharing-notice { margin: 16px 6px 0; }
   .ticket-purchase-details { order: 5; }
