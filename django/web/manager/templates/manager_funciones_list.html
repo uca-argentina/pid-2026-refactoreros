@@ -5,23 +5,25 @@
     <div>
       <h1>{% if is_history %}Historial de funciones{% else %}Funciones{% endif %}</h1>
     </div>
-    {% if is_history %}
-      <a class="secondary-inline-link" href="{% url 'manager:funciones_list' %}">
-        <i data-lucide="arrow-left" aria-hidden="true"></i>
-        <span>Volver a funciones</span>
-      </a>
-    {% else %}
-      <a class="secondary-inline-link" href="{% url 'manager:funciones_historial' %}">
-        <i data-lucide="history" aria-hidden="true"></i>
-        <span>Historial de funciones</span>
-      </a>
-    {% endif %}
-    {% if create_url_name %}
-      <a class="primary-link" href="{% url create_url_name %}">
-        <i data-lucide="plus" aria-hidden="true"></i>
-        <span>Nueva función</span>
-      </a>
-    {% endif %}
+    <div class="screenings-heading-actions">
+      {% if is_history %}
+        <a class="secondary-inline-link" href="{% url 'manager:funciones_list' %}">
+          <i data-lucide="arrow-left" aria-hidden="true"></i>
+          <span>Volver a funciones</span>
+        </a>
+      {% else %}
+        <a class="secondary-inline-link" href="{% url 'manager:funciones_historial' %}">
+          <i data-lucide="history" aria-hidden="true"></i>
+          <span>Historial de funciones</span>
+        </a>
+      {% endif %}
+      {% if create_url_name %}
+        <a class="primary-link" href="{% url create_url_name %}">
+          <i data-lucide="plus" aria-hidden="true"></i>
+          <span>Nueva función</span>
+        </a>
+      {% endif %}
+    </div>
   </section>
 
   {% if hidden_priority_functions %}
@@ -41,29 +43,31 @@
               <h3>{{ screening.movie.title }}</h3>
               <p>{{ screening.room.name }} | {{ screening.starts_at|date:"d/m/Y H:i" }} | desde ${{ screening.price_from }}</p>
             </div>
-            {% if screening.status == "borrador" %}
-              <form method="post" action="{% url 'manager:funciones_estado' screening.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="status" value="publicada">
-                <button type="submit" class="publish-action">
-                  <i data-lucide="send" aria-hidden="true"></i>
-                  <span>Publicar</span>
+            <div class="priority-screening-actions">
+              {% if screening.status == "borrador" %}
+                <form method="post" action="{% url 'manager:funciones_estado' screening.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="status" value="publicada">
+                  <button type="submit" class="publish-action">
+                    <i data-lucide="send" aria-hidden="true"></i>
+                    <span>Publicar</span>
+                  </button>
+                </form>
+                <button type="button" class="disabled-action" disabled>
+                  <i data-lucide="calendar-clock" aria-hidden="true"></i>
+                  <span>Programar</span>
                 </button>
-              </form>
-              <button type="button" class="disabled-action" disabled>
-                <i data-lucide="calendar-clock" aria-hidden="true"></i>
-                <span>Programar</span>
-              </button>
-            {% elif screening.status == "programada" %}
-              <form method="post" action="{% url 'manager:funciones_estado' screening.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="status" value="publicada">
-                <button type="submit" class="publish-action">
-                  <i data-lucide="send" aria-hidden="true"></i>
-                  <span>Publicar</span>
-                </button>
-              </form>
-            {% endif %}
+              {% elif screening.status == "programada" %}
+                <form method="post" action="{% url 'manager:funciones_estado' screening.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="status" value="publicada">
+                  <button type="submit" class="publish-action">
+                    <i data-lucide="send" aria-hidden="true"></i>
+                    <span>Publicar</span>
+                  </button>
+                </form>
+              {% endif %}
+            </div>
           </article>
         {% endfor %}
       </div>
