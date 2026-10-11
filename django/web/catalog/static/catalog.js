@@ -146,6 +146,12 @@ function applyReservationState(seatMap, payload) {
   markUnavailableSeats(seatMap, payload.unavailable);
   const ownReserved = new Set((payload.reserved || []).map((reservation) => reservation.label));
   seatMap?.querySelectorAll("button.client-seat").forEach((seat) => {
+    // Keep the optimistic selection while its reserve/release request is in flight.
+    // A polling response can otherwise still contain the previous reservation and
+    // briefly paint a just-released seat as selected again.
+    if (seat.classList.contains("is-pending")) {
+      return;
+    }
     if (ownReserved.has(seat.dataset.seatLabel) && !seat.classList.contains("is-unavailable")) {
       seat.classList.add("is-selected");
     } else if (seat.classList.contains("is-selected") && !seat.classList.contains("is-pending")) {
