@@ -18,7 +18,7 @@
       {% if used_count %}
         <section class="ticket-admission-update is-visible" data-admission-update aria-live="polite">
           <span class="ticket-admission-kicker"><i data-lucide="sparkles" aria-hidden="true"></i>Ingreso registrado</span>
-          <strong data-admission-title>Ya tenés {{ used_count }} butaca{{ used_count|pluralize }} validada{{ used_count|pluralize }}</strong>
+          <strong data-admission-title>{% if used_count == 1 %}¡Que disfrutes la película!{% else %}¡Que disfruten la película!{% endif %}</strong>
           <p data-admission-detail>{{ purchase.screening.room.name }} · {{ used_seat_summary|default:"Sin butacas asignadas" }}</p>
           <p data-admission-remaining>{% if remaining_count == 1 %}Te queda 1 butaca pendiente para entrar. ¡Que lo disfrutes!{% elif remaining_count %}Te quedan {{ remaining_count }} butacas pendientes para entrar. ¡Que lo disfruten!{% else %}Ya ingresaron todas las personas. ¡Que lo disfruten!{% endif %}</p>
         </section>
