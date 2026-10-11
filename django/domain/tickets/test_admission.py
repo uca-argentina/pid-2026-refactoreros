@@ -1,7 +1,5 @@
 from datetime import timedelta
 from decimal import Decimal
-from unittest.mock import patch
-
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import TestCase
@@ -93,8 +91,7 @@ class PurchaseAdmissionTests(AdmissionFixture):
 
     def test_canceling_creates_refund_and_blocks_remaining_entries(self):
         validate_ticket(self.purchase.validation_token, self.operator, quantity=1)
-        with self.captureOnCommitCallbacks(execute=True), patch("domain.tickets.services.send_mail", return_value=1):
-            self.screening.change_status(Screening.Status.CANCELED)
+        self.screening.change_status(Screening.Status.CANCELED)
         self.assertEqual(PurchaseRefund.objects.get(purchase=self.purchase).amount, self.purchase.total)
         with self.assertRaises(ValidationError):
             validate_ticket(self.purchase.validation_token, self.operator)
@@ -125,6 +122,19 @@ class PurchaseAdmissionViewTests(AdmissionFixture):
             "room": "Sala 1",
             "used_seat_summary": "Entrada 1 · Entrada 2",
         })
+
+    def test_customer_sees_and_reads_their_cancellation_notification(self):
+        self.screening.change_status(Screening.Status.CANCELED)
+        refund = PurchaseRefund.objects.get(purchase=self.purchase)
+        self.assertIsNone(refund.read_at)
+        self.client.force_login(self.customer)
+
+        response = self.client.get(reverse("notifications"))
+
+        self.assertContains(response, "Función cancelada")
+        self.assertContains(response, "Devolución simulada registrada")
+        refund.refresh_from_db()
+        self.assertIsNotNone(refund.read_at)
 
     def test_finished_purchase_moves_to_history_without_a_qr(self):
         self.screening.starts_at = timezone.now() - timedelta(hours=3)

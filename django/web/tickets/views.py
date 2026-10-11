@@ -11,7 +11,7 @@ import re
 
 from domain.cinema.models import CinemaSettings
 from domain.screenings.models import Screening
-from domain.tickets.models import TicketPurchase, SeatReservation
+from domain.tickets.models import PurchaseRefund, TicketPurchase, SeatReservation
 from web.catalog.views import build_seat_map, manager_role
 
 from .forms import TicketPurchaseForm
@@ -272,6 +272,24 @@ def my_tickets_view(request):
             "manager_role": manager_role(request.user),
         },
     )
+
+
+@login_required
+@never_cache
+@require_GET
+def notifications_view(request):
+    notifications = list(
+        PurchaseRefund.objects.filter(purchase__user=request.user)
+        .select_related("purchase__screening__movie", "purchase__screening__room")
+        .order_by("-created_at")
+    )
+    unread_ids = [notification.pk for notification in notifications if notification.read_at is None]
+    if unread_ids:
+        PurchaseRefund.objects.filter(pk__in=unread_ids).update(read_at=timezone.now())
+    return render(request, "notifications.html", {
+        "cinema": CinemaSettings.current(),
+        "notifications": notifications,
+    })
 
 
 @login_required

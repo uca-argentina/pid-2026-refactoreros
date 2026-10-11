@@ -156,8 +156,7 @@ def undo_ticket_validation(validation_id, operator):
 
 
 def refund_canceled_screening(screening):
-    """Caller holds the screening lock. One refund and durable notice per purchase."""
-    refund_ids = []
+    """Caller holds the screening lock. One refund and in-app notice per purchase."""
     for purchase in TicketPurchase.objects.filter(screening=screening):
         notice = (
             f"Se canceló la función de {screening.movie.title} del "
@@ -165,12 +164,10 @@ def refund_canceled_screening(screening):
             f"Registramos una devolución simulada de ${purchase.total:.2f} "
             f"por tu compra #{purchase.pk}. No se realizó un movimiento de dinero real."
         )
-        refund, _ = PurchaseRefund.objects.get_or_create(
+        PurchaseRefund.objects.get_or_create(
             purchase=purchase, defaults={"amount": purchase.total, "notice": notice},
         )
-        refund_ids.append(refund.pk)
     SeatReservation.objects.filter(screening=screening).delete()
-    transaction.on_commit(lambda: send_refund_notifications(refund_ids))
 
 
 def send_refund_notifications(refund_ids=None):

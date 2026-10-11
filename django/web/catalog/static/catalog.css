@@ -107,6 +107,33 @@ body {
   color: #ffb4ad;
 }
 
+.client-header nav a.client-notifications-link {
+  position: relative;
+  padding: 0 6px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 999px;
+}
+
+.client-header nav a.client-notifications-link.is-active {
+  color: #fff;
+  border-color: rgba(229, 53, 44, .7);
+  background: rgba(180, 35, 24, .2);
+}
+
+.client-notification-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 1px;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: #fff;
+  background: #c6281d;
+  font-size: 11px;
+  line-height: 1;
+}
+
 .client-header nav a.has-imminent-ticket {
   position: relative;
 }
@@ -1416,6 +1443,17 @@ body {
 
   .client-header nav a.client-logout-link {
     color: rgba(255, 255, 255, .58);
+  }
+
+  .client-header nav a.client-notifications-link {
+    gap: 5px;
+    min-width: 34px;
+    justify-content: center;
+    padding: 0 7px;
+  }
+
+  .client-notifications-label {
+    display: none;
   }
 
   .client-header nav a span {
