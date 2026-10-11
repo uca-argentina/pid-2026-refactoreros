@@ -93,6 +93,15 @@
     admissionForm.querySelectorAll('input[name="ticket_numbers"]').forEach(input => {
       input.addEventListener('change', updateAdmissionButton);
     });
+    const selectAllSeats = admissionForm.querySelector('[data-select-all-seats]');
+    if (selectAllSeats) {
+      selectAllSeats.addEventListener('click', () => {
+        admissionForm.querySelectorAll('input[name="ticket_numbers"]').forEach(input => {
+          input.checked = true;
+        });
+        updateAdmissionButton();
+      });
+    }
     updateAdmissionButton();
   }
 

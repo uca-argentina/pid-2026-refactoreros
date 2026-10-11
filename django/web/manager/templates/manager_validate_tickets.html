@@ -51,8 +51,11 @@
           {% if purchase.remaining_quantity == 1 %}
             {% for ticket in purchase.tickets.all %}{% if not ticket.used_at %}<input type="hidden" name="ticket_numbers" value="{{ ticket.number }}">{% endif %}{% endfor %}
           {% else %}
-            <fieldset>
-              <legend>Butacas a validar</legend>
+            <div class="admission-seat-group" role="group" aria-label="Butacas a validar">
+              <div class="admission-seat-heading">
+                <span>Butacas a validar</span>
+                <button type="button" class="admission-select-all" data-select-all-seats>Seleccionar todo</button>
+              </div>
               <div class="admission-seat-grid">
                 {% for ticket in purchase.tickets.all %}
                   {% if not ticket.used_at %}
@@ -63,7 +66,7 @@
                   {% endif %}
                 {% endfor %}
               </div>
-            </fieldset>
+            </div>
           {% endif %}
           <div class="form-actions"><button type="submit" name="action" value="validate" data-validate-admission disabled>Validar ingreso</button></div>
         </form>
