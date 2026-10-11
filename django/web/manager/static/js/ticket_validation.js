@@ -127,9 +127,6 @@
       admissionSubmitting = true;
       admissionButton.disabled = true;
       admissionButton.textContent = 'Validando ingreso…';
-      admissionForm.querySelectorAll('input[name="ticket_numbers"]').forEach(input => {
-        input.disabled = true;
-      });
     });
     updateAdmissionButton();
   }

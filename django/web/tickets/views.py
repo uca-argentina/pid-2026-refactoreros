@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.cache import never_cache
 import json
+import re
 
 from domain.cinema.models import CinemaSettings
 from domain.screenings.models import Screening
@@ -106,6 +107,26 @@ def reservation_state_payload(screening, user):
         ),
         "reserved": [reservation_payload(reservation) for reservation in own_reservations],
     }
+
+
+def admission_seat_summary(tickets):
+    grouped = {}
+    fallback = []
+    for ticket in tickets:
+        label = ticket.seat_label or f"Entrada {ticket.number}"
+        match = re.fullmatch(r"(\d+)([A-Z]+)", label)
+        if not match:
+            fallback.append(label)
+            continue
+        row, column = match.groups()
+        grouped.setdefault(row, []).append(column)
+
+    summary = []
+    for row in sorted(grouped, key=int):
+        columns = sorted(grouped[row])
+        seats = columns[0] if len(columns) == 1 else f"{', '.join(columns[:-1])} y {columns[-1]}"
+        summary.append(f"Fila {row}, {'asiento' if len(columns) == 1 else 'asientos'} {seats}")
+    return " · ".join(summary + fallback)
 
 
 @login_required
@@ -262,7 +283,9 @@ def ticket_detail_view(request, pk):
         pk=pk, user=request.user,
     )
     screening = purchase.screening
-    used_count = sum(ticket.used_at is not None for ticket in purchase.tickets.all())
+    tickets = list(purchase.tickets.all())
+    used_tickets = [ticket for ticket in tickets if ticket.used_at is not None]
+    used_count = len(used_tickets)
     is_expired = screening.ends_at <= timezone.now() or screening.status == Screening.Status.FINISHED
     available = (
         used_count < purchase.quantity and screening.status == Screening.Status.PUBLISHED
@@ -270,6 +293,26 @@ def ticket_detail_view(request, pk):
     )
     return render(request, "ticket_detail.html", {
         "purchase": purchase, "used_count": used_count, "available": available, "is_expired": is_expired,
+        "remaining_count": purchase.quantity - used_count,
+        "used_seat_summary": admission_seat_summary(used_tickets),
         "cinema": CinemaSettings.current(),
         "manager_role": manager_role(request.user),
+    })
+
+
+@login_required
+@never_cache
+@require_GET
+def ticket_admission_status_view(request, pk):
+    purchase = get_object_or_404(
+        TicketPurchase.objects.select_related("screening__room").prefetch_related("tickets"),
+        pk=pk, user=request.user,
+    )
+    tickets = list(purchase.tickets.all())
+    used_tickets = [ticket for ticket in tickets if ticket.used_at is not None]
+    return JsonResponse({
+        "used_count": len(used_tickets),
+        "remaining_count": purchase.quantity - len(used_tickets),
+        "room": purchase.screening.room.name,
+        "used_seat_summary": admission_seat_summary(used_tickets),
     })
