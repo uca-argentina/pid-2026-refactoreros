@@ -1878,3 +1878,150 @@ body {
   text-transform: uppercase;
   color: #c0392b;
 }
+
+/* Single responsive header layout.  Keep all navigation inside the sticky
+   header on touch devices; fixed child navigation was fragile in tablets. */
+@media (max-width: 1280px) {
+  .client-page {
+    padding-top: 0;
+    padding-bottom: 34px;
+  }
+
+  .client-header {
+    position: sticky;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px 20px;
+    min-height: 0;
+    padding: 12px 24px;
+  }
+
+  .client-header nav {
+    display: contents;
+  }
+
+  .client-brand {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .client-logo {
+    height: 42px;
+    max-width: 150px;
+  }
+
+  .client-header > nav > .client-nav-account,
+  .client-header > nav > .client-nav-account.has-management,
+  .client-header > nav > .client-nav-account.is-anonymous {
+    display: flex;
+    grid-column: 2;
+    grid-row: 1;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+    min-width: 0;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .client-header .client-nav-primary {
+    position: static;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    width: min(520px, 100%);
+    margin: 0 auto;
+    padding: 5px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .07);
+    box-shadow: none;
+  }
+
+  .client-header .client-nav-primary a {
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 12px;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, .8);
+    font-size: 13px;
+  }
+
+  .client-header .client-nav-primary a.client-tickets-link,
+  .client-header .client-nav-primary a.client-tickets-link:hover {
+    color: #ffaaa3;
+    background: rgba(180, 35, 24, .18);
+  }
+
+  .client-header .client-nav-primary a.is-active,
+  .client-header .client-nav-primary a.is-active:hover {
+    color: #fff;
+    background: #b42318;
+  }
+
+  .client-user-pill {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 280px;
+    min-height: 36px;
+  }
+
+  .client-header nav a.client-notifications-link,
+  .client-header nav a.client-logout-link {
+    flex: 0 0 auto;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 8px;
+  }
+
+  .client-header .client-notifications-label,
+  .client-header nav a.client-logout-link span {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .client-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .client-brand {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .client-header > nav > .client-nav-account,
+  .client-header > nav > .client-nav-account.has-management,
+  .client-header > nav > .client-nav-account.is-anonymous {
+    grid-column: 1;
+    grid-row: 2;
+    justify-content: flex-start;
+  }
+
+  .client-user-pill {
+    flex: 0 0 36px;
+    width: 36px;
+    max-width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .client-user-pill > span {
+    display: none;
+  }
+
+  .client-header .client-nav-primary {
+    grid-column: 1;
+    grid-row: 3;
+    width: 100%;
+  }
+}
