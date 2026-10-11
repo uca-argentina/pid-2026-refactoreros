@@ -1992,8 +1992,8 @@ body {
   .client-header {
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
+    gap: 6px;
+    padding: 10px 12px;
   }
 
   .client-brand {
@@ -2007,12 +2007,13 @@ body {
     grid-column: 2;
     grid-row: 1;
     justify-content: flex-end;
+    gap: 5px;
   }
 
   .client-user-pill {
     flex: 1 1 auto;
     width: auto;
-    max-width: min(160px, 31vw);
+    max-width: none;
     padding: 0 8px;
     justify-content: flex-start;
   }
