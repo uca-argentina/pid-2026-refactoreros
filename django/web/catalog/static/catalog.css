@@ -1144,6 +1144,115 @@ body {
   }
 }
 
+/* Tablets use the same stable two-level navigation as mobile.  The centered
+   desktop capsule needs considerably more room once account controls exist. */
+@media (min-width: 861px) and (max-width: 1280px) {
+  .client-page {
+    padding-top: 0;
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .client-header {
+    position: sticky;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    min-height: 68px;
+    gap: 18px;
+    padding: 10px 24px;
+  }
+
+  .client-logo {
+    height: 44px;
+    max-width: 150px;
+  }
+
+  .client-header nav {
+    display: contents;
+  }
+
+  .client-brand {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .client-header > nav > .client-nav-account {
+    display: grid;
+    grid-column: 2;
+    grid-row: 1;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    justify-self: stretch;
+    gap: 9px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .client-header > nav > .client-nav-account.has-management {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+  }
+
+  .client-header > nav > .client-nav-account.is-anonymous {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .client-user-pill {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .client-header nav a.client-notifications-link,
+  .client-header nav a.client-logout-link {
+    justify-content: center;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0 8px;
+  }
+
+  .client-header nav a.client-logout-link span,
+  .client-header .client-notifications-label {
+    display: none;
+  }
+
+  .client-nav-primary {
+    position: fixed;
+    z-index: 30;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    padding: 7px 10px max(7px, env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(5, 7, 11, .97);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, .28);
+  }
+
+  .client-header .client-nav-primary a {
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 8px;
+    border-radius: 7px;
+    color: rgba(255, 255, 255, .76);
+    font-size: 12px;
+  }
+
+  .client-header .client-nav-primary a.client-tickets-link,
+  .client-header .client-nav-primary a.client-tickets-link:hover {
+    background: rgba(180, 35, 24, .18);
+    color: #ffaaa3;
+  }
+
+  .client-header .client-nav-primary a.is-active,
+  .client-header .client-nav-primary a.is-active:hover {
+    background: #b42318;
+    color: #fff;
+  }
+}
+
 @media (max-width: 860px) {
   .client-page {
     padding-top: 0;
