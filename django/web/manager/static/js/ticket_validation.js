@@ -9,6 +9,7 @@
   const cameraDevice = document.querySelector('[data-camera-device]');
   const status = document.querySelector('[data-scanner-status]');
   const reservationCode = document.querySelector('[data-reservation-code]');
+  const previewButton = form.querySelector('[data-preview]');
   const codeCharacters = reservationCode ? [...reservationCode.querySelectorAll('[data-code-character]')] : [];
   const codeInput = form.elements.code;
   const canvas = document.createElement('canvas');
@@ -16,6 +17,19 @@
   let stream = null;
   let frame = null;
   let generation = 0;
+  let previewSubmitting = false;
+
+  function showPreviewLoading() {
+    if (previewSubmitting) return;
+
+    previewSubmitting = true;
+    if (!previewButton) return;
+
+    previewButton.disabled = true;
+    previewButton.classList.add('is-loading');
+    previewButton.setAttribute('aria-busy', 'true');
+    previewButton.textContent = 'Buscando entrada…';
+  }
 
   function setStatus(message) {
     status.textContent = message;
@@ -246,7 +260,14 @@
       if (cameraDevice.value) startCamera(cameraDevice.value);
     });
   }
-  form.addEventListener('submit', stopCamera);
+  form.addEventListener('submit', event => {
+    if (previewSubmitting) {
+      event.preventDefault();
+      return;
+    }
+    stopCamera();
+    showPreviewLoading();
+  });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopCamera(); });
   window.addEventListener('pagehide', stopCamera);
 })();
