@@ -279,7 +279,7 @@ function showReservationError(error) {
   }
 }
 
-function queueSeatReservation(seat, action) {
+function queueSeatReservation(seat, action, flushImmediately = false) {
   const seatMap = seat.closest(".client-seat-map");
   const queue = queuedOperationsFor(seatMap);
   queue.set(seat.dataset.seatLabel, {
@@ -288,6 +288,10 @@ function queueSeatReservation(seat, action) {
   });
   seat.classList.add("is-pending");
   window.clearTimeout(pendingSeatTimers.get(seatMap));
+  if (flushImmediately) {
+    flushSeatReservations(seatMap).catch(showReservationError);
+    return;
+  }
   pendingSeatTimers.set(
     seatMap,
     window.setTimeout(() => {
@@ -416,7 +420,8 @@ document.querySelectorAll("button.client-seat").forEach((seat) => {
 
     if (seat.classList.contains("is-selected")) {
       seat.classList.remove("is-selected");
-      queueSeatReservation(seat, "release");
+      const releasesLastSelectedSeat = selectedSeatsFor(seatMap).length === 0;
+      queueSeatReservation(seat, "release", releasesLastSelectedSeat);
     } else {
       seat.classList.add("is-selected");
       queueSeatReservation(seat, "reserve");
