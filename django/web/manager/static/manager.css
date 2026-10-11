@@ -1893,3 +1893,24 @@ th {
     padding: 0 10px;
   }
 }
+
+@media (min-width: 681px) and (max-width: 1120px) {
+  .manager-topbar {
+    align-items: center;
+    flex-direction: row;
+    min-height: 64px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .topbar-actions {
+    align-items: center;
+    justify-content: flex-end;
+    width: auto;
+    max-width: min(70vw, 640px);
+  }
+
+  .topbar-user {
+    flex: 0 1 240px;
+  }
+}

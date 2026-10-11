@@ -1076,6 +1076,10 @@ body {
 }
 
 @media (max-width: 860px) {
+  .client-page {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
   .client-header {
     align-items: flex-start;
     flex-direction: column;
@@ -1102,6 +1106,52 @@ body {
   .client-header nav a {
     min-height: 32px;
     font-size: 13px;
+  }
+
+  .client-nav-primary {
+    position: fixed;
+    z-index: 30;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    padding: 7px 10px max(7px, env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(5, 7, 11, .97);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, .28);
+  }
+
+  .client-header .client-nav-primary a {
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 8px;
+    border-radius: 7px;
+    color: rgba(255, 255, 255, .76);
+    font-size: 12px;
+  }
+
+  .client-header .client-nav-primary a.client-tickets-link,
+  .client-header .client-nav-primary a.client-tickets-link:hover {
+    background: rgba(180, 35, 24, .18);
+    color: #ffaaa3;
+  }
+
+  .client-header .client-nav-primary a:hover {
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+  }
+
+  .client-header .client-nav-primary a.is-active,
+  .client-header .client-nav-primary a.is-active:hover {
+    background: #b42318;
+    color: #fff;
+  }
+
+  .client-header .client-nav-primary a svg {
+    width: 17px;
+    height: 17px;
   }
 
   .client-user-pill {
@@ -1295,6 +1345,8 @@ body {
   }
 
   .client-header {
+    align-items: flex-start;
+    flex-direction: column;
     padding: 14px 16px;
   }
 
