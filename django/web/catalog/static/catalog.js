@@ -236,9 +236,12 @@ async function sendSeatOperations(seatMap, operations) {
 }
 
 function clearPendingState(seatMap, operations) {
+  const queuedOperations = queuedOperationsFor(seatMap);
   operations.forEach((operation) => {
     const seat = seatMap.querySelector(`[data-seat-label="${operation.label}"]`);
-    seat?.classList.remove("is-pending");
+    if (!queuedOperations.has(operation.label)) {
+      seat?.classList.remove("is-pending");
+    }
   });
 }
 
@@ -249,7 +252,12 @@ async function flushSeatReservations(seatMap) {
 
   const activeFlush = pendingSeatFlushes.get(seatMap);
   if (activeFlush) {
-    return activeFlush;
+    return activeFlush.catch(() => null).then(() => {
+      if (queuedOperationsFor(seatMap).size) {
+        return flushSeatReservations(seatMap);
+      }
+      return {ok: true};
+    });
   }
 
   window.clearTimeout(pendingSeatTimers.get(seatMap));
@@ -420,8 +428,7 @@ document.querySelectorAll("button.client-seat").forEach((seat) => {
 
     if (seat.classList.contains("is-selected")) {
       seat.classList.remove("is-selected");
-      const releasesLastSelectedSeat = selectedSeatsFor(seatMap).length === 0;
-      queueSeatReservation(seat, "release", releasesLastSelectedSeat);
+      queueSeatReservation(seat, "release", true);
     } else {
       seat.classList.add("is-selected");
       queueSeatReservation(seat, "reserve");
@@ -456,7 +463,9 @@ purchaseForm?.addEventListener("submit", async (event) => {
     return;
   }
 
-  const hasPendingOperations = activeSeatMap && queuedOperationsFor(activeSeatMap).size;
+  const hasPendingOperations = activeSeatMap && (
+    queuedOperationsFor(activeSeatMap).size || pendingSeatFlushes.get(activeSeatMap)
+  );
   if (hasPendingOperations) {
     event.preventDefault();
     purchasePreparing = true;
