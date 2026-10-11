@@ -20,11 +20,13 @@
       update.hidden = true;
       return;
     }
-    title.textContent = `Ya tenés ${used} ${plural(used, 'butaca validada', 'butacas validadas')}`;
+    title.textContent = used === 1
+      ? '¡Que disfrutes la película!'
+      : '¡Que disfruten la película!';
     detail.textContent = `${payload.room} · ${payload.used_seat_summary || 'Butacas registradas'}`;
     remaining.textContent = pending
-      ? `Te ${pending === 1 ? 'queda' : 'quedan'} ${pending} ${plural(pending, 'butaca pendiente', 'butacas pendientes')} para entrar. ¡Que lo ${pending === 1 ? 'disfrutes' : 'disfruten'}!`
-      : 'Ya ingresaron todas las personas. ¡Que lo disfruten!';
+      ? `Todavía ${pending === 1 ? 'queda' : 'quedan'} ${pending} ${plural(pending, 'butaca pendiente', 'butacas pendientes')} para entrar.`
+      : 'Ya ingresaron todas las personas.';
     update.hidden = false;
     update.classList.remove('is-arriving');
     window.requestAnimationFrame(() => update.classList.add('is-arriving'));
