@@ -141,6 +141,64 @@
   font-size: 13px;
 }
 
+/* Lecturas rápidas */
+
+.decision-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.decision-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--viz-1);
+  border-radius: 2px;
+  background: var(--surface-soft);
+}
+
+.decision-card > svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  color: var(--viz-1);
+}
+
+.decision-card div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.decision-card span,
+.decision-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.decision-card span {
+  font-weight: 600;
+}
+
+.decision-card strong {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.decision-card p {
+  line-height: 1.35;
+}
+
 /* Grilla de tarjetas */
 
 .dashboard-grid {
@@ -559,9 +617,9 @@
 
 .heatmap {
   display: grid;
-  grid-template-columns: 40px repeat(var(--hours), minmax(28px, 1fr));
+  grid-template-columns: 40px repeat(var(--blocks), minmax(28px, 1fr));
   gap: 2px;
-  min-width: calc(40px + var(--hours) * 30px);
+  min-width: calc(40px + var(--blocks) * 30px);
 }
 
 .heatmap-hour,
@@ -728,6 +786,10 @@
   .heatmap-layout {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .decision-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -750,6 +812,10 @@
   }
 
   .dashboard-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .decision-strip {
     grid-template-columns: minmax(0, 1fr);
   }
 

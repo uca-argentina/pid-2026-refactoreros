@@ -3,6 +3,7 @@ from datetime import datetime, time, timedelta
 from decimal import Decimal
 
 from django.db.models import Count, Sum
+from django.db.models.functions import ExtractHour, ExtractMinute, ExtractWeekDay
 from django.utils import timezone
 
 from domain.screenings.models import Screening
@@ -24,6 +25,7 @@ SHORT_WEEKDAYS = ("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
 TOP_MOVIES = 5
 TOP_TIME_SLOTS = 3
 X_AXIS_LABELS = 8
+TIME_SLOT_MINUTES = 30
 
 
 def build_dashboard(period=None, now=None):
@@ -34,6 +36,8 @@ def build_dashboard(period=None, now=None):
 
     rows = screening_rows(completed_screenings(start, now))
     summary = summarize(rows)
+    movies = top_movies(rows)
+    time_slots = demand_by_purchase_time(start, now)
     previous = None
     if start is not None:
         start_previous = start_of_day(today - timedelta(days=days * 2 - 1))
@@ -50,9 +54,10 @@ def build_dashboard(period=None, now=None):
         "summary": summary,
         "deltas": build_deltas(summary, previous),
         "revenue": revenue_series(rows, start, today),
-        "movies": top_movies(rows),
+        "movies": movies,
         "rooms": occupancy_by_room(rows),
-        "time_slots": demand_by_time(rows),
+        "time_slots": time_slots,
+        "insights": decision_insights(summary, movies, time_slots),
         "presale": presale(now),
     }
 
@@ -314,57 +319,147 @@ def occupancy_by_room(rows):
     return sorted(rooms, key=lambda data: (-data["occupancy"], data["room"].name))
 
 
-def demand_by_time(rows):
-    if not rows:
-        return None
+def time_slot_label(minutes):
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def demand_by_purchase_time(start, end):
+    """Aggregate demand by when tickets were bought, not when a screening starts."""
+    purchases = TicketPurchase.objects.filter(
+        screening__status__in=SELLABLE_STATUSES,
+        created_at__lt=end,
+    )
+    if start is not None:
+        purchases = purchases.filter(created_at__gte=start)
+
+    current_timezone = timezone.get_current_timezone()
+    grouped_purchases = (
+        purchases.annotate(
+            weekday=ExtractWeekDay("created_at", tzinfo=current_timezone),
+            hour=ExtractHour("created_at", tzinfo=current_timezone),
+            minute=ExtractMinute("created_at", tzinfo=current_timezone),
+        )
+        .values("weekday", "hour", "minute")
+        .annotate(tickets=Sum("quantity"), purchases=Count("pk"))
+    )
+    return purchase_time_slots(grouped_purchases)
+
+
+def purchase_time_slots(grouped_purchases):
+    """Build a Monday-to-Sunday heatmap in thirty-minute purchase windows."""
     slots = {}
-    for row in rows:
-        day, hour = row["starts_at"].weekday(), row["starts_at"].hour
+    for purchase in grouped_purchases:
+        # ExtractWeekDay follows Django's convention: Sunday=1, Monday=2.
+        day = (int(purchase["weekday"]) + 5) % 7
+        hour = int(purchase["hour"])
+        minute = (int(purchase["minute"]) // TIME_SLOT_MINUTES) * TIME_SLOT_MINUTES
+        starts_at_minutes = hour * 60 + minute
         data = slots.setdefault(
-            (day, hour),
+            (day, starts_at_minutes),
             {
                 "day": WEEKDAYS[day],
                 "short_day": SHORT_WEEKDAYS[day],
                 "hour": hour,
-                "sold": 0,
-                "capacity": 0,
-                "screenings": 0,
+                "minute": minute,
+                "label": time_slot_label(starts_at_minutes),
+                "tickets": 0,
+                "purchases": 0,
             },
         )
-        data["sold"] += row["sold"]
-        data["capacity"] += row["capacity"]
-        data["screenings"] += 1
+        data["tickets"] += purchase["tickets"] or 0
+        data["purchases"] += purchase["purchases"] or 0
 
-    maximum = max(data["sold"] for data in slots.values())
+    if not slots:
+        return None
+
+    maximum = max(data["tickets"] for data in slots.values())
     for data in slots.values():
-        data["occupancy"] = percentage(data["sold"], data["capacity"])
-        # Las slots con sales arrancan en 18% para no confundirse con las vacías.
-        intensity = 18 + 82 * data["sold"] / maximum if data["sold"] else 0
+        # Blocks with purchases start at 18% so they are distinct from empty ones.
+        intensity = 18 + 82 * data["tickets"] / maximum if data["tickets"] else 0
         data["intensity_css"] = css_percentage(intensity)
 
-    hours = range(min(hour for _day, hour in slots), max(hour for _day, hour in slots) + 1)
+    time_blocks = range(
+        min(minutes for _day, minutes in slots),
+        max(minutes for _day, minutes in slots) + TIME_SLOT_MINUTES,
+        TIME_SLOT_MINUTES,
+    )
     return {
-        "hours": list(hours),
+        "time_blocks": [
+            {"minutes": minutes, "label": time_slot_label(minutes)}
+            for minutes in time_blocks
+        ],
         "days": [
             {
                 "day": WEEKDAYS[day],
                 "short_day": SHORT_WEEKDAYS[day],
                 "slots": [
                     slots.get(
-                        (day, hour),
-                        {"day": WEEKDAYS[day], "hour": hour, "screenings": 0},
+                        (day, minutes),
+                        {
+                            "day": WEEKDAYS[day],
+                            "label": time_slot_label(minutes),
+                            "tickets": 0,
+                            "purchases": 0,
+                        },
                     )
-                    for hour in hours
+                    for minutes in time_blocks
                 ],
             }
             for day in range(7)
         ],
         "top": sorted(
-            (data for data in slots.values() if data["sold"]),
-            key=lambda data: (-data["sold"], -data["occupancy"]),
+            (data for data in slots.values() if data["tickets"]),
+            key=lambda data: (-data["tickets"], -data["purchases"], data["day"], data["label"]),
         )[:TOP_TIME_SLOTS],
         "detail": [slots[key] for key in sorted(slots)],
+        "total_tickets": sum(data["tickets"] for data in slots.values()),
+        "total_purchases": sum(data["purchases"] for data in slots.values()),
     }
+
+
+def decision_insights(summary, movies, time_slots):
+    """Surface the signals a manager can act on before reading each chart."""
+    insights = []
+    if movies:
+        movie = movies[0]
+        share = percentage(movie["sold"], summary["sold"])
+        insights.append(
+            {
+                "icon": "clapperboard",
+                "label": "Mayor tracción",
+                "value": movie["movie"].title,
+                "detail": f"{movie['sold']} entradas: {share:.0f}% de la venta del período.",
+            }
+        )
+    if time_slots and time_slots["top"]:
+        peak = time_slots["top"][0]
+        insights.append(
+            {
+                "icon": "shopping-bag",
+                "label": "Pico de compra",
+                "value": f"{peak['day']} · {peak['label']}",
+                "detail": f"{peak['tickets']} entradas en {peak['purchases']} compra(s).",
+            }
+        )
+    if summary["sold"]:
+        if summary["unused"]:
+            label, value = "Entradas sin usar", str(summary["unused"])
+            detail = (
+                f"{summary['attendance']:.0f}% de asistencia registrada "
+                "en funciones realizadas."
+            )
+        else:
+            label, value = "Asistencia registrada", "100%"
+            detail = "Todas las entradas vendidas del período registran ingreso."
+        insights.append(
+            {
+                "icon": "scan-line",
+                "label": label,
+                "value": value,
+                "detail": detail,
+            }
+        )
+    return insights
 
 
 def presale(now):

@@ -24,7 +24,7 @@
       <p class="period-range">
         <i data-lucide="calendar-range" aria-hidden="true"></i>
         <span>
-          Funciones realizadas
+          Resultados de funciones realizadas
           {% if dashboard.start %}del {{ dashboard.start|date:"d/m/Y" }} al {{ dashboard.end|date:"d/m/Y" }}{% else %}hasta hoy{% endif %}
         </span>
       </p>
@@ -55,6 +55,21 @@
         <span class="kpi-meta">{{ summary.used|floatformat:"0g" }} {{ summary.used|pluralize:"entrada utilizada,entradas utilizadas" }}</span>
       </article>
     </section>
+
+    {% if dashboard.insights %}
+      <section class="decision-strip" aria-label="Lecturas rápidas para decidir">
+        {% for insight in dashboard.insights %}
+          <article class="decision-card">
+            <i data-lucide="{{ insight.icon }}" aria-hidden="true"></i>
+            <div>
+              <span>{{ insight.label }}</span>
+              <strong>{{ insight.value }}</strong>
+              <p>{{ insight.detail }}</p>
+            </div>
+          </article>
+        {% endfor %}
+      </section>
+    {% endif %}
 
     <section class="dashboard-grid">
       <article class="panel-section viz-card viz-card-fill">
@@ -293,8 +308,8 @@
     <section class="panel-section viz-card">
       <header class="viz-header">
         <div>
-          <h2>Horarios de mayor demanda</h2>
-          <p>Entradas vendidas por día y hora de inicio</p>
+          <h2>Demanda de compra</h2>
+          <p>Entradas compradas por día y bloque de 30 minutos</p>
         </div>
         {% if dashboard.time_slots %}
           <div class="heatmap-scale" aria-hidden="true">
@@ -309,24 +324,24 @@
         {% if time_slots %}
           <div class="heatmap-layout">
             <div class="heatmap-scroll">
-              <div class="heatmap" style="--hours: {{ time_slots.hours|length }}" role="list" aria-label="Entradas vendidas por día y hora">
+              <div class="heatmap" style="--blocks: {{ time_slots.time_blocks|length }}" role="list" aria-label="Entradas compradas por día y bloque de media hora">
                 <span class="heatmap-corner" aria-hidden="true"></span>
-                {% for hour in time_slots.hours %}
-                  <span class="heatmap-hour" aria-hidden="true">{{ hour }} h</span>
+                {% for block in time_slots.time_blocks %}
+                  <span class="heatmap-hour" aria-hidden="true">{{ block.label }}</span>
                 {% endfor %}
                 {% for day in time_slots.days %}
                   <span class="heatmap-day" aria-hidden="true">{{ day.short_day }}</span>
                   {% for slot in day.slots %}
-                    {% if slot.screenings %}
+                    {% if slot.purchases %}
                       <span
                         class="heatmap-cell"
                         role="listitem"
                         tabindex="0"
                         style="--level: {{ slot.intensity_css }}"
-                        data-tip-title="{{ slot.day }} · {{ slot.hour }} h"
-                        data-tip-value="{{ slot.sold }} {{ slot.sold|pluralize:'entrada,entradas' }}"
-                        data-tip-meta="{{ slot.screenings }} {{ slot.screenings|pluralize:'función,funciones' }} · {{ slot.occupancy|floatformat:'-1' }}% de ocupación"
-                        aria-label="{{ slot.day }} {{ slot.hour }} h: {{ slot.sold }} entradas, {{ slot.screenings }} funciones"
+                        data-tip-title="{{ slot.day }} · {{ slot.label }}"
+                        data-tip-value="{{ slot.tickets }} {{ slot.tickets|pluralize:'entrada,entradas' }}"
+                        data-tip-meta="{{ slot.purchases }} {{ slot.purchases|pluralize:'compra,compras' }} de entradas"
+                        aria-label="{{ slot.day }} {{ slot.label }}: {{ slot.tickets }} entradas en {{ slot.purchases }} compras"
                       ></span>
                     {% else %}
                       <span class="heatmap-cell is-empty" aria-hidden="true"></span>
@@ -337,21 +352,22 @@
             </div>
 
             <div class="peak-panel">
-              <h3>Franjas más demandadas</h3>
+              <p class="viz-note">{{ time_slots.total_tickets }} entradas en {{ time_slots.total_purchases }} {{ time_slots.total_purchases|pluralize:"compra,compras" }} registradas en este período.</p>
+              <h3>Bloques con más compras</h3>
               {% if time_slots.top %}
                 <ol class="peak-list">
                   {% for slot in time_slots.top %}
                     <li>
                       <span class="peak-rank">{{ forloop.counter }}</span>
                       <div>
-                        <strong>{{ slot.day }} · {{ slot.hour }} h</strong>
-                        <span>{{ slot.sold|floatformat:"0g" }} entradas · {{ slot.occupancy|floatformat:"-1" }}% de ocupación</span>
+                        <strong>{{ slot.day }} · {{ slot.label }}</strong>
+                        <span>{{ slot.tickets|floatformat:"0g" }} entradas · {{ slot.purchases }} {{ slot.purchases|pluralize:"compra,compras" }}</span>
                       </div>
                     </li>
                   {% endfor %}
                 </ol>
               {% else %}
-                <p class="viz-note">Todavía no hay entradas vendidas en las funciones del período.</p>
+                <p class="viz-note">Todavía no hay compras de entradas en el período.</p>
               {% endif %}
             </div>
           </div>
@@ -363,20 +379,18 @@
                 <thead>
                   <tr>
                     <th scope="col">Día</th>
-                    <th scope="col">Hora</th>
-                    <th scope="col">Entradas</th>
-                    <th scope="col">Funciones</th>
-                    <th scope="col">Ocupación</th>
+                    <th scope="col">Bloque</th>
+                    <th scope="col">Entradas compradas</th>
+                    <th scope="col">Compras</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for slot in time_slots.detail %}
                     <tr>
                       <td data-label="Día">{{ slot.day }}</td>
-                      <td data-label="Hora">{{ slot.hour }} h</td>
-                      <td data-label="Entradas">{{ slot.sold }}</td>
-                      <td data-label="Funciones">{{ slot.screenings }}</td>
-                      <td data-label="Ocupación">{{ slot.occupancy|floatformat:"-1" }}%</td>
+                      <td data-label="Bloque">{{ slot.label }}</td>
+                      <td data-label="Entradas compradas">{{ slot.tickets }}</td>
+                      <td data-label="Compras">{{ slot.purchases }}</td>
                     </tr>
                   {% endfor %}
                 </tbody>
@@ -387,8 +401,8 @@
           <div class="empty-state compact">
             <i data-lucide="clock" aria-hidden="true"></i>
             <div>
-              <h3>Sin datos de horarios</h3>
-              <p>La demanda por horario aparece cuando hay funciones realizadas en el período.</p>
+              <h3>Sin compras en el período</h3>
+              <p>La demanda aparece cuando se registran compras de entradas, aunque la función sea futura.</p>
             </div>
           </div>
         {% endif %}
