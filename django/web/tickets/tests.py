@@ -197,9 +197,12 @@ class TicketPurchaseTests(TestCase):
         response = self.client.get(reverse("my_tickets"))
 
         self.assertContains(response, "Publicada")
-        self.assertContains(response, "2")
-        self.assertContains(response, "1A, 1B")
+        self.assertContains(response, "2 entradas")
+        self.assertNotContains(response, "1A, 1B")
         self.assertNotContains(response, "otro@mail.com")
+
+        detail = self.client.get(reverse("ticket_detail", args=[purchase.pk]))
+        self.assertContains(detail, "1A, 1B")
 
     def test_compra_no_permite_funcion_cancelada(self):
         screening = crear_funcion(status=Screening.Status.CANCELED, title="Cancelada")

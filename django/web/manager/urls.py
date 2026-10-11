@@ -1,16 +1,19 @@
 from django.urls import path
 
 from . import views
+from .validation import TicketValidationView
 
 app_name = "manager"
 
 urlpatterns = [
+    path("validar-entradas/", TicketValidationView.as_view(), name="validar_entradas"),
     path("", views.ManagementHomeView.as_view(), name="home"),
     path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
     path("configuracion/", views.CinemaSettingsUpdateView.as_view(), name="configuracion"),
     path("usuarios/", views.UsersListView.as_view(), name="usuarios_list"),
     path("usuarios/<int:pk>/editar/", views.UserUpdateView.as_view(), name="usuarios_update"),
     path("usuarios/<int:pk>/estado/", views.UserToggleActiveView.as_view(), name="usuarios_toggle"),
+    path("usuarios/<int:pk>/operador/", views.UserToggleOperatorView.as_view(), name="usuarios_toggle_operator"),
     path("salas/", views.RoomsListView.as_view(), name="salas_list"),
     path("salas/nueva/", views.RoomCreateView.as_view(), name="salas_create"),
     path("salas/<int:pk>/editar/", views.RoomUpdateView.as_view(), name="salas_update"),

@@ -61,6 +61,25 @@
               <small>Al activarlo, va a poder volver a acceder al sitio.</small>
             {% endif %}
           </form>
+          {% if can_toggle_operator %}
+            <form method="post" action="{% url 'manager:usuarios_toggle_operator' object.pk %}">
+              {% csrf_token %}
+              <button type="submit">
+                {% if is_operator %}
+                  <i data-lucide="user-minus" aria-hidden="true"></i>
+                  <span>Quitar rol de operador</span>
+                {% else %}
+                  <i data-lucide="badge-check" aria-hidden="true"></i>
+                  <span>Designar como operador</span>
+                {% endif %}
+              </button>
+              {% if is_operator %}
+                <small>Este usuario puede validar entradas, pero no administrar películas ni funciones.</small>
+              {% else %}
+                <small>Podrá validar entradas desde su panel, sin permisos de gestión.</small>
+              {% endif %}
+            </form>
+          {% endif %}
         {% else %}
           <small>No podés bloquear tu propio user.</small>
         {% endif %}

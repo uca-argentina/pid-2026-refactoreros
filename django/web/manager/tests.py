@@ -140,6 +140,7 @@ class ManagerAccessTests(TestCase):
             data={
                 "seat_reservation_minutes": 7,
                 "seat_refresh_seconds": 12,
+                "admission_undo_seconds": 45,
             },
             follow=True,
         )
@@ -148,6 +149,7 @@ class ManagerAccessTests(TestCase):
         cinema_settings = CinemaSettings.objects.get()
         self.assertEqual(cinema_settings.seat_reservation_minutes, 7)
         self.assertEqual(cinema_settings.seat_refresh_seconds, 12)
+        self.assertEqual(cinema_settings.admission_undo_seconds, 45)
 
     def test_acomodador_no_puede_configurar_reserva_y_recarga_de_butacas(self):
         self.client.force_login(self.acomodador)
@@ -186,7 +188,7 @@ class ManagerUsuariosTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cliente@mail.com")
-        self.assertContains(response, "customer")
+        self.assertContains(response, "Cliente")
         self.assertContains(response, reverse("manager:usuarios_update", args=[self.gerente.pk]))
         self.assertNotContains(
             response, reverse("manager:usuarios_update", args=[self.otro_gerente.pk])

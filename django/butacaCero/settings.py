@@ -121,6 +121,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'web.catalog.context_processors.client_navigation',
             ],
         },
     },
@@ -251,4 +252,5 @@ if MAILERS["default"]["BACKEND"] == "django.core.mail.backends.smtp.EmailBackend
         "password": env("DJANGO_EMAIL_HOST_PASSWORD"),
         "use_tls": env.bool("DJANGO_EMAIL_USE_TLS"),
         "use_ssl": env.bool("DJANGO_EMAIL_USE_SSL"),
+        "timeout": 10,
     }

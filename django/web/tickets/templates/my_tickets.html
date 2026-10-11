@@ -8,66 +8,63 @@
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
   <link rel="icon" href="{% static 'favicon-96x96.png' %}" type="image/png">
   <link rel="stylesheet" href="{% static 'catalog.css' %}">
+  <link rel="stylesheet" href="{% static 'admission_tickets.css' %}">
 </head>
 <body class="client-page">
-  {% include "_client_header.html" with show_movies_link=True %}
-
+  {% include "_client_header.html" %}
   <main class="client-main">
     {% if messages %}
       <div class="client-messages client-messages-success">
-        {% for message in messages %}
-          <p>{{ message }}</p>
-        {% endfor %}
+        {% for message in messages %}<p>{{ message }}</p>{% endfor %}
       </div>
     {% endif %}
 
-    <section class="client-heading">
-      <h1>Mis entradas</h1>
-    </section>
+    <section class="client-heading"><h1>Mis entradas</h1></section>
 
     {% if purchases %}
-      <section class="ticket-list" aria-label="Entradas purchasedas">
+      <p class="ticket-entry-hint">Para ingresar a la sala, te vamos a pedir que muestres el código QR o el código de reserva.</p>
+      <section class="ticket-list" aria-label="Entradas compradas">
         {% for purchase in purchases %}
-          <article class="ticket-card{% if purchase.screening.status == 'cancelada' %} is-cancelled{% endif %}">
+          <article class="ticket-card ticket-card-compact{% if purchase.screening.status == 'cancelada' %} is-cancelled{% endif %}{% if purchase.is_history %} is-history{% endif %}">
             <div class="ticket-main">
               <div class="ticket-tags">
                 <span>{{ purchase.screening.starts_at|date:"l d/m H:i"|capfirst }}</span>
-                {% if purchase.screening.status == 'cancelada' %}
-                  <span class="ticket-status">Función cancelada</span>
-                {% endif %}
+                {% if purchase.screening.status == 'cancelada' %}<span class="ticket-status">Función cancelada</span>{% endif %}
+                {% if purchase.is_history and purchase.screening.status != 'cancelada' %}<span class="ticket-history-status">Función finalizada</span>{% endif %}
               </div>
               <h2>{{ purchase.screening.movie.title }}</h2>
               <p>{{ purchase.screening.room.name }}</p>
             </div>
-            <dl class="ticket-summary">
-              <div>
-                <dt>Cantidad</dt>
-                <dd>{{ purchase.cantidad }}</dd>
-              </div>
-              <div>
-                <dt>Butacas</dt>
-                <dd>{{ purchase.seat_labels|default:"Sin asignar" }}</dd>
-              </div>
-              <div>
-                <dt>Total</dt>
-                <dd>${{ purchase.total }}</dd>
-              </div>
-            </dl>
+
+            <div class="ticket-card-action">
+              <span>{{ purchase.quantity }} entrada{{ purchase.quantity|pluralize }}</span>
+              {% if purchase.admission_open %}
+                <a class="ticket-qr-link" href="{% url 'ticket_detail' purchase.pk %}">
+                  <i data-lucide="qr-code" aria-hidden="true"></i><span>MOSTRAR QR</span>
+                </a>
+              {% elif purchase.is_history or purchase.used_count == purchase.quantity %}
+                <a class="ticket-history-link" href="{% url 'ticket_detail' purchase.pk %}">Ver detalle</a>
+              {% else %}
+                <a class="ticket-history-link" href="{% url 'ticket_detail' purchase.pk %}">Ver detalle</a>
+              {% endif %}
+            </div>
+
+            {% if purchase.refund %}
+              <aside class="ticket-refund ticket-refund-compact" aria-label="Aviso de cancelación">
+                <strong>Devolución simulada registrada</strong>
+              </aside>
+            {% endif %}
           </article>
         {% endfor %}
       </section>
     {% else %}
       <section class="client-empty">
-        <h2>Todavia no purchaseste entradas</h2>
+        <h2>Todavía no compraste entradas</h2>
         <p>Elegí una función de la cartelera para empezar.</p>
       </section>
     {% endif %}
   </main>
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script>
-    if (window.lucide) {
-      lucide.createIcons();
-    }
-  </script>
+  <script>if (window.lucide) { lucide.createIcons(); }</script>
 </body>
 </html>

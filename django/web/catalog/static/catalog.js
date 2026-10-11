@@ -11,9 +11,23 @@ const seatMaps = document.querySelectorAll(".client-seat-map");
 let reservationExpiresAt = null;
 let reservationTimer = null;
 let submitAfterReservationFlush = false;
+let purchaseSubmitting = false;
+let purchasePreparing = false;
 const pendingSeatOperations = new WeakMap();
 const pendingSeatTimers = new WeakMap();
 const pendingSeatFlushes = new WeakMap();
+
+function setPurchaseProcessing(processing) {
+  if (!purchaseButton) {
+    return;
+  }
+  purchaseButton.disabled = processing;
+  purchaseButton.classList.toggle("is-processing", processing);
+  purchaseButton.setAttribute("aria-busy", String(processing));
+  if (processing) {
+    purchaseButton.innerHTML = '<span class="purchase-loading-clock" aria-hidden="true"></span>Procesando compra…';
+  }
+}
 
 function getActiveSeatMap() {
   return Array.from(seatMaps).find((seatMap) => !seatMap.classList.contains("is-hidden"));
@@ -326,7 +340,7 @@ function updateSeatDrivenPurchaseState() {
     cartTotal.textContent = `$${formatMoney(total)}`;
   }
 
-  if (purchaseButton && requiresSeatSelection) {
+  if (purchaseButton && requiresSeatSelection && !purchaseSubmitting && !purchasePreparing) {
     purchaseButton.disabled = selectedCount === 0;
     if (selectedCount === 0) {
       purchaseButton.textContent = purchaseButton.dataset.selectSeatLabel;
@@ -418,8 +432,15 @@ seatMaps.forEach((seatMap) => {
 });
 
 purchaseForm?.addEventListener("submit", async (event) => {
+  if (purchaseSubmitting || purchasePreparing) {
+    event.preventDefault();
+    return;
+  }
+
   if (submitAfterReservationFlush) {
     submitAfterReservationFlush = false;
+    purchaseSubmitting = true;
+    setPurchaseProcessing(true);
     return;
   }
 
@@ -433,14 +454,26 @@ purchaseForm?.addEventListener("submit", async (event) => {
   const hasPendingOperations = activeSeatMap && queuedOperationsFor(activeSeatMap).size;
   if (hasPendingOperations) {
     event.preventDefault();
+    purchasePreparing = true;
+    setPurchaseProcessing(true);
     try {
       await flushSeatReservations(activeSeatMap);
       if (selectedSeatsFor(activeSeatMap).length > 0) {
+        purchasePreparing = false;
+        purchaseButton.disabled = false;
         submitAfterReservationFlush = true;
         purchaseForm.requestSubmit();
       }
     } catch (error) {
+      purchasePreparing = false;
+      purchaseButton.classList.remove("is-processing");
+      purchaseButton.removeAttribute("aria-busy");
+      updateSeatDrivenPurchaseState();
       showReservationError(error);
     }
+    return;
   }
+
+  purchaseSubmitting = true;
+  setPurchaseProcessing(true);
 });

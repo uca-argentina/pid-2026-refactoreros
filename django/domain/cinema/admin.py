@@ -10,6 +10,7 @@ class CinemaSettingsAdmin(admin.ModelAdmin):
         "slogan",
         "seat_reservation_minutes",
         "seat_refresh_seconds",
+        "admission_undo_seconds",
         "updated_at",
     )
     readonly_fields = ("updated_at",)

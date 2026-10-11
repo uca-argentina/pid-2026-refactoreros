@@ -8,6 +8,7 @@ class CinemaSettings(models.Model):
     login_image = models.ImageField(upload_to="branding/", blank=True, db_column="imagen_login")
     seat_reservation_minutes = models.PositiveIntegerField(default=5, db_column="reserva_asientos_minutos")
     seat_refresh_seconds = models.PositiveIntegerField(default=5, db_column="recarga_asientos_segundos")
+    admission_undo_seconds = models.PositiveIntegerField(default=30, db_column="deshacer_validacion_segundos")
     updated_at = models.DateTimeField(auto_now=True, db_column="actualizado_en")
 
     class Meta:

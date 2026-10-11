@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from .forms import AdminUserChangeForm, AdminUserCreationForm
-from .models import Usher, Customer, Manager
+from .models import Usher, Customer, Manager, Operator
 
 User = get_user_model()
 
@@ -33,6 +33,18 @@ class ManagerInline(admin.StackedInline):
     readonly_fields = ("manager_id",)
 
 
+class OperatorInline(admin.StackedInline):
+    model = Operator
+    extra = 1
+    max_num = 1
+
+
+@admin.register(Operator)
+class OperatorAdmin(admin.ModelAdmin):
+    list_display = ("user",)
+    search_fields = ("user__email", "user__username")
+
+
 class UserAdmin(DjangoUserAdmin):
     form = AdminUserChangeForm
     add_form = AdminUserCreationForm
@@ -45,7 +57,7 @@ class UserAdmin(DjangoUserAdmin):
             },
         ),
     )
-    inlines = (CustomerInline, UsherInline, ManagerInline)
+    inlines = (CustomerInline, UsherInline, ManagerInline, OperatorInline)
 
 
 try:

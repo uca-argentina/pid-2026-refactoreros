@@ -1,4 +1,6 @@
 from datetime import timedelta
+import secrets
+import uuid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -7,6 +9,18 @@ from django.utils import timezone
 
 from domain.cinema.models import CinemaSettings
 from domain.screenings.models import Screening
+
+TICKET_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def generate_ticket_code():
+    """Short, human-readable purchase reference; not used as the QR secret."""
+    return "".join(secrets.choice(TICKET_CODE_ALPHABET) for _ in range(6))
+
+
+def generate_ticket_token():
+    """Opaque QR credential: 192 bits, independent from purchase IDs."""
+    return secrets.token_urlsafe(24)
 
 
 def index_to_letters(index):
@@ -35,6 +49,8 @@ class TicketPurchase(models.Model):
     total = models.DecimalField(max_digits=10, decimal_places=2)
     selected_seats = models.JSONField(default=list, blank=True, db_column="asientos_seleccionados")
     created_at = models.DateTimeField(auto_now_add=True, db_column="creada_en")
+    validation_code = models.CharField(max_length=6, unique=True, default=generate_ticket_code, editable=False)
+    validation_token = models.CharField(max_length=32, unique=True, default=generate_ticket_token, editable=False)
 
     class Meta:
         verbose_name = "Compra de entrada"
@@ -49,6 +65,18 @@ class TicketPurchase(models.Model):
     def seat_labels(self):
         labels = self._labels_from_selected_seats(self.selected_seats)
         return ", ".join(labels)
+
+    @property
+    def qr_payload(self):
+        return f"BC2:{self.validation_token}"
+
+    @property
+    def used_quantity(self):
+        return self.tickets.filter(used_at__isnull=False).count()
+
+    @property
+    def remaining_quantity(self):
+        return self.quantity - self.used_quantity
 
     @classmethod
     def sold_quantity(cls, screening):
@@ -277,7 +305,79 @@ class TicketPurchase(models.Model):
     def save(self, *args, **kwargs):
         if self.screening_id and self.quantity and self.total in (None, ""):
             self.total = self.screening.price_from * self.quantity
-        super().save(*args, **kwargs)
+        creating = self._state.adding
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if creating:
+                labels = self._labels_from_selected_seats(self.selected_seats)
+                AdmissionTicket.objects.bulk_create([
+                    AdmissionTicket(
+                        purchase=self, number=index + 1,
+                        seat_label=labels[index] if index < len(labels) else "",
+                    )
+                    for index in range(self.quantity)
+                ])
+
+class AdmissionTicket(models.Model):
+    purchase = models.ForeignKey(TicketPurchase, on_delete=models.CASCADE, related_name="tickets")
+    number = models.PositiveIntegerField()
+    seat_label = models.CharField(max_length=12, blank=True)
+    code = models.CharField(max_length=32, unique=True, default=generate_ticket_token, editable=False)
+    used_at = models.DateTimeField(null=True, blank=True, editable=False)
+    used_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                on_delete=models.SET_NULL, related_name="validated_tickets", editable=False)
+
+    class Meta:
+        ordering = ["number"]
+        verbose_name = "Entrada individual"
+        verbose_name_plural = "Entradas individuales"
+        constraints = [models.UniqueConstraint(fields=["purchase", "number"], name="unique_ticket_number_per_purchase")]
+
+    @property
+    def qr_payload(self):
+        return f"BC1:{self.code}"
+
+    def __str__(self):
+        return f"Compra #{self.purchase_id} · Entrada {self.number}"
+
+
+class AdmissionValidation(models.Model):
+    """An operator's reversible, auditable admission action."""
+
+    purchase = models.ForeignKey(TicketPurchase, on_delete=models.CASCADE, related_name="admission_validations")
+    operator = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL,
+                                 related_name="admission_validations")
+    tickets = models.ManyToManyField(AdmissionTicket, related_name="validation_events")
+    created_at = models.DateTimeField(auto_now_add=True)
+    reverted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Validación de ingreso"
+        verbose_name_plural = "Validaciones de ingreso"
+
+    @property
+    def can_undo(self):
+        return (
+            self.reverted_at is None
+            and self.created_at >= timezone.now() - timedelta(seconds=CinemaSettings.current().admission_undo_seconds)
+        )
+
+
+class PurchaseRefund(models.Model):
+    purchase = models.OneToOneField(TicketPurchase, on_delete=models.CASCADE, related_name="refund")
+    reference = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    notice = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    email_sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Devolución simulada"
+        verbose_name_plural = "Devoluciones simuladas"
+
+    def __str__(self):
+        return f"Devolución simulada · Compra #{self.purchase_id}"
 
 
 class SeatPurchase(models.Model):

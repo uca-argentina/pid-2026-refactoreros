@@ -1,11 +1,11 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db.models import Case, IntegerField, Value, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.cache import never_cache
 import json
 
 from domain.cinema.models import CinemaSettings
@@ -213,20 +213,35 @@ def seat_reservation_status_view(request, pk):
 
 
 @login_required
+@never_cache
 def my_tickets_view(request):
     now = timezone.now()
-    purchases = (
+    Screening.finalize_expired()
+    purchases = list(
         TicketPurchase.objects.filter(user=request.user)
-        .select_related("screening__movie", "screening__room")
-        .annotate(
-            screening_date_bucket=Case(
-                When(screening__starts_at__gte=now, then=Value(0)),
-                default=Value(1),
-                output_field=IntegerField(),
-            )
-        )
-        .order_by("screening_date_bucket", "screening__starts_at", "-created_at")
+        .select_related("screening__movie", "screening__room", "refund")
+        .prefetch_related("tickets")
+        .order_by("screening__starts_at", "-created_at")
     )
+    for purchase in purchases:
+        purchase.used_count = sum(ticket.used_at is not None for ticket in purchase.tickets.all())
+        purchase.remaining_count = purchase.quantity - purchase.used_count
+        purchase.is_history = (
+            purchase.screening.ends_at <= now
+            or purchase.screening.status in {Screening.Status.FINISHED, Screening.Status.CANCELED}
+            or hasattr(purchase, "refund")
+        )
+        purchase.admission_open = (
+            purchase.screening.status == Screening.Status.PUBLISHED
+            and purchase.screening.ends_at > now
+            and purchase.remaining_count > 0
+            and not purchase.is_history
+        )
+    active_purchases = [purchase for purchase in purchases if not purchase.is_history]
+    historical_purchases = [purchase for purchase in purchases if purchase.is_history]
+    active_purchases.sort(key=lambda purchase: (not purchase.admission_open, purchase.screening.starts_at))
+    historical_purchases.sort(key=lambda purchase: purchase.screening.starts_at, reverse=True)
+    purchases = active_purchases + historical_purchases
     return render(
         request,
         "my_tickets.html",
@@ -236,3 +251,25 @@ def my_tickets_view(request):
             "manager_role": manager_role(request.user),
         },
     )
+
+
+@login_required
+@never_cache
+@require_GET
+def ticket_detail_view(request, pk):
+    purchase = get_object_or_404(
+        TicketPurchase.objects.select_related("screening__movie", "screening__room", "refund").prefetch_related("tickets"),
+        pk=pk, user=request.user,
+    )
+    screening = purchase.screening
+    used_count = sum(ticket.used_at is not None for ticket in purchase.tickets.all())
+    is_expired = screening.ends_at <= timezone.now() or screening.status == Screening.Status.FINISHED
+    available = (
+        used_count < purchase.quantity and screening.status == Screening.Status.PUBLISHED
+        and screening.ends_at > timezone.now() and not hasattr(purchase, "refund")
+    )
+    return render(request, "ticket_detail.html", {
+        "purchase": purchase, "used_count": used_count, "available": available, "is_expired": is_expired,
+        "cinema": CinemaSettings.current(),
+        "manager_role": manager_role(request.user),
+    })

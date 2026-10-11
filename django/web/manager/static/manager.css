@@ -194,6 +194,7 @@ svg {
 }
 
 .manager-nav a,
+.manager-nav button,
 .logout-link {
   display: flex;
   align-items: center;
@@ -207,14 +208,25 @@ svg {
   text-decoration: none;
 }
 
+.manager-nav button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
 .manager-nav a:hover,
 .logout-link:hover,
-.manager-nav a.is-active {
+.manager-nav a.is-active,
+.manager-nav button:hover,
+.manager-nav button.is-active {
   color: var(--sidebar-active-ink);
   background: var(--sidebar-active-bg);
 }
 
-.manager-nav a.is-active {
+.manager-nav a.is-active,
+.manager-nav button.is-active {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
@@ -238,6 +250,14 @@ svg {
   border-radius: 0;
   color: currentColor;
   background: transparent;
+}
+
+.manager-nav .manager-manage-toggle,
+.manager-manage-menu { display: none; }
+
+@media (min-width: 1121px) {
+  .manager-nav .manager-manage-toggle,
+  .manager-manage-menu { display: none !important; }
 }
 
 .logout-link {
@@ -1504,6 +1524,8 @@ th {
     flex: 0 0 auto;
   }
 
+  .manager-nav button { flex: 0 0 auto; }
+
   .dashboard-layout,
   .form-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -1519,7 +1541,7 @@ th {
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1120px) {
   .manager-sidebar,
   .manager-topbar {
     padding-left: 16px;
@@ -1571,6 +1593,22 @@ th {
     text-align: center;
   }
 
+  .manager-nav button {
+    flex: 1 1 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 54px;
+    padding: 4px 2px;
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .manager-nav .manager-manage-toggle { display: flex; }
+  .manager-nav .manager-manage-toggle svg { transition: transform .18s ease; }
+  .manager-nav .manager-manage-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+
   .manager-nav a span {
     max-width: 100%;
     overflow: hidden;
@@ -1578,9 +1616,57 @@ th {
     white-space: nowrap;
   }
 
-  .manager-nav a.is-active {
+  .manager-nav button span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .manager-nav a.is-active,
+  .manager-nav button.is-active {
     box-shadow: inset 0 3px 0 var(--accent);
   }
+
+  .manager-nav .nav-users,
+  .manager-nav .nav-rooms,
+  .manager-nav .nav-seat-types,
+  .manager-nav .nav-movies,
+  .manager-nav .nav-screenings { display: none !important; }
+
+  .manager-manage-menu {
+    position: fixed;
+    z-index: 21;
+    right: 12px;
+    bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--sidebar-bg);
+    box-shadow: 0 -12px 30px rgba(0, 0, 0, .28);
+  }
+
+  .manager-manage-menu[hidden] { display: none; }
+
+  .manager-manage-menu a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--sidebar-ink);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .manager-manage-menu a:last-child { grid-column: 1 / -1; }
 
   .cinema-logo,
   .cinema-logo-placeholder {

@@ -54,6 +54,14 @@ body {
   gap: 18px;
 }
 
+.client-nav-primary,
+.client-nav-account {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
 .client-header nav a {
   display: inline-flex;
   align-items: center;
@@ -89,6 +97,38 @@ body {
   border-color: rgba(251, 191, 36, .72);
   color: #fde68a;
   background: rgba(251, 191, 36, .18);
+}
+
+.client-header nav a.client-tickets-link {
+  color: #ff958d;
+}
+
+.client-header nav a.client-tickets-link:hover {
+  color: #ffb4ad;
+}
+
+.client-header nav a.has-imminent-ticket {
+  position: relative;
+}
+
+.client-header nav a.has-imminent-ticket::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  inset: -8px;
+  border: 1px solid rgba(229, 53, 44, .9);
+  border-radius: 8px;
+  animation: ticket-alert-ring 2.4s ease-out infinite;
+}
+
+@keyframes ticket-alert-ring {
+  0%, 24% { inset: -9px; opacity: 0; }
+  35% { opacity: .95; }
+  100% { inset: 4px; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .client-header nav a.has-imminent-ticket::after { animation: none; opacity: .9; }
 }
 
 .client-user-pill {
@@ -822,6 +862,36 @@ body {
   cursor: not-allowed;
 }
 
+.purchase-action button.is-processing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #fff;
+  background: rgba(255, 255, 255, .18);
+}
+
+.purchase-loading-clock {
+  width: 17px;
+  height: 17px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  opacity: .9;
+  animation: purchase-clock-spin 1s steps(8, end) infinite;
+}
+
+.purchase-loading-clock::after {
+  content: "";
+  display: block;
+  width: 2px;
+  height: 6px;
+  margin: 3px auto 0;
+  background: currentColor;
+  transform-origin: bottom;
+}
+
+@keyframes purchase-clock-spin { to { transform: rotate(360deg); } }
+
 .purchase-summary {
   width: 100%;
   max-width: 100%;
@@ -1024,6 +1094,11 @@ body {
     gap: 8px 12px;
   }
 
+  .client-nav-primary,
+  .client-nav-account {
+    gap: 8px 12px;
+  }
+
   .client-header nav a {
     min-height: 32px;
     font-size: 13px;
@@ -1215,42 +1290,72 @@ body {
 }
 
 @media (max-width: 520px) {
+  .client-page {
+    padding-bottom: 72px;
+  }
+
   .client-header {
     padding: 14px 16px;
   }
 
   .client-header nav {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
+    display: block;
+  }
+
+  .client-nav-account {
+    width: 100%;
     gap: 9px 14px;
+    justify-content: space-between;
   }
 
-  .client-header nav a {
-    justify-content: flex-start;
-    min-width: 0;
-    min-height: 28px;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
+  .client-nav-primary {
+    position: fixed;
+    z-index: 30;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    padding: 7px 10px max(7px, env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(5, 7, 11, .97);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, .28);
   }
 
-  .client-header nav a.client-manager-link {
-    padding: 0;
-    border: 0;
-    color: #fbbf24;
-    background: transparent;
+  .client-header .client-nav-primary a {
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 8px;
+    border-radius: 7px;
+    color: rgba(255, 255, 255, .76);
+    font-size: 12px;
   }
 
-  .client-header nav a.client-manager-link:hover {
-    color: #fde68a;
-    background: transparent;
+  .client-header .client-nav-primary a.client-tickets-link,
+  .client-header .client-nav-primary a.client-tickets-link:hover {
+    background: rgba(180, 35, 24, .18);
+    color: #ffaaa3;
+  }
+
+  .client-header .client-nav-primary a:hover {
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+  }
+
+  .client-header .client-nav-primary a.is-active,
+  .client-header .client-nav-primary a.is-active:hover {
+    background: #b42318;
+    color: #fff;
+  }
+
+  .client-header .client-nav-primary a svg {
+    width: 17px;
+    height: 17px;
   }
 
   .client-user-pill {
-    order: 3;
-    max-width: 100%;
+    max-width: calc(100% - 116px);
     padding: 0;
     border: 0;
     background: transparent;
@@ -1258,7 +1363,6 @@ body {
   }
 
   .client-header nav a.client-logout-link {
-    margin-left: auto;
     color: rgba(255, 255, 255, .58);
   }
 
