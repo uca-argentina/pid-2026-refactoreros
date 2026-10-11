@@ -178,26 +178,27 @@ body {
 
 .client-header nav a.has-imminent-ticket {
   position: relative;
+  background-color: rgba(180, 35, 24, .2);
+  animation: imminent-ticket-pulse 1.8s ease-in-out infinite;
 }
 
 .client-header nav a.has-imminent-ticket::after {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-  inset: -8px;
-  border: 1px solid rgba(229, 53, 44, .9);
-  border-radius: 8px;
-  animation: ticket-alert-ring 2.4s ease-out infinite;
+  content: none;
 }
 
-@keyframes ticket-alert-ring {
-  0%, 24% { inset: -9px; opacity: 0; }
-  35% { opacity: .95; }
-  100% { inset: 4px; opacity: 0; }
+@keyframes imminent-ticket-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(229, 53, 44, 0), 0 0 0 rgba(229, 53, 44, 0);
+    filter: saturate(1);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(229, 53, 44, .13), 0 0 22px rgba(229, 53, 44, .28);
+    filter: saturate(1.16) brightness(1.08);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .client-header nav a.has-imminent-ticket::after { animation: none; opacity: .9; }
+  .client-header nav a.has-imminent-ticket { animation: none; background-color: rgba(180, 35, 24, .3); }
 }
 
 .client-user-pill {

@@ -39,7 +39,7 @@
             <div class="ticket-card-action">
               <span>{{ purchase.quantity }} entrada{{ purchase.quantity|pluralize }}</span>
               {% if purchase.admission_open %}
-                <a class="ticket-qr-link" href="{% url 'ticket_detail' purchase.pk %}">
+                <a class="ticket-qr-link{% if purchase.is_imminent %} is-imminent-ticket{% endif %}" href="{% url 'ticket_detail' purchase.pk %}">
                   <i data-lucide="qr-code" aria-hidden="true"></i><span>MOSTRAR QR</span>
                 </a>
               {% elif purchase.is_history or purchase.used_count == purchase.quantity %}
