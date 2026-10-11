@@ -175,6 +175,18 @@
         toggle.setAttribute("aria-expanded", opening ? "true" : "false");
       });
     })();
+
+    (function () {
+      document.addEventListener("submit", function (event) {
+        var form = event.target;
+        if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== "post") return;
+        if (form.dataset.submitting === "true") {
+          event.preventDefault();
+          return;
+        }
+        form.dataset.submitting = "true";
+      }, true);
+    })();
   </script>
   {% block extra_scripts %}{% endblock %}
   {% block scripts %}{% endblock %}
