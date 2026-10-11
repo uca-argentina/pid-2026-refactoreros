@@ -441,6 +441,14 @@ svg {
   gap: 16px;
 }
 
+.screenings-heading-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .page-heading p,
 .section-title p {
   margin: 0 0 6px;
@@ -1132,7 +1140,8 @@ th {
 }
 
 .priority-screening-card {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
@@ -1158,10 +1167,8 @@ th {
   white-space: nowrap;
 }
 
-.priority-screening-card form {
-  flex: 0 0 auto;
-  margin: 0;
-}
+.priority-screening-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.priority-screening-actions form { flex: 0 0 auto; margin: 0; }
 
 .priority-screening-card button.publish-action {
   min-height: 38px;
@@ -1718,17 +1725,21 @@ th {
     flex-direction: column;
   }
 
-  .priority-screenings-header,
-  .priority-screening-card {
+  .priority-screenings-header {
     align-items: stretch;
     flex-direction: column;
   }
 
+  .priority-screening-card { grid-template-columns: 1fr; }
+
   .priority-screenings-header > span,
-  .priority-screening-card form,
-  .priority-screening-card button.publish-action {
+  .priority-screening-actions,
+  .priority-screening-actions form,
+  .priority-screening-actions button {
     width: 100%;
   }
+
+  .priority-screening-actions { justify-content: stretch; }
 
   .table-action-reference {
     justify-content: flex-start;
