@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Butacas | {{ screening.movie.title }} | {{ cinema.name }}</title>
+  <title>Butacas | {{ screening.movie.title }} | {{ cinema.name|default:"Butaca Cero" }}</title>
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
   <link rel="icon" href="{% static 'favicon-96x96.png' %}" type="image/png">
   <link rel="stylesheet" href="{% static 'catalog.css' %}">
