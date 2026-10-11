@@ -182,7 +182,7 @@
   function accept(result) {
     if (!result || !/^BC2:[A-Za-z2-9]{6}$/i.test(result.data)) return false;
     stopCamera();
-    form.elements.code.value = result.data;
+    form.elements.code.value = result.data.slice(4).toUpperCase();
     setStatus('QR leído. Consultando entrada…');
     form.requestSubmit(form.querySelector('[data-preview]'));
     return true;
