@@ -72,6 +72,12 @@
   .validation-history-item { align-items: center; }
 }
 
+@media (max-width: 1024px) {
+  .validation-scanner .form-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; }
+  .validation-scanner [data-start-camera] { width: 100%; min-height: 52px; font-size: 16px; }
+  .camera-picker summary { min-height: 52px; min-width: 52px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .admission-seat-option input:not(:checked) + span::after { animation: none; opacity: .9; }
 }
