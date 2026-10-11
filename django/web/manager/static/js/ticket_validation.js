@@ -94,6 +94,7 @@
     const admissionButton = admissionForm.querySelector('[data-validate-admission]');
     const availableSeats = admissionForm.dataset.availableSeats;
     const isSingleAdmission = admissionForm.dataset.singleAdmission === 'true';
+    let admissionSubmitting = false;
     const updateAdmissionButton = () => {
       if (isSingleAdmission) {
         admissionButton.disabled = false;
@@ -118,6 +119,18 @@
         updateAdmissionButton();
       });
     }
+    admissionForm.addEventListener('submit', event => {
+      if (admissionSubmitting) {
+        event.preventDefault();
+        return;
+      }
+      admissionSubmitting = true;
+      admissionButton.disabled = true;
+      admissionButton.textContent = 'Validando ingreso…';
+      admissionForm.querySelectorAll('input[name="ticket_numbers"]').forEach(input => {
+        input.disabled = true;
+      });
+    });
     updateAdmissionButton();
   }
 
@@ -126,7 +139,7 @@
     const updateUndoButtons = () => {
       const now = Date.now() / 1000;
       undoButtons.forEach(button => {
-        if (button.dataset.undoExpired === 'true') return;
+        if (button.dataset.undoExpired === 'true' || button.dataset.undoSubmitting === 'true') return;
         const remaining = Math.max(0, Number(button.dataset.undoDeadline) - now);
         const undoWindowSeconds = Number(button.dataset.undoWindowSeconds) || 30;
         const countdown = button.querySelector('[data-undo-countdown]');
@@ -142,6 +155,21 @@
         countdown.textContent = ` · 0:${String(Math.ceil(remaining)).padStart(2, '0')}`;
       });
     };
+    undoButtons.forEach(button => {
+      const undoForm = button.closest('form');
+      if (!undoForm) return;
+      undoForm.addEventListener('submit', event => {
+        if (button.dataset.undoSubmitting === 'true') {
+          event.preventDefault();
+          return;
+        }
+        button.dataset.undoSubmitting = 'true';
+        button.disabled = true;
+        button.querySelector('span').textContent = 'Deshaciendo…';
+        const countdown = button.querySelector('[data-undo-countdown]');
+        if (countdown) countdown.textContent = '';
+      });
+    });
     updateUndoButtons();
     window.setInterval(updateUndoButtons, 250);
   }

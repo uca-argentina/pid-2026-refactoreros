@@ -70,7 +70,8 @@
               </div>
             </div>
           {% endif %}
-          <div class="form-actions"><button type="submit" name="action" value="validate" data-validate-admission disabled>Validar ingreso</button></div>
+          <input type="hidden" name="action" value="validate">
+          <div class="form-actions"><button type="submit" data-validate-admission disabled>Validar ingreso</button></div>
         </form>
       </section>
     {% endif %}
@@ -99,7 +100,8 @@
               <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="validation_id" value="{{ validation.pk }}">
-                <button type="submit" name="action" value="undo" class="undo-validation" data-undo-validation data-undo-window-seconds="{{ cinema.admission_undo_seconds }}" data-undo-deadline="{{ validation.created_at|date:'U'|add:cinema.admission_undo_seconds }}">
+                <input type="hidden" name="action" value="undo">
+                <button type="submit" class="undo-validation" data-undo-validation data-undo-window-seconds="{{ cinema.admission_undo_seconds }}" data-undo-deadline="{{ validation.created_at|date:'U'|add:cinema.admission_undo_seconds }}">
                   <span>Deshacer</span><span data-undo-countdown></span>
                 </button>
               </form>
