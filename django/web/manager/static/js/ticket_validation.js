@@ -4,6 +4,8 @@
   const video = document.querySelector('[data-camera]');
   const start = document.querySelector('[data-start-camera]');
   const stop = document.querySelector('[data-stop-camera]');
+  const cameraPicker = document.querySelector('[data-camera-picker]');
+  const cameraDevice = document.querySelector('[data-camera-device]');
   const status = document.querySelector('[data-scanner-status]');
   const reservationCode = document.querySelector('[data-reservation-code]');
   const codeCharacters = reservationCode ? [...reservationCode.querySelectorAll('[data-code-character]')] : [];
@@ -135,6 +137,25 @@
     video.hidden = true;
     start.disabled = false;
     stop.hidden = true;
+    if (cameraPicker) {
+      cameraPicker.hidden = true;
+      cameraPicker.open = false;
+    }
+  }
+
+  async function populateCameraPicker(selectedDeviceId) {
+    if (!cameraPicker || !cameraDevice || !navigator.mediaDevices?.enumerateDevices) return;
+    const cameras = (await navigator.mediaDevices.enumerateDevices())
+      .filter(device => device.kind === 'videoinput');
+    cameraDevice.replaceChildren();
+    cameras.forEach((camera, index) => {
+      const option = document.createElement('option');
+      option.value = camera.deviceId;
+      option.textContent = camera.label || `Cámara ${index + 1}`;
+      option.selected = camera.deviceId === selectedDeviceId;
+      cameraDevice.append(option);
+    });
+    cameraPicker.hidden = cameras.length < 2;
   }
 
   function decode(source, width, height) {
@@ -161,7 +182,7 @@
     frame = requestAnimationFrame(scan);
   }
 
-  start.addEventListener('click', async () => {
+  async function startCamera(deviceId = '') {
     if (!window.isSecureContext) {
       setStatus('La cámara solo funciona por HTTPS. Abrí el panel con una URL segura y permití la cámara en Brave.');
       return;
@@ -173,7 +194,11 @@
     start.disabled = true;
     const current = ++generation;
     try {
-      const acquired = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      const videoConstraints = deviceId
+        ? { deviceId: { exact: deviceId } }
+        : { facingMode: { ideal: 'environment' } };
+      const acquired = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
       if (current !== generation) {
         acquired.getTracks().forEach(track => track.stop());
         return;
@@ -183,13 +208,24 @@
       video.hidden = false;
       stop.hidden = false;
       await video.play();
+      const activeDeviceId = stream.getVideoTracks()[0]?.getSettings().deviceId || deviceId;
+      await populateCameraPicker(activeDeviceId);
       setStatus('Apuntá al QR de una entrada.');
       scan();
     } catch (error) {
       stopCamera();
       setStatus('No pudimos abrir la cámara. Revisá los permisos o ingresá el código manualmente.');
     }
+  }
+
+  start.addEventListener('click', () => {
+    startCamera();
   });
+  if (cameraDevice) {
+    cameraDevice.addEventListener('change', () => {
+      if (cameraDevice.value) startCamera(cameraDevice.value);
+    });
+  }
   stop.addEventListener('click', () => {
     stopCamera();
     setStatus('Cámara detenida.');
