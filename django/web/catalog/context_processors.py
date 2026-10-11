@@ -3,13 +3,14 @@ from datetime import timedelta
 from django.utils import timezone
 
 from domain.screenings.models import Screening
-from domain.tickets.models import TicketPurchase
+from domain.tickets.models import PurchaseRefund, TicketPurchase
 from domain.users.roles import staff_role
 
 
 def client_navigation(request):
     """Shared state used by the public-site header on every client page."""
     has_imminent_admission = False
+    unread_notifications = 0
     if request.user.is_authenticated:
         now = timezone.now()
         candidates = TicketPurchase.objects.filter(
@@ -23,7 +24,12 @@ def client_navigation(request):
             and any(ticket.used_at is None for ticket in purchase.tickets.all())
             for purchase in candidates
         )
+        unread_notifications = PurchaseRefund.objects.filter(
+            purchase__user=request.user,
+            read_at__isnull=True,
+        ).count()
     return {
         "manager_role": staff_role(request.user),
         "has_imminent_admission": has_imminent_admission,
+        "unread_notifications": unread_notifications,
     }

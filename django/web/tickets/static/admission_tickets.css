@@ -63,6 +63,53 @@
   font-size: 13px;
 }
 
+.notification-main {
+  max-width: 820px;
+}
+
+.notification-intro {
+  margin: -8px 0 22px;
+  color: rgba(255, 255, 255, .66);
+}
+
+.notification-list {
+  display: grid;
+  gap: 12px;
+}
+
+.notification-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 15px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 12px;
+  color: #fff;
+  background: rgba(255, 255, 255, .06);
+}
+
+.notification-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: #ff9b92;
+  background: rgba(180, 35, 24, .22);
+}
+
+.notification-icon svg { width: 20px; height: 20px; }
+.notification-card p { margin: 0; }
+.notification-card h2 { margin: 2px 0 5px; font-size: 19px; }
+.notification-kicker { color: #ffaaa3; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.notification-refund { margin-top: 12px !important; color: #fff; font-weight: 700; }
+.notification-date { margin-top: 7px !important; color: rgba(255, 255, 255, .52); font-size: 13px; }
+
+@media (max-width: 560px) {
+  .notification-card { gap: 12px; padding: 15px; }
+  .notification-card h2 { font-size: 17px; }
+}
+
 .ticket-qr-card { max-width: 600px; margin: auto; padding: clamp(16px, 4vw, 32px); color: #fff; text-align: center; }
 .ticket-qr-image { display: grid; place-items: center; width: min(100%, 380px); aspect-ratio: 1; margin: 24px auto; padding: 10px; border-radius: 12px; background: #fff; overflow: hidden; box-shadow: 0 14px 32px rgba(0, 0, 0, .28); }
 .ticket-qr-image img,

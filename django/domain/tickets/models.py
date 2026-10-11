@@ -399,6 +399,7 @@ class PurchaseRefund(models.Model):
     notice = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     email_sent_at = models.DateTimeField(null=True, blank=True)
+    read_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Devolución simulada"
