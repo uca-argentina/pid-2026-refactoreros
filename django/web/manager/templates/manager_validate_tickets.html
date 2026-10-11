@@ -9,8 +9,9 @@
     <section class="validation-scanner" aria-labelledby="scanner-title">
       <h2 id="scanner-title" class="visually-hidden">Escanear código QR</h2>
       <div class="form-actions">
-        <button type="button" data-start-camera><i data-lucide="camera" aria-hidden="true"></i>Escanear código</button>
-        <button type="button" data-stop-camera hidden>Detener cámara</button>
+        <button type="button" data-start-camera>
+          <i data-lucide="camera" data-camera-icon aria-hidden="true"></i><span data-camera-close-mark hidden aria-hidden="true">×</span><span data-camera-button-label>Escanear código</span>
+        </button>
         <details class="camera-picker" data-camera-picker hidden>
           <summary aria-label="Elegir cámara" title="Elegir cámara"><i data-lucide="settings-2" aria-hidden="true"></i></summary>
           <div class="camera-picker-menu">

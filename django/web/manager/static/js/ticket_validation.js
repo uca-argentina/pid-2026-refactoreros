@@ -3,7 +3,8 @@
   if (!form) return;
   const video = document.querySelector('[data-camera]');
   const start = document.querySelector('[data-start-camera]');
-  const stop = document.querySelector('[data-stop-camera]');
+  const cameraButtonLabel = document.querySelector('[data-camera-button-label]');
+  const cameraCloseMark = document.querySelector('[data-camera-close-mark]');
   const cameraPicker = document.querySelector('[data-camera-picker]');
   const cameraDevice = document.querySelector('[data-camera-device]');
   const status = document.querySelector('[data-scanner-status]');
@@ -145,7 +146,9 @@
     video.srcObject = null;
     video.hidden = true;
     start.disabled = false;
-    stop.hidden = true;
+    start.classList.remove('is-camera-open');
+    if (cameraButtonLabel) cameraButtonLabel.textContent = 'Escanear código';
+    if (cameraCloseMark) cameraCloseMark.hidden = true;
     if (cameraPicker) {
       cameraPicker.hidden = true;
       cameraPicker.open = false;
@@ -215,10 +218,13 @@
       stream = acquired;
       video.srcObject = stream;
       video.hidden = false;
-      stop.hidden = false;
       await video.play();
       const activeDeviceId = stream.getVideoTracks()[0]?.getSettings().deviceId || deviceId;
       await populateCameraPicker(activeDeviceId);
+      start.disabled = false;
+      start.classList.add('is-camera-open');
+      if (cameraButtonLabel) cameraButtonLabel.textContent = 'Cerrar cámara';
+      if (cameraCloseMark) cameraCloseMark.hidden = false;
       setStatus('Apuntá al QR de una entrada.');
       scan();
     } catch (error) {
@@ -228,6 +234,11 @@
   }
 
   start.addEventListener('click', () => {
+    if (stream) {
+      stopCamera();
+      setStatus('Cámara cerrada.');
+      return;
+    }
     startCamera();
   });
   if (cameraDevice) {
@@ -235,10 +246,6 @@
       if (cameraDevice.value) startCamera(cameraDevice.value);
     });
   }
-  stop.addEventListener('click', () => {
-    stopCamera();
-    setStatus('Cámara detenida.');
-  });
   form.addEventListener('submit', stopCamera);
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopCamera(); });
   window.addEventListener('pagehide', stopCamera);
