@@ -15,6 +15,7 @@ body {
 
 .client-page {
   min-height: 100vh;
+  padding-top: 76px;
   color: var(--text);
   background:
     radial-gradient(circle at 18% 0%, rgba(255, 255, 255, .16) 0, rgba(255, 255, 255, 0) 320px),
@@ -22,14 +23,21 @@ body {
 }
 
 .client-header {
+  position: fixed;
+  z-index: 40;
+  top: 0;
+  right: 0;
+  left: 0;
   min-height: 76px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 24px;
   padding: 0 40px;
   color: #fff;
   border-bottom: 1px solid rgba(255, 255, 255, .1);
+  background: rgba(5, 7, 11, .9);
+  backdrop-filter: blur(16px);
 }
 
 .client-brand {
@@ -47,11 +55,7 @@ body {
 }
 
 .client-header nav {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 18px;
+  display: contents;
 }
 
 .client-nav-primary,
@@ -59,7 +63,22 @@ body {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 18px;
+}
+
+.client-nav-primary {
+  grid-column: 2;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .07);
+}
+
+.client-nav-account {
+  grid-column: 3;
+  justify-self: end;
+  justify-content: flex-end;
+  gap: 12px;
 }
 
 .client-header nav a {
@@ -77,6 +96,29 @@ body {
 
 .client-header nav a:hover {
   color: #fff;
+}
+
+.client-header .client-nav-primary a {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, .78);
+}
+
+.client-header .client-nav-primary a.client-tickets-link,
+.client-header .client-nav-primary a.client-tickets-link:hover {
+  color: rgba(255, 255, 255, .78);
+}
+
+.client-header .client-nav-primary a:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, .1);
+}
+
+.client-header .client-nav-primary a.is-active,
+.client-header .client-nav-primary a.is-active:hover {
+  color: #111318;
+  background: #fff;
 }
 
 .client-header nav a svg {
@@ -1104,12 +1146,15 @@ body {
 
 @media (max-width: 860px) {
   .client-page {
+    padding-top: 0;
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
 
   .client-header {
+    position: sticky;
     align-items: flex-start;
     flex-direction: column;
+    display: flex;
     gap: 14px;
     padding: 16px 20px;
   }
@@ -1120,6 +1165,7 @@ body {
   }
 
   .client-header nav {
+    display: flex;
     width: 100%;
     justify-content: flex-start;
     gap: 8px 12px;
@@ -1127,6 +1173,11 @@ body {
 
   .client-nav-primary,
   .client-nav-account {
+    display: flex;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     gap: 8px 12px;
   }
 
