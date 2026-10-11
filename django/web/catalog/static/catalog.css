@@ -1166,6 +1166,7 @@ body {
 
   .client-header nav {
     display: flex;
+    flex: 0 0 auto;
     width: 100%;
     align-items: center;
     justify-content: flex-start;
@@ -1182,18 +1183,21 @@ body {
     gap: 8px 12px;
   }
 
-  .client-nav-account {
+  .client-header > nav > .client-nav-account {
     display: grid;
+    grid-column: auto;
+    justify-self: stretch;
+    align-self: stretch;
     grid-template-columns: auto minmax(0, 1fr) auto;
     width: 100%;
     gap: 8px;
   }
 
-  .client-nav-account.has-management {
+  .client-header > nav > .client-nav-account.has-management {
     grid-template-columns: auto auto minmax(0, 1fr) auto;
   }
 
-  .client-nav-account.is-anonymous {
+  .client-header > nav > .client-nav-account.is-anonymous {
     display: flex;
     justify-content: flex-end;
   }
@@ -1469,7 +1473,7 @@ body {
     display: block;
   }
 
-  .client-nav-account {
+  .client-header > nav > .client-nav-account {
     width: 100%;
     gap: 8px;
   }
