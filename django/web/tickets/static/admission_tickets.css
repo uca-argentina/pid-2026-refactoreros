@@ -49,6 +49,11 @@
   text-transform: none;
 }
 .ticket-qr-link:hover { background: #d02d25; color: #fff; }
+.ticket-qr-link.is-imminent-ticket { animation: imminent-ticket-pulse 1.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket-qr-link.is-imminent-ticket { animation: none; background: #d02d25; }
+}
 .ticket-history-link { position: relative; z-index: 1; display: inline-flex; align-items: center; min-height: 38px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, .35); border-radius: 6px; color: rgba(255, 255, 255, .9); font-size: 13px; font-weight: 800; text-decoration: none; }
 .ticket-history-link:hover { border-color: rgba(255, 255, 255, .8); color: #fff; }
 .ticket-used-label { color: rgba(255,255,255,.6); text-align: right; }

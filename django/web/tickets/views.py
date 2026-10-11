@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -257,6 +259,10 @@ def my_tickets_view(request):
             and purchase.screening.ends_at > now
             and purchase.remaining_count > 0
             and not purchase.is_history
+        )
+        purchase.is_imminent = (
+            purchase.admission_open
+            and now <= purchase.screening.starts_at <= now + timedelta(hours=2)
         )
     active_purchases = [purchase for purchase in purchases if not purchase.is_history]
     historical_purchases = [purchase for purchase in purchases if purchase.is_history]

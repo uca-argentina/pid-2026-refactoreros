@@ -103,6 +103,7 @@ class PurchaseAdmissionViewTests(AdmissionFixture):
         response = self.client.get(reverse("my_tickets"))
         self.assertContains(response, "MOSTRAR QR")
         self.assertContains(response, "has-imminent-ticket")
+        self.assertContains(response, "is-imminent-ticket")
         self.assertNotContains(response, "Entrada 1")
         detail = self.client.get(reverse("ticket_detail", args=[self.purchase.pk]))
         self.assertContains(detail, self.purchase.validation_code)
