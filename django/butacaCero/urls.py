@@ -39,3 +39,8 @@ urlpatterns = [
 
 if settings.DEBUG or settings.SERVE_MEDIA_FILES:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+handler400 = "web.catalog.views.bad_request_view"
+handler403 = "web.catalog.views.permission_denied_view"
+handler404 = "web.catalog.views.not_found_view"
+handler500 = "web.catalog.views.server_error_view"

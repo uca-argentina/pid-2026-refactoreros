@@ -1,0 +1,41 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{{ status }} | {{ cinema.name|default:"Butaca Cero" }}</title>
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+  <link rel="icon" href="{% static 'favicon-96x96.png' %}" type="image/png">
+  <link rel="stylesheet" href="{% static 'catalog.css' %}">
+  <link rel="stylesheet" href="{% static 'error_pages.css' %}">
+</head>
+<body class="client-page error-page">
+  <header class="error-header">
+    <a class="client-brand" href="{% url 'home' %}" aria-label="Volver a la cartelera">
+      {% if cinema.logo %}
+        <img src="{{ cinema.logo.url }}" alt="{{ cinema.name }}" class="client-logo">
+      {% else %}
+        <strong>{{ cinema.name|default:"Butaca Cero" }}</strong>
+      {% endif %}
+    </a>
+  </header>
+  <main class="error-main">
+    <section class="error-card" aria-labelledby="error-title">
+      <p class="error-code" aria-hidden="true">{{ status }}</p>
+      <div class="error-copy">
+        <p class="error-eyebrow">{{ eyebrow }}</p>
+        <h1 id="error-title">{{ title }}</h1>
+        <p>{{ description }}</p>
+      </div>
+      <div class="error-actions">
+        <a class="error-primary-action" href="{% url 'home' %}"><i data-lucide="clapperboard" aria-hidden="true"></i>Volver a la cartelera</a>
+        <button class="error-secondary-action" type="button" onclick="window.history.back()"><i data-lucide="arrow-left" aria-hidden="true"></i>Volver atrás</button>
+      </div>
+    </section>
+  </main>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>if (window.lucide) { lucide.createIcons(); }</script>
+</body>
+</html>

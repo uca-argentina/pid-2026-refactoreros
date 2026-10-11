@@ -147,3 +147,46 @@ def screening_detail_view(request, pk):
     Screening.finalize_expired()
     screening = get_object_or_404(Screening.published(), pk=pk)
     return redirect("seat_selection", pk=screening.pk)
+
+
+def _error_page(request, status, title, description, eyebrow):
+    """Render project error pages without relying on the normal navigation."""
+    try:
+        cinema = CinemaSettings.current()
+    except Exception:
+        cinema = CinemaSettings(name="Butaca Cero")
+    return render(request, "error_page.html", {
+        "cinema": cinema,
+        "status": status,
+        "title": title,
+        "description": description,
+        "eyebrow": eyebrow,
+    }, status=status)
+
+
+def bad_request_view(request, exception=None):
+    return _error_page(
+        request, 400, "No pudimos interpretar la solicitud.",
+        "Revisá los datos e intentá nuevamente.", "Solicitud inválida",
+    )
+
+
+def permission_denied_view(request, exception=None):
+    return _error_page(
+        request, 403, "No tenés permiso para entrar acá.",
+        "Si creés que deberías tener acceso, iniciá sesión con otra cuenta.", "Acceso restringido",
+    )
+
+
+def not_found_view(request, exception=None):
+    return _error_page(
+        request, 404, "Esta función no está en cartelera.",
+        "La página que buscás no existe o ya no está disponible.", "Página no encontrada",
+    )
+
+
+def server_error_view(request):
+    return _error_page(
+        request, 500, "Se apagaron las luces antes de tiempo.",
+        "Tuvimos un problema inesperado. Esperá unos segundos e intentá de nuevo.", "Error inesperado",
+    )
