@@ -35,7 +35,8 @@
           {% endfor %}
         </div>
         <span class="visually-hidden">{{ form.code.as_hidden }}</span>{{ form.code.errors }}
-        <div class="form-actions"><button type="submit" name="action" value="preview" data-preview>Consultar</button></div>
+        <input type="hidden" name="action" value="preview">
+        <div class="form-actions"><button type="submit" data-preview>Consultar</button></div>
       </form>
     </section>
 
