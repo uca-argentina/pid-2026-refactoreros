@@ -83,7 +83,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "cloudinary",
     "domain.cinema",
     "domain.movies",
     "domain.rooms",
@@ -187,6 +186,7 @@ CLOUDINARY_CONFIGURED = all(
     [CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET]
 )
 if CLOUDINARY_CONFIGURED:
+    INSTALLED_APPS.append("cloudinary")
     CLOUDINARY_STORAGE = {
         "CLOUD_NAME": CLOUDINARY_CLOUD_NAME,
         "API_KEY": CLOUDINARY_API_KEY,
