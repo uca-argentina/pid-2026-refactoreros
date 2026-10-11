@@ -29,6 +29,8 @@
 @keyframes seat-alert-ring { 0%, 24% { inset: -7px; opacity: 0; } 35% { opacity: .95; } 100% { inset: 3px; opacity: 0; } }
 .validation-scanner video { width: 100%; max-height: 360px; margin-top: 16px; border-radius: 8px; background: #000; }
 .validation-scanner [hidden] { display: none; }
+.validation-scanner [data-start-camera].is-camera-open [data-camera-icon] { display: none; }
+.validation-scanner [data-camera-close-mark] { font-size: 22px; font-weight: 400; line-height: .7; }
 .camera-picker { position: relative; }
 .camera-picker summary { display: inline-flex; align-items: center; justify-content: center; min-width: 42px; min-height: 40px; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; list-style: none; }
 .camera-picker summary::-webkit-details-marker { display: none; }
