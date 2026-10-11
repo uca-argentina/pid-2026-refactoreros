@@ -180,7 +180,7 @@ def permission_denied_view(request, exception=None):
 
 def not_found_view(request, exception=None):
     return _error_page(
-        request, 404, "Esta función no está en cartelera.",
+        request, 404, "Esta página se perdió en el multiverso.",
         "La página que buscás no existe o ya no está disponible.", "Página no encontrada",
     )
 

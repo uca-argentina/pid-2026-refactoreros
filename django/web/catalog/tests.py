@@ -49,7 +49,7 @@ class CatalogFlowTests(TestCase):
         response = self.client.get("/esta-pagina-no-existe/")
 
         self.assertEqual(response.status_code, 404)
-        self.assertContains(response, "Esta función no está en cartelera.", status_code=404)
+        self.assertContains(response, "Esta página se perdió en el multiverso.", status_code=404)
         self.assertContains(response, "Volver a la cartelera", status_code=404)
 
     def test_home_renderiza_sin_sesion(self):
