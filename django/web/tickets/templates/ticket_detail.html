@@ -14,7 +14,7 @@
 <body class="client-page">
   {% include "_client_header.html" %}
   <main class="client-main">
-    <article class="ticket-qr-card">
+    <article class="ticket-qr-card"{% if available %} data-ticket-status-url="{% url 'ticket_admission_status' purchase.pk %}" data-used-count="{{ used_count }}"{% endif %}>
       {% if available %}
         <div class="ticket-qr-image" data-qr-payload="{{ purchase.qr_payload }}" aria-label="QR de esta compra para validar el ingreso"></div>
       {% endif %}
@@ -24,6 +24,23 @@
       </div>
       {% if available %}
         <p class="ticket-code"><span>Código de reserva</span><strong>{{ purchase.validation_code }}</strong></p>
+      {% endif %}
+      {% if used_count %}
+        <section class="ticket-admission-update is-visible" data-admission-update aria-live="polite">
+          <span class="ticket-admission-kicker"><i data-lucide="sparkles" aria-hidden="true"></i>Ingreso registrado</span>
+          <strong data-admission-title>Ya tenés {{ used_count }} butaca{{ used_count|pluralize }} validada{{ used_count|pluralize }}</strong>
+          <p data-admission-detail>{{ purchase.screening.room.name }} · {{ used_seat_summary|default:"Sin butacas asignadas" }}</p>
+          <p data-admission-remaining>{% if remaining_count == 1 %}Te queda 1 butaca pendiente para entrar. ¡Que lo disfrutes!{% elif remaining_count %}Te quedan {{ remaining_count }} butacas pendientes para entrar. ¡Que lo disfruten!{% else %}Ya ingresaron todas las personas. ¡Que lo disfruten!{% endif %}</p>
+        </section>
+      {% else %}
+        <section class="ticket-admission-update" data-admission-update aria-live="polite" hidden>
+          <span class="ticket-admission-kicker"><i data-lucide="sparkles" aria-hidden="true"></i>Ingreso registrado</span>
+          <strong data-admission-title></strong>
+          <p data-admission-detail></p>
+          <p data-admission-remaining></p>
+        </section>
+      {% endif %}
+      {% if available %}
         <p class="ticket-sharing-notice"><strong>¿Necesitás compartir tu entrada?</strong> Podés compartir el QR o el código de reserva, pero tené en cuenta que, al hacerlo, otra persona podría usarla antes que vos.</p>
       {% elif purchase.refund %}
         <p>{{ purchase.refund.notice }}</p>
@@ -51,6 +68,7 @@
   </script>
   {% if available %}
     <script src="{% static 'qrcode.min.js' %}"></script>
+    <script src="{% static 'ticket_detail.js' %}" defer></script>
     <script>
       document.querySelectorAll("[data-qr-payload]").forEach(function (target) {
         var size = Math.min(480, Math.max(160, target.clientWidth - 20));

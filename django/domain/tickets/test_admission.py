@@ -112,6 +112,20 @@ class PurchaseAdmissionViewTests(AdmissionFixture):
         self.assertContains(detail, "data-qr-payload")
         self.assertContains(detail, "qrcode.min.js")
 
+    def test_customer_can_poll_a_summary_of_their_validated_entries(self):
+        validate_ticket(self.purchase.validation_code, self.operator, ticket_numbers=[1, 2])
+        self.client.force_login(self.customer)
+
+        response = self.client.get(reverse("ticket_admission_status", args=[self.purchase.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            "used_count": 2,
+            "remaining_count": 2,
+            "room": "Sala 1",
+            "used_seat_summary": "Entrada 1 · Entrada 2",
+        })
+
     def test_finished_purchase_moves_to_history_without_a_qr(self):
         self.screening.starts_at = timezone.now() - timedelta(hours=3)
         self.screening.save(update_fields=["starts_at"])
