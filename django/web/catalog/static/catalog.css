@@ -1147,7 +1147,7 @@ body {
 
 /* Tablets use the same stable two-level navigation as mobile.  The centered
    desktop capsule needs considerably more room once account controls exist. */
-@media (min-width: 861px) and (max-width: 1280px) {
+@media (min-width: 861px) and (max-width: 900px) {
   .client-page {
     padding-top: 0;
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
@@ -1882,7 +1882,7 @@ body {
 
 /* Single responsive header layout.  Keep all navigation inside the sticky
    header on touch devices; fixed child navigation was fragile in tablets. */
-@media (max-width: 1280px) {
+@media (max-width: 900px) {
   .client-page {
     padding-top: 0;
     padding-bottom: 34px;
@@ -1921,6 +1921,7 @@ body {
     grid-row: 1;
     align-items: center;
     justify-content: flex-end;
+    flex-wrap: nowrap;
     gap: 9px;
     min-width: 0;
     width: 100%;
@@ -1967,10 +1968,20 @@ body {
   }
 
   .client-user-pill {
+    display: inline-flex;
     flex: 1 1 auto;
+    justify-content: flex-start;
+    width: auto;
     min-width: 0;
-    max-width: 280px;
+    max-width: min(320px, 46vw);
     min-height: 36px;
+    padding: 0 10px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    background: rgba(255, 255, 255, .07);
+  }
+
+  .client-user-pill > span {
+    display: block;
   }
 
   .client-header nav a.client-notifications-link,
@@ -1985,6 +1996,41 @@ body {
   .client-header .client-notifications-label,
   .client-header nav a.client-logout-link span {
     display: none;
+  }
+}
+
+/* Compact desktop: preserve the single-row composition before changing to the
+   tablet layout. Secondary labels are the first things to collapse. */
+@media (min-width: 901px) and (max-width: 1400px) {
+  .client-header {
+    grid-template-columns: minmax(140px, 1fr) auto minmax(0, 1fr);
+    gap: 16px;
+    padding: 0 24px;
+  }
+
+  .client-nav-account {
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .client-user-pill {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: min(260px, 27vw);
+  }
+
+  .client-header .client-notifications-label,
+  .client-header nav a.client-logout-link span {
+    display: none;
+  }
+
+  .client-header nav a.client-notifications-link,
+  .client-header nav a.client-logout-link {
+    flex: 0 0 auto;
+    justify-content: center;
+    min-width: 36px;
+    padding: 0 8px;
   }
 }
 
