@@ -1989,9 +1989,10 @@ body {
 
 @media (max-width: 600px) {
   .client-header {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
     gap: 10px;
-    padding: 14px 16px;
+    padding: 10px 16px;
   }
 
   .client-brand {
@@ -2002,26 +2003,37 @@ body {
   .client-header > nav > .client-nav-account,
   .client-header > nav > .client-nav-account.has-management,
   .client-header > nav > .client-nav-account.is-anonymous {
-    grid-column: 1;
-    grid-row: 2;
-    justify-content: flex-start;
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: flex-end;
   }
 
   .client-user-pill {
-    flex: 0 0 36px;
-    width: 36px;
-    max-width: 36px;
-    padding: 0;
-    justify-content: center;
+    flex: 1 1 auto;
+    width: auto;
+    max-width: min(160px, 31vw);
+    padding: 0 8px;
+    justify-content: flex-start;
   }
 
   .client-user-pill > span {
-    display: none;
+    display: block;
   }
 
   .client-header .client-nav-primary {
-    grid-column: 1;
-    grid-row: 3;
+    grid-column: 1 / -1;
+    grid-row: 2;
     width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .client-header .client-manager-link {
+    min-width: 36px;
+    padding: 0 8px;
+  }
+
+  .client-header .client-manager-link span {
+    display: none;
   }
 }
