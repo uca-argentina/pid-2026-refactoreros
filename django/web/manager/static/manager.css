@@ -1135,7 +1135,8 @@ th {
 
 .priority-screenings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 640px));
+  justify-content: start;
   gap: 10px;
 }
 
@@ -1150,6 +1151,18 @@ th {
   border: 1px solid var(--border);
   border-radius: 2px;
   background: var(--surface-soft);
+  animation: priority-screening-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes priority-screening-pulse {
+  0%, 100% {
+    border-color: color-mix(in srgb, var(--warning) 38%, var(--border));
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--warning) 0%, transparent);
+  }
+  50% {
+    border-color: color-mix(in srgb, var(--warning) 72%, var(--border));
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--warning) 13%, transparent);
+  }
 }
 
 .priority-screening-card > div {
