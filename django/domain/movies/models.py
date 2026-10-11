@@ -3,39 +3,39 @@ from django.db import models
 
 class Movie(models.Model):
     class Rating(models.TextChoices):
-        ATP = "ATP", "ATP - Apta para todo publico"
+        ATP = "ATP", "ATP - Apta para todo público"
         MAS_13 = "+13", "+13 años"
         MAS_16 = "+16", "+16 años"
         MAS_18 = "+18", "+18 años"
 
     class Genre(models.TextChoices):
-        ACCION = "ACCION", "Accion"
+        ACCION = "ACCION", "Acción"
         AVENTURA = "AVENTURA", "Aventura"
-        ANIMACION = "ANIMACION", "Animacion"
+        ANIMACION = "ANIMACION", "Animación"
         COMEDIA = "COMEDIA", "Comedia"
         DRAMA = "DRAMA", "Drama"
         TERROR = "TERROR", "Terror"
-        CIENCIA_FICCION = "CIENCIA_FICCION", "Ciencia ficcion"
+        CIENCIA_FICCION = "CIENCIA_FICCION", "Ciencia ficción"
         SUSPENSO = "SUSPENSO", "Suspenso"
         ROMANCE = "ROMANCE", "Romance"
         DOCUMENTAL = "DOCUMENTAL", "Documental"
-        FANTASIA = "FANTASIA", "Fantasia"
+        FANTASIA = "FANTASIA", "Fantasía"
         MUSICAL = "MUSICAL", "Musical"
 
     title = models.CharField(max_length=200, db_column="titulo")
     synopsis = models.TextField(db_column="sinopsis")
-    genre = models.CharField(max_length=20, verbose_name="Genero", choices=Genre.choices, db_column="genero")
-    rating = models.CharField(max_length=5, verbose_name="Clasificacion", choices=Rating.choices, db_column="clasificacion")
+    genre = models.CharField(max_length=20, verbose_name="Género", choices=Genre.choices, db_column="genero")
+    rating = models.CharField(max_length=5, verbose_name="Clasificación", choices=Rating.choices, db_column="clasificacion")
     duration_minutes = models.PositiveIntegerField(
-        help_text="Duracion de la pelicula en minutos",
-        verbose_name="Duracion en minutos",
+        help_text="Duración de la película en minutos",
+        verbose_name="Duración en minutos",
         db_column="duracion_minutos",
     )
     image = models.ImageField(upload_to="peliculas/", verbose_name="Imagen del cartel", db_column="imagen")
 
     class Meta:
-        verbose_name = "Pelicula"
-        verbose_name_plural = "Peliculas"
+        verbose_name = "Película"
+        verbose_name_plural = "Películas"
         db_table = "movies_pelicula"
         ordering = ["title"]
 
