@@ -13,8 +13,11 @@
 .validation-result h3, .validation-result p { margin: 0; }
 .validation-result h3 { font-size: 22px; }
 .admission-selection { display: grid; gap: 18px; padding-top: 8px; }
-.admission-selection fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
-.admission-selection legend { margin-bottom: 10px; font-size: 13px; font-weight: 800; }
+.admission-seat-group { min-width: 0; }
+.admission-seat-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.admission-seat-heading > span { font-size: 13px; font-weight: 800; }
+.admission-select-all { min-height: auto; padding: 4px 8px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--brand); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.admission-select-all:hover { border-color: var(--brand); }
 .admission-seat-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .admission-seat-option { position: relative; }
 .admission-seat-option input { position: absolute; opacity: 0; pointer-events: none; }
