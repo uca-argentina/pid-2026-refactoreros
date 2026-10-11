@@ -10,7 +10,15 @@ from django.utils import timezone
 from domain.cinema.models import CinemaSettings
 from domain.screenings.models import Screening
 from domain.users.roles import can_validate_tickets
-from .models import AdmissionTicket, AdmissionValidation, PurchaseRefund, SeatPurchase, SeatReservation, TicketPurchase
+from .models import (
+    AdmissionTicket,
+    AdmissionValidation,
+    PurchaseRefund,
+    SeatPurchase,
+    SeatReservation,
+    TicketPurchase,
+    reservation_code_digest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +51,7 @@ def inspect_ticket(code, operator):
     if not can_validate_tickets(operator):
         raise PermissionDenied
     credential = normalize_purchase_credential(code)
-    filters = {"validation_token": credential} if len(credential) == 32 else {"validation_code": credential}
+    filters = {"validation_token": credential} if len(credential) == 32 else {"validation_code_digest": reservation_code_digest(credential)}
     purchase = TicketPurchase.objects.select_related(
         "screening__movie", "screening__room", "refund",
     ).prefetch_related("tickets").filter(**filters).first()
@@ -76,7 +84,7 @@ def validate_ticket(code, operator, quantity=None, ticket_numbers=None):
             raise ValidationError("Indicá cuántas personas ingresan.")
         if quantity < 1:
             raise ValidationError("Indicá al menos una persona.")
-    filters = {"validation_token": credential} if len(credential) == 32 else {"validation_code": credential}
+    filters = {"validation_token": credential} if len(credential) == 32 else {"validation_code_digest": reservation_code_digest(credential)}
     candidate = TicketPurchase.objects.select_related("screening").filter(**filters).first()
     if candidate is None:
         raise ValidationError("No encontramos una entrada con ese código.")

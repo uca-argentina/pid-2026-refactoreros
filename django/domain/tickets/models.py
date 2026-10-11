@@ -1,4 +1,6 @@
 from datetime import timedelta
+import hashlib
+import hmac
 import secrets
 import uuid
 
@@ -21,6 +23,25 @@ def generate_ticket_code():
 def generate_ticket_token():
     """Opaque QR credential: 192 bits, independent from purchase IDs."""
     return secrets.token_urlsafe(24)
+
+
+def reservation_code_for_token(token):
+    """Return the stable, human-readable reservation code for a purchase token."""
+    digest = hmac.new(
+        settings.SECRET_KEY.encode(),
+        f"ticket-reservation-code:{token}".encode(),
+        hashlib.sha256,
+    ).digest()
+    return "".join(TICKET_CODE_ALPHABET[byte % len(TICKET_CODE_ALPHABET)] for byte in digest[:6])
+
+
+def reservation_code_digest(code):
+    """Indexed server-side representation of a short reservation code."""
+    return hmac.new(
+        settings.SECRET_KEY.encode(),
+        f"ticket-reservation-lookup:{code.upper()}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
 
 
 def index_to_letters(index):
@@ -49,7 +70,7 @@ class TicketPurchase(models.Model):
     total = models.DecimalField(max_digits=10, decimal_places=2)
     selected_seats = models.JSONField(default=list, blank=True, db_column="asientos_seleccionados")
     created_at = models.DateTimeField(auto_now_add=True, db_column="creada_en")
-    validation_code = models.CharField(max_length=6, unique=True, default=generate_ticket_code, editable=False)
+    validation_code_digest = models.CharField(max_length=64, unique=True, editable=False)
     validation_token = models.CharField(max_length=32, unique=True, default=generate_ticket_token, editable=False)
 
     class Meta:
@@ -67,8 +88,12 @@ class TicketPurchase(models.Model):
         return ", ".join(labels)
 
     @property
+    def validation_code(self):
+        return reservation_code_for_token(self.validation_token)
+
+    @property
     def qr_payload(self):
-        return f"BC2:{self.validation_token}"
+        return f"BC2:{self.validation_code}"
 
     @property
     def used_quantity(self):
@@ -305,6 +330,9 @@ class TicketPurchase(models.Model):
     def save(self, *args, **kwargs):
         if self.screening_id and self.quantity and self.total in (None, ""):
             self.total = self.screening.price_from * self.quantity
+        if not self.validation_token:
+            self.validation_token = generate_ticket_token()
+        self.validation_code_digest = reservation_code_digest(self.validation_code)
         creating = self._state.adding
         with transaction.atomic():
             super().save(*args, **kwargs)

@@ -38,7 +38,8 @@ class PurchaseAdmissionTests(AdmissionFixture):
     def test_purchase_has_one_qr_credential_and_short_visible_code(self):
         self.assertRegex(self.purchase.validation_code, r"^[A-Z2-9]{6}$")
         self.assertRegex(self.purchase.validation_token, r"^[A-Za-z0-9_-]{32}$")
-        self.assertEqual(self.purchase.qr_payload, f"BC2:{self.purchase.validation_token}")
+        self.assertEqual(self.purchase.qr_payload, f"BC2:{self.purchase.validation_code}")
+        self.assertNotEqual(self.purchase.validation_code_digest, self.purchase.validation_code)
         self.assertEqual(self.purchase.tickets.count(), 4)
 
     def test_one_qr_supports_partial_validation(self):

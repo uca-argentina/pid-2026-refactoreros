@@ -168,7 +168,7 @@
   }
 
   function accept(result) {
-    if (!result || !/^BC2:[A-Za-z0-9_-]{32}$/.test(result.data)) return false;
+    if (!result || !/^BC2:[A-Za-z2-9]{6}$/i.test(result.data)) return false;
     stopCamera();
     form.elements.code.value = result.data;
     setStatus('QR leído. Consultando entrada…');
