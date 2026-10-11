@@ -1,4 +1,4 @@
-.validation-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; max-width: 960px; }
+.validation-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; max-width: 960px; overflow-x: clip; }
 .validation-scanner, .validation-manual { min-width: 0; padding: 8px 32px 8px 0; }
 .validation-manual { padding: 8px 0 8px 32px; border-left: 1px solid var(--border); }
 .validation-manual h2 { margin: 0 0 16px; font-size: 20px; }
@@ -35,13 +35,14 @@
 .validation-scanner [hidden] { display: none; }
 .validation-scanner [data-start-camera].is-camera-open [data-camera-icon] { display: none; }
 .validation-scanner [data-camera-close-mark] { font-size: 22px; font-weight: 400; line-height: .7; }
-.camera-picker { position: relative; }
+.validation-scanner .form-actions { position: relative; min-width: 0; }
+.camera-picker { position: relative; min-width: 0; }
 .camera-picker summary { display: inline-flex; align-items: center; justify-content: center; min-width: 42px; min-height: 40px; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; list-style: none; }
 .camera-picker summary::-webkit-details-marker { display: none; }
 .camera-picker summary:hover, .camera-picker[open] summary { border-color: var(--brand); color: var(--brand); }
-.camera-picker-menu { position: absolute; z-index: 5; top: calc(100% + 8px); left: 0; display: grid; gap: 6px; width: min(280px, 75vw); padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface, #fff); box-shadow: 0 12px 25px rgba(0, 0, 0, .18); }
+.camera-picker-menu { position: absolute; z-index: 5; top: calc(100% + 8px); right: 0; left: auto; display: grid; gap: 6px; width: min(280px, calc(100vw - 32px)); max-width: calc(100vw - 32px); padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface, #fff); box-shadow: 0 12px 25px rgba(0, 0, 0, .18); }
 .camera-picker-menu label { font-size: 12px; font-weight: 800; }
-.camera-picker-menu select { width: 100%; min-height: 38px; border: 1px solid var(--border); border-radius: 5px; background: var(--input-bg); color: var(--ink); }
+.camera-picker-menu select { width: 100%; min-width: 0; max-width: 100%; min-height: 38px; border: 1px solid var(--border); border-radius: 5px; background: var(--input-bg); color: var(--ink); }
 .validation-scanner [data-scanner-status].is-visible { position: static; width: auto; height: auto; padding: 0; margin: 12px 0 0; overflow: visible; clip: auto; white-space: normal; color: var(--muted); }
 .validation-help { max-width: 960px; margin-top: 30px; color: var(--muted); }
 .validation-help summary { width: fit-content; color: var(--brand); font-weight: 700; cursor: pointer; }

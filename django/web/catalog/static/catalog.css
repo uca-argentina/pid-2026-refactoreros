@@ -1152,9 +1152,9 @@ body {
 
   .client-header {
     position: sticky;
-    align-items: flex-start;
-    flex-direction: column;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
     gap: 14px;
     padding: 16px 20px;
   }
@@ -1165,12 +1165,7 @@ body {
   }
 
   .client-header nav {
-    display: flex;
-    flex: 0 0 auto;
-    width: 100%;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 8px 12px;
+    display: contents;
   }
 
   .client-nav-primary,
@@ -1190,6 +1185,8 @@ body {
     align-self: stretch;
     grid-template-columns: auto minmax(0, 1fr) auto;
     width: 100%;
+    grid-column: 1;
+    grid-row: 2;
     gap: 8px;
   }
 
@@ -1464,13 +1461,12 @@ body {
   }
 
   .client-header {
-    align-items: flex-start;
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
     padding: 14px 16px;
   }
 
   .client-header nav {
-    display: block;
+    display: contents;
   }
 
   .client-header > nav > .client-nav-account {
