@@ -48,19 +48,21 @@
       lucide.createIcons();
     }
   </script>
-  <script src="{% static 'qrcode.min.js' %}"></script>
-  <script>
-    document.querySelectorAll("[data-qr-payload]").forEach(function (target) {
-      var size = Math.min(480, Math.max(160, target.clientWidth - 20));
-      new QRCode(target, {
-        text: target.dataset.qrPayload,
-        width: size,
-        height: size,
-        colorDark: "#081a31",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.M,
+  {% if available %}
+    <script src="{% static 'qrcode.min.js' %}"></script>
+    <script>
+      document.querySelectorAll("[data-qr-payload]").forEach(function (target) {
+        var size = Math.min(480, Math.max(160, target.clientWidth - 20));
+        new QRCode(target, {
+          text: target.dataset.qrPayload,
+          width: size,
+          height: size,
+          colorDark: "#081a31",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M,
+        });
       });
-    });
-  </script>
+    </script>
+  {% endif %}
 </body>
 </html>
