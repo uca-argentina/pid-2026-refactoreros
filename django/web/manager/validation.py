@@ -118,9 +118,9 @@ class TicketValidationView(StaffAccessMixin, FormView):
                 if remaining == 1 else f"Te quedan {remaining} butacas para entrar a la sala."
             )
             message = (
-                f"Tenés {seat_phrase}. {remaining_message} {farewell}"
+                f"{purchase.screening.room.name}. Tenés {seat_phrase}. {remaining_message} {farewell}"
             )
         else:
-            message = f"Tenés {seat_phrase}. {farewell}"
+            message = f"{purchase.screening.room.name}. Tenés {seat_phrase}. {farewell}"
         messages.success(self.request, message)
         return redirect(reverse('manager:validar_entradas'))
