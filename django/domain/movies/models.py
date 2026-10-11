@@ -4,9 +4,9 @@ from django.db import models
 class Movie(models.Model):
     class Rating(models.TextChoices):
         ATP = "ATP", "ATP - Apta para todo publico"
-        MAS_13 = "+13", "+13 anos"
-        MAS_16 = "+16", "+16 anos"
-        MAS_18 = "+18", "+18 anos"
+        MAS_13 = "+13", "+13 años"
+        MAS_16 = "+16", "+16 años"
+        MAS_18 = "+18", "+18 años"
 
     class Genre(models.TextChoices):
         ACCION = "ACCION", "Accion"
