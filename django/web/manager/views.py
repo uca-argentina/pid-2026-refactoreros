@@ -27,6 +27,8 @@ from domain.screenings.models import Screening
 from domain.seats.models import Seat
 from domain.seat_types.models import SeatType
 from domain.tickets.models import TicketPurchase
+from domain.users.models import Operator
+from domain.users.roles import staff_role
 
 from .dashboard import build_dashboard
 from .forms import (
@@ -42,13 +44,7 @@ User = get_user_model()
 
 
 def manager_role(user):
-    if not user.is_authenticated:
-        return ""
-    if hasattr(user, "manager_profile"):
-        return "manager"
-    if hasattr(user, "usher_profile"):
-        return "usher"
-    return ""
+    return staff_role(user)
 
 
 class StaffAccessMixin(LoginRequiredMixin):
@@ -79,6 +75,11 @@ class ManagerRequiredMixin(StaffAccessMixin):
 
 class ManagementHomeView(StaffAccessMixin, TemplateView):
     template_name = "manager_home.html"
+
+    def get(self, request, *args, **kwargs):
+        if self.manager_role == "operator":
+            return redirect("manager:validar_entradas")
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -354,6 +355,7 @@ class UsersListView(ManagerListView):
                 {
                     "user": user,
                     "role": rol,
+                    "role_label": {"manager": "Gerente", "operator": "Operador", "usher": "Acomodador", "customer": "Cliente"}[rol],
                     "can_edit": not is_other_manager,
                     "can_toggle": user.pk != self.request.user.pk and rol != "manager",
                 }
@@ -388,6 +390,8 @@ class UserUpdateView(ManagerRequiredMixin, UpdateView):
         context["enctype"] = self.enctype
         context["show_user_status_action"] = self.object.pk != self.request.user.pk
         context["can_toggle_user_status"] = manager_role(self.object) != "manager"
+        context["can_toggle_operator"] = manager_role(self.object) != "manager"
+        context["is_operator"] = Operator.objects.filter(user=self.object).exists()
         return context
 
 
@@ -407,6 +411,22 @@ class UserToggleActiveView(ManagerRequiredMixin, DetailView):
         status = "activado" if user.is_active else "bloqueado"
         messages.success(request, f"Usuario {status} correctamente.")
         return redirect("manager:usuarios_list")
+
+
+class UserToggleOperatorView(ManagerRequiredMixin, DetailView):
+    model = User
+
+    def post(self, request, *args, **kwargs):
+        user = self.get_object()
+        if user.pk == request.user.pk or manager_role(user) == "manager":
+            raise PermissionDenied
+        operator, created = Operator.objects.get_or_create(user=user)
+        if created:
+            messages.success(request, "Usuario designado como operador de entradas.")
+        else:
+            operator.delete()
+            messages.success(request, "Se quitó el rol de operador de entradas.")
+        return redirect("manager:usuarios_update", pk=user.pk)
 
 
 class RoomsListView(ManagerListView):

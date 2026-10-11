@@ -107,6 +107,9 @@ docker compose down -v
 
 ## Consideraciones
 
+La [guía de validación de entradas](docs/validacion-entradas.md) describe el rol
+Operador, los QR individuales, las migraciones, las devoluciones simuladas y los tests.
+
 - No subir `.env` a Git.
 - `.env.example` es solo una plantilla.
 - PostgreSQL no expone puerto al host; Django se conecta internamente a `db:5432`.

@@ -2,7 +2,7 @@
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 from domain.movies.models import Movie
@@ -106,9 +106,19 @@ class Screening(models.Model):
             )
 
     def save(self, *args, **kwargs):
-        if self.room_id and not self.capacity_snapshot:
-            self.capture_room_configuration()
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            previous = None
+            if self.pk:
+                previous = type(self).objects.select_for_update().get(pk=self.pk)
+            if self.room_id and not self.capacity_snapshot:
+                self.capture_room_configuration()
+            super().save(*args, **kwargs)
+            status_written = kwargs.get("update_fields") is None or "status" in kwargs["update_fields"]
+            if status_written and self.status == self.Status.CANCELED and (
+                previous is None or previous.status != self.Status.CANCELED
+            ):
+                from domain.tickets.services import refund_canceled_screening
+                refund_canceled_screening(self)
 
     @property
     def has_sales(self):
@@ -146,6 +156,12 @@ class Screening(models.Model):
         ]
 
     def change_status(self, new_status):
+        with transaction.atomic():
+            current = type(self).objects.select_for_update().get(pk=self.pk)
+            current._change_status(new_status)
+            self.refresh_from_db()
+
+    def _change_status(self, new_status):
         if not self.can_transition_to(new_status):
             raise ValidationError(
                 f"No se puede pasar una función {self.get_status_display().lower()} "

@@ -40,6 +40,21 @@ class Usher(models.Model):
         return self.user.get_username()
 
 
+class Operator(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="operator_profile",
+    )
+
+    class Meta:
+        verbose_name = "Operador"
+        verbose_name_plural = "Operadores"
+
+    def __str__(self):
+        return self.user.get_username()
+
+
 class Manager(models.Model):
     manager_id = models.BigAutoField(primary_key=True, db_column="id_gerente")
     user = models.OneToOneField(

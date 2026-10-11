@@ -27,7 +27,7 @@
               <strong class="cell-title">{{ item.user.email|default:item.user.username }}</strong>
             </td>
             <td data-label="Nombre">{{ item.user.get_full_name|default:"-" }}</td>
-            <td data-label="Rol"><span class="status-pill status-neutral">{{ item.role }}</span></td>
+            <td data-label="Rol"><span class="status-pill status-neutral">{{ item.role_label }}</span></td>
             <td data-label="Estado">
               {% if item.user.is_active %}
                 <span class="status-pill status-live">Activo</span>

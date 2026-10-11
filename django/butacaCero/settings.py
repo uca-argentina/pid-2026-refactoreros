@@ -87,6 +87,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'web.catalog.context_processors.client_navigation',
             ],
         },
     },
@@ -159,6 +160,17 @@ LOGOUT_REDIRECT_URL = "login"
 
 MAILERS = {
     'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        'BACKEND': env('DJANGO_EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend'),
     },
 }
+DEFAULT_FROM_EMAIL = env('DJANGO_DEFAULT_FROM_EMAIL', default='webmaster@localhost')
+if MAILERS['default']['BACKEND'] == 'django.core.mail.backends.smtp.EmailBackend':
+    MAILERS['default']['OPTIONS'] = {
+        'host': env('DJANGO_EMAIL_HOST', default='localhost'),
+        'port': env.int('DJANGO_EMAIL_PORT', default=587),
+        'username': env('DJANGO_EMAIL_HOST_USER', default=''),
+        'password': env('DJANGO_EMAIL_HOST_PASSWORD', default=''),
+        'use_tls': env.bool('DJANGO_EMAIL_USE_TLS', default=True),
+        'use_ssl': env.bool('DJANGO_EMAIL_USE_SSL', default=False),
+        'timeout': 10,
+    }

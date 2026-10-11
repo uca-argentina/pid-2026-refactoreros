@@ -27,10 +27,16 @@ class CinemaSettingsForm(forms.ModelForm):
         label="Recarga automática de butacas (segundos)",
         help_text="Frecuencia con la que el cliente vuelve a consultar disponibilidad.",
     )
+    admission_undo_seconds = forms.IntegerField(
+        min_value=5,
+        max_value=600,
+        label="Deshacer validación de entradas (segundos)",
+        help_text="Tiempo que tiene el operador para deshacer una validación por error.",
+    )
 
     class Meta:
         model = CinemaSettings
-        fields = ("seat_reservation_minutes", "seat_refresh_seconds")
+        fields = ("seat_reservation_minutes", "seat_refresh_seconds", "admission_undo_seconds")
 
 
 class UserManagementForm(forms.ModelForm):

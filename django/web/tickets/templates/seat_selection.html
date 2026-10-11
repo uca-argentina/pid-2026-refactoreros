@@ -11,7 +11,7 @@
   <script src="{% static 'catalog.js' %}" defer></script>
 </head>
 <body class="client-page">
-  {% include "_client_header.html" with show_movies_link=True %}
+  {% include "_client_header.html" %}
 
   <main class="client-main seat-selection-main">
     <section class="seat-selection-header">
@@ -80,8 +80,8 @@
         </section>
       {% endif %}
 
-        <aside class="purchase-cart" aria-label="Detalle de purchase">
-          <h2>Tu purchase</h2>
+        <aside class="purchase-cart" aria-label="Detalle de compra">
+          <h2>Tu compra</h2>
           <dl>
             <div>
               <dt>Función</dt>
