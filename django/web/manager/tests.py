@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from domain.cinema.models import CinemaSettings
 from domain.movies.models import Movie
+from domain.promotions.models import Promotion
 from domain.rooms.models import Room
 from domain.seats.models import Seat
 from domain.seat_types.models import SeatType
@@ -1121,6 +1122,74 @@ class ManagerFuncionesTests(TestCase):
         self.assertRedirects(response, reverse("manager:funciones_list"))
         screening.refresh_from_db()
         self.assertEqual(str(screening.ticket_price), "1600.00")
+
+
+class ManagerPromotionsTests(TestCase):
+    def setUp(self):
+        self.manager = get_user_model().objects.create_user(
+            username="promos-gerente@mail.com",
+            email="promos-gerente@mail.com",
+            password="PasswordSegura123!",
+        )
+        Manager.objects.create(user=self.manager)
+        self.seat_type = SeatType.objects.order_by("pk").first()
+        self.client.force_login(self.manager)
+
+    def test_gerente_configura_una_promocion(self):
+        response = self.client.post(
+            reverse("manager:promotions_create"),
+            data={
+                "name": "Miércoles preferencial",
+                "is_active": "on",
+                "discount_type": Promotion.DiscountType.PERCENTAGE,
+                "discount_value": "25.00",
+                "weekdays": [str(Promotion.Weekday.WEDNESDAY)],
+                "starts_at": "18:00",
+                "ends_at": "22:00",
+                "seat_types": [str(self.seat_type.pk)],
+            },
+        )
+
+        self.assertRedirects(response, reverse("manager:promotions_list"))
+        promotion = Promotion.objects.get(name="Miércoles preferencial")
+        self.assertEqual(promotion.weekdays, [Promotion.Weekday.WEDNESDAY])
+        self.assertEqual(promotion.starts_at.strftime("%H:%M"), "18:00")
+        self.assertEqual(list(promotion.seat_types.all()), [self.seat_type])
+
+    def test_lista_promociones_y_enlaza_desde_gestion(self):
+        Promotion.objects.create(
+            name="General",
+            discount_type=Promotion.DiscountType.FIXED,
+            discount_value="100.00",
+        )
+
+        response = self.client.get(reverse("manager:promotions_list"))
+
+        self.assertContains(response, "General")
+        self.assertContains(response, "Nueva promoción")
+        home = self.client.get(reverse("manager:home"))
+        self.assertContains(home, reverse("manager:promotions_list"))
+
+    def test_formulario_muestra_dias_y_butacas_como_chips(self):
+        promotion = Promotion.objects.create(
+            name="Chips seleccionados",
+            discount_type=Promotion.DiscountType.FIXED,
+            discount_value="100.00",
+            weekdays=[Promotion.Weekday.WEDNESDAY],
+        )
+        promotion.seat_types.add(self.seat_type)
+
+        response = self.client.get(
+            reverse("manager:promotions_update", args=[promotion.pk])
+        )
+
+        self.assertTemplateUsed(response, "manager_promotion_form.html")
+        self.assertContains(response, 'class="promotion-choice-chip"', count=7)
+        self.assertContains(response, 'class="promotion-choice-chip promotion-seat-type-chip"')
+        self.assertContains(response, f"--seat-type-color: {self.seat_type.color}")
+        self.assertContains(response, 'name="weekdays" value="2"')
+        self.assertContains(response, 'data-discount-affix')
+        self.assertContains(response, 'data-client-error-for="discount_value"')
 
 
 class ManagerDashboardTests(TestCase):

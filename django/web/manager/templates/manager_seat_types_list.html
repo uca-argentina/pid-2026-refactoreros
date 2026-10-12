@@ -22,6 +22,7 @@
           <th>Nombre</th>
           <th>Precio</th>
           <th>Color</th>
+          <th>Ícono</th>
           <th>Butacas</th>
           <th>Acciones</th>
         </tr>
@@ -37,6 +38,13 @@
                 {{ seat_type.color }}
               </span>
             </td>
+            <td data-label="Ícono">
+              {% if seat_type.icon %}
+                <img class="seat-type-icon-preview" src="{{ seat_type.icon.url }}" alt="Ícono de {{ seat_type.name }}">
+              {% else %}
+                <span class="muted-cell">Sin ícono</span>
+              {% endif %}
+            </td>
             <td data-label="Butacas">{{ seat_type.seat_count }}</td>
             <td class="table-actions" data-label="Acciones">
               <a href="{% url 'manager:seat_types_update' seat_type.pk %}">
@@ -50,7 +58,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="5">No hay tipos de butaca cargados.</td></tr>
+          <tr><td colspan="6">No hay tipos de butaca cargados.</td></tr>
         {% endfor %}
       </tbody>
     </table>

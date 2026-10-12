@@ -7,6 +7,9 @@ const reservationSummary = document.querySelector("[data-reservation-summary]");
 const reservationSummaryText = document.querySelector("[data-reservation-summary-text]");
 const cartSeatLines = document.querySelector("[data-cart-seat-lines]");
 const cartTotal = document.querySelector("[data-cart-total]");
+const cartBaseTotal = document.querySelector("[data-cart-base-total]");
+const purchaseSavings = document.querySelector("[data-purchase-savings]");
+const purchaseSavingsAmount = document.querySelector("[data-purchase-savings-amount]");
 const seatMaps = document.querySelectorAll(".client-seat-map");
 let reservationExpiresAt = null;
 let reservationTimer = null;
@@ -57,6 +60,23 @@ function formatMoney(value) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function parseSeatPrice(rawValue) {
+  const rawPrice = String(rawValue || "").trim();
+  const normalizedPrice = rawPrice.includes(",")
+    ? rawPrice.replace(/\./g, "").replace(",", ".")
+    : rawPrice;
+  const price = Number(normalizedPrice);
+  return Number.isFinite(price) ? price : null;
+}
+
+function seatPrice(seat) {
+  return parseSeatPrice(seat?.dataset.seatPrice) ?? 0;
+}
+
+function seatBasePrice(seat) {
+  return parseSeatPrice(seat?.dataset.seatBasePrice) ?? seatPrice(seat);
 }
 
 function csrfToken() {
@@ -168,12 +188,17 @@ async function syncSeatStatus(seatMap) {
   if (!statusUrl) {
     return;
   }
-  const response = await fetch(statusUrl, {headers: {"Accept": "application/json"}});
-  if (!response.ok) {
+  try {
+    const response = await fetch(statusUrl, {headers: {"Accept": "application/json"}});
+    if (!response.ok) {
+      return;
+    }
+    const payload = await response.json();
+    applyReservationState(seatMap, payload);
+  } catch (_error) {
+    // La recarga automática no debe romper la selección si el servidor se reinicia.
     return;
   }
-  const payload = await response.json();
-  applyReservationState(seatMap, payload);
 }
 
 async function requestSingleSeatReservation(seat, action) {
@@ -327,9 +352,14 @@ function updateSeatDrivenPurchaseState() {
   const selectedCount = selectedSeats.length;
   const seatStateUpdating = hasPendingSeatOperations(activeSeatMap);
   const total = selectedSeats.reduce(
-    (sum, seat) => sum + Number(seat.dataset.seatPrice || 0),
+    (sum, seat) => sum + seatPrice(seat),
     0,
   );
+  const baseTotal = selectedSeats.reduce(
+    (sum, seat) => sum + seatBasePrice(seat),
+    0,
+  );
+  const savings = Math.max(baseTotal - total, 0);
 
   if (purchaseSummary) {
     purchaseSummary.hidden = !requiresSeatSelection || selectedCount > 0;
@@ -353,7 +383,7 @@ function updateSeatDrivenPurchaseState() {
         const price = document.createElement("strong");
 
         label.textContent = seat.dataset.seatLabel;
-        price.textContent = `$${formatMoney(Number(seat.dataset.seatPrice || 0))}`;
+        price.textContent = `$${formatMoney(seatPrice(seat))}`;
         item.appendChild(label);
         item.appendChild(price);
         cartSeatLines.appendChild(item);
@@ -363,6 +393,16 @@ function updateSeatDrivenPurchaseState() {
 
   if (cartTotal) {
     cartTotal.textContent = `$${formatMoney(total)}`;
+  }
+
+  if (cartBaseTotal) {
+    cartBaseTotal.hidden = savings <= 0;
+    cartBaseTotal.textContent = `$${formatMoney(baseTotal)}`;
+  }
+
+  if (purchaseSavings && purchaseSavingsAmount) {
+    purchaseSavings.hidden = savings <= 0;
+    purchaseSavingsAmount.textContent = `$${formatMoney(savings)}`;
   }
 
   if (purchaseButton && requiresSeatSelection && !purchaseSubmitting && !purchasePreparing) {

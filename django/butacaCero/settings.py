@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     "domain.users",
     "domain.seats",
     "domain.seat_types",
+    "domain.promotions",
     "web.auth",
     "web.catalog",
     "web.manager",

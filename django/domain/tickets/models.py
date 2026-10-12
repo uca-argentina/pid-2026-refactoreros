@@ -10,6 +10,7 @@ from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 
 from domain.cinema.models import CinemaSettings
+from domain.promotions.pricing import PromotionPriceCalculator
 from domain.screenings.models import Screening
 
 TICKET_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -120,7 +121,7 @@ class TicketPurchase(models.Model):
         return max(screening.available_capacity - cls.sold_quantity(screening), 0)
 
     @classmethod
-    def seat_prices(cls, screening):
+    def seat_price_quotes(cls, screening, price_calculator=None):
         snapshot = screening.room_layout_snapshot or {}
         if isinstance(snapshot, dict):
             seats = snapshot.get("seats", [])
@@ -139,14 +140,26 @@ class TicketPurchase(models.Model):
                 column_labels[column_index] = index_to_letters(next_column_label)
                 next_column_label += 1
 
-        prices = {}
+        calculator = price_calculator or PromotionPriceCalculator.current()
+        quotes = {}
         for seat in seats:
             column_label = column_labels.get(seat["column"], "")
             if not column_label:
                 continue
             label = f"{seat['row'] + 1}{column_label}"
-            prices[label] = screening.price_for_type(seat.get("type_id"))
-        return prices
+            quotes[label] = calculator.quote(
+                base_price=screening.price_for_type(seat.get("type_id")),
+                seat_type_id=seat.get("type_id"),
+                screening_starts_at=screening.starts_at,
+            )
+        return quotes
+
+    @classmethod
+    def seat_prices(cls, screening):
+        return {
+            label: quote.final_price
+            for label, quote in cls.seat_price_quotes(screening).items()
+        }
 
     @classmethod
     def _labels_from_selected_seats(cls, selected_seats):
@@ -220,21 +233,33 @@ class TicketPurchase(models.Model):
 
     @classmethod
     def total_for_seats(cls, screening, selected_seats):
-        seat_prices = cls.seat_prices(screening)
+        seat_quotes = cls.seat_price_quotes(screening)
         labels = cls._labels_from_selected_seats(selected_seats)
 
         if not labels:
             return None, 0, []
 
-        invalid_labels = [label for label in labels if label not in seat_prices]
+        invalid_labels = [label for label in labels if label not in seat_quotes]
         if invalid_labels:
             raise ValidationError({"quantity": "La seleccion de asientos no es valida."})
 
-        selected_payload = [
-            {"label": label, "price": str(seat_prices[label])}
-            for label in labels
-        ]
-        return sum(seat_prices[label] for label in labels), len(labels), selected_payload
+        selected_payload = []
+        for label in labels:
+            quote = seat_quotes[label]
+            selected_payload.append(
+                {
+                    "label": label,
+                    "price": str(quote.final_price),
+                    "base_price": str(quote.base_price),
+                    "discount": str(quote.discount),
+                    "promotion": quote.promotion.name if quote.promotion else "",
+                }
+            )
+        return (
+            sum(seat_quotes[label].final_price for label in labels),
+            len(labels),
+            selected_payload,
+        )
 
     @classmethod
     def buy(cls, user, screening, quantity, selected_seats=None, require_reservation=False):

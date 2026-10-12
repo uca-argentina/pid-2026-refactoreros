@@ -38,6 +38,9 @@ def seat_selection_view(request, pk):
     screening = get_object_or_404(Screening.published(), pk=pk)
     screening.tickets_available = TicketPurchase.available_for(screening)
     screening.seat_map = build_seat_map(screening, user=request.user)
+    screening.current_price_from = (
+        screening.seat_map["price_from"] if screening.seat_map else screening.price_from
+    )
     purchase_error = request.session.pop("purchase_error", "")
     return render(
         request,

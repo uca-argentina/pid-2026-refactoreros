@@ -85,6 +85,7 @@ class Screening(models.Model):
                     "type_id": seat.seat_type_id,
                     "price": str(seat_price),
                     "color": seat.seat_type.color,
+                    "icon_url": seat.seat_type.icon.url if seat.seat_type.icon else "",
                 }
             )
         layout = self.room.layout_configuration or {}
