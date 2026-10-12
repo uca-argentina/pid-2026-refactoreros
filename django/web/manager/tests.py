@@ -1229,7 +1229,7 @@ class ManagerDashboardTests(TestCase):
             status=status,
         )
 
-    def vender(self, screening, quantity, total, used=0):
+    def vender(self, screening, quantity, total, used=0, purchased_at=None):
         purchase = TicketPurchase.objects.create(
             user=self.cliente,
             screening=screening,
@@ -1243,6 +1243,8 @@ class ManagerDashboardTests(TestCase):
                 label=f"{purchase.pk}-{index}",
                 used_at=self.now if index < used else None,
             )
+        if purchased_at is not None:
+            TicketPurchase.objects.filter(pk=purchase.pk).update(created_at=purchased_at)
         return purchase
 
     def test_gerente_ve_dashboard(self):
@@ -1255,7 +1257,7 @@ class ManagerDashboardTests(TestCase):
         self.assertContains(response, "Vendidas vs. utilizadas")
         self.assertIn("Pel\u00edculas m\u00e1s vistas".encode("utf-8"), response.content)
         self.assertIn("Ocupaci\u00f3n por sala".encode("utf-8"), response.content)
-        self.assertContains(response, "Horarios de mayor demanda")
+        self.assertContains(response, "Demanda de compra")
 
     def test_acomodador_no_puede_ver_dashboard(self):
         acomodador = get_user_model().objects.create_user(
@@ -1297,11 +1299,26 @@ class ManagerDashboardTests(TestCase):
 
     def test_excluye_canceladas_y_separa_presale(self):
         realizada = self.crear_funcion(-1)
-        self.vender(realizada, 2, "2000.00")
+        self.vender(
+            realizada,
+            2,
+            "2000.00",
+            purchased_at=timezone.make_aware(datetime(2026, 10, 7, 12, 15)),
+        )
         cancelada = self.crear_funcion(-1, hour=22, status=Screening.Status.CANCELED)
-        self.vender(cancelada, 4, "4000.00")
+        self.vender(
+            cancelada,
+            4,
+            "4000.00",
+            purchased_at=timezone.make_aware(datetime(2026, 10, 7, 13, 15)),
+        )
         proxima = self.crear_funcion(2, status=Screening.Status.PUBLISHED)
-        self.vender(proxima, 5, "5000.00")
+        self.vender(
+            proxima,
+            5,
+            "5000.00",
+            purchased_at=timezone.make_aware(datetime(2026, 10, 8, 11, 0)),
+        )
 
         dashboard = build_dashboard("30", now=self.now)
 
@@ -1310,6 +1327,7 @@ class ManagerDashboardTests(TestCase):
         self.assertEqual(dashboard["presale"]["screenings"], 1)
         self.assertEqual(dashboard["presale"]["sold"], 5)
         self.assertEqual(dashboard["presale"]["revenue"], Decimal("5000.00"))
+        self.assertEqual(dashboard["time_slots"]["total_tickets"], 7)
 
     def test_period_filtra_funciones_por_date(self):
         self.vender(self.crear_funcion(-3), 1, "1000.00")
@@ -1367,19 +1385,33 @@ class ManagerDashboardTests(TestCase):
         self.assertEqual(ranking[0]["width_css"], "100.00%")
         self.assertEqual(ranking[1]["width_css"], "40.00%")
 
-    def test_time_slots_destaca_la_slot_con_mas_entradas(self):
-        self.vender(self.crear_funcion(-2, hour=16), 1, "1000.00")
+    def test_time_slots_usa_la_hora_de_compra_y_bloques_de_media_hora(self):
+        self.vender(
+            self.crear_funcion(-2, hour=16),
+            1,
+            "1000.00",
+            purchased_at=timezone.make_aware(datetime(2026, 10, 6, 17, 12)),
+        )
         noche = self.crear_funcion(-1, hour=21)
-        self.vender(noche, 6, "6000.00")
+        self.vender(
+            noche,
+            6,
+            "6000.00",
+            purchased_at=timezone.make_aware(datetime(2026, 10, 7, 18, 47)),
+        )
 
         time_slots = build_dashboard("30", now=self.now)["time_slots"]
 
-        self.assertEqual(time_slots["hours"], list(range(16, 22)))
+        self.assertEqual(
+            [block["label"] for block in time_slots["time_blocks"]],
+            ["17:00", "17:30", "18:00", "18:30"],
+        )
         slot = time_slots["top"][0]
-        self.assertEqual(slot["hour"], 21)
-        self.assertEqual(slot["day"], WEEKDAYS[timezone.localtime(noche.starts_at).weekday()])
-        self.assertEqual(slot["sold"], 6)
-        self.assertAlmostEqual(slot["occupancy"], 60.0)
+        self.assertEqual(slot["hour"], 18)
+        self.assertEqual(slot["minute"], 30)
+        self.assertEqual(slot["day"], WEEKDAYS[2])
+        self.assertEqual(slot["tickets"], 6)
+        self.assertEqual(slot["purchases"], 1)
 
     def test_dashboard_renderiza_anchos_css_con_punto_decimal(self):
         screening = self.crear_funcion(-1, now=timezone.now())

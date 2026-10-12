@@ -1,6 +1,5 @@
 from datetime import timedelta
 import hashlib
-import hmac
 import secrets
 import uuid
 
@@ -17,7 +16,7 @@ TICKET_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 
 def generate_ticket_code():
-    """Short, human-readable purchase reference; not used as the QR secret."""
+    """Legacy migration default for the former plaintext code column."""
     return "".join(secrets.choice(TICKET_CODE_ALPHABET) for _ in range(6))
 
 
@@ -27,21 +26,20 @@ def generate_ticket_token():
 
 
 def reservation_code_for_token(token):
-    """Return the stable, human-readable reservation code for a purchase token."""
-    digest = hmac.new(
-        settings.SECRET_KEY.encode(),
-        f"ticket-reservation-code:{token}".encode(),
-        hashlib.sha256,
-    ).digest()
+    """Return a stable, human-readable code for a persisted purchase token.
+
+    The token is already random and unique.  Deriving the short display code
+    from it (rather than from ``SECRET_KEY``) keeps existing tickets usable
+    after a routine Django secret-key rotation.
+    """
+    digest = hashlib.sha256(f"ticket-reservation-code:{token}".encode()).digest()
     return "".join(TICKET_CODE_ALPHABET[byte % len(TICKET_CODE_ALPHABET)] for byte in digest[:6])
 
 
 def reservation_code_digest(code):
     """Indexed server-side representation of a short reservation code."""
-    return hmac.new(
-        settings.SECRET_KEY.encode(),
-        f"ticket-reservation-lookup:{code.upper()}".encode(),
-        hashlib.sha256,
+    return hashlib.sha256(
+        f"ticket-reservation-lookup:{code.upper()}".encode()
     ).hexdigest()
 
 
@@ -355,21 +353,38 @@ class TicketPurchase(models.Model):
     def save(self, *args, **kwargs):
         if self.screening_id and self.quantity and self.total in (None, ""):
             self.total = self.screening.price_from * self.quantity
-        if not self.validation_token:
-            self.validation_token = generate_ticket_token()
-        self.validation_code_digest = reservation_code_digest(self.validation_code)
         creating = self._state.adding
-        with transaction.atomic():
-            super().save(*args, **kwargs)
-            if creating:
-                labels = self._labels_from_selected_seats(self.selected_seats)
-                AdmissionTicket.objects.bulk_create([
-                    AdmissionTicket(
-                        purchase=self, number=index + 1,
-                        seat_label=labels[index] if index < len(labels) else "",
-                    )
-                    for index in range(self.quantity)
-                ])
+        for attempt in range(32 if creating else 1):
+            if not self.validation_token or (creating and attempt):
+                self.validation_token = generate_ticket_token()
+            self.validation_code_digest = reservation_code_digest(self.validation_code)
+            try:
+                with transaction.atomic():
+                    super().save(*args, **kwargs)
+                    if creating:
+                        labels = self._labels_from_selected_seats(self.selected_seats)
+                        AdmissionTicket.objects.bulk_create([
+                            AdmissionTicket(
+                                purchase=self, number=index + 1,
+                                seat_label=labels[index] if index < len(labels) else "",
+                            )
+                            for index in range(self.quantity)
+                        ])
+                return
+            except IntegrityError:
+                if not creating:
+                    raise
+                # A short code collision is unlikely but must not fail a sale.
+                # The database constraint also covers concurrent purchases.
+                collision = TicketPurchase.objects.filter(
+                    models.Q(validation_token=self.validation_token)
+                    | models.Q(validation_code_digest=self.validation_code_digest)
+                ).exists()
+                if not collision:
+                    raise
+                self.pk = None
+                self._state.adding = True
+        raise RuntimeError("No se pudo generar un código de reserva único.")
 
 class AdmissionTicket(models.Model):
     purchase = models.ForeignKey(TicketPurchase, on_delete=models.CASCADE, related_name="tickets")
