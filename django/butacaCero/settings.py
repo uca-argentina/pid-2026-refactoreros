@@ -29,6 +29,7 @@ env = environ.Env(
     DJANGO_DEBUG=(bool, False),
     DJANGO_ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
     DJANGO_CSRF_TRUSTED_ORIGINS=(list, []),
+    DJANGO_EMAIL_BACKEND=(str,"django.core.mail.backends.smtp.EmailBackend"),
     DJANGO_EMAIL_HOST=(str, "localhost"),
     DJANGO_EMAIL_PORT=(int, 25),
     DJANGO_EMAIL_HOST_USER=(str, ""),
@@ -237,13 +238,23 @@ LOGOUT_REDIRECT_URL = "login"
 
 DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL")
 default_email_backend = (
-    "django.core.mail.backends.console.EmailBackend"
+    "django.core.mail.backends.smtp.EmailBackend"
     if DEBUG
     else "django.core.mail.backends.smtp.EmailBackend"
 )
+
 MAILERS = {
     "default": {
-        "BACKEND": env("DJANGO_EMAIL_BACKEND", default=default_email_backend),
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "OPTIONS": {
+            "host": env("DJANGO_EMAIL_HOST"),
+            "port": env.int("DJANGO_EMAIL_PORT"),
+            "username": env("DJANGO_EMAIL_HOST_USER"),
+            "password": env("DJANGO_EMAIL_HOST_PASSWORD"),
+            "use_tls": env.bool("DJANGO_EMAIL_USE_TLS"),
+            "use_ssl": env.bool("DJANGO_EMAIL_USE_SSL"),
+            "timeout": 10,
+        },
     },
 }
 
