@@ -1,5 +1,6 @@
 from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import never_cache
 
 from domain.cinema.models import CinemaSettings
 from domain.movies.models import Movie
@@ -151,6 +152,7 @@ def home_view(request):
     )
 
 
+@never_cache
 def movie_detail_view(request, pk):
     Screening.finalize_expired()
     published = Screening.published()

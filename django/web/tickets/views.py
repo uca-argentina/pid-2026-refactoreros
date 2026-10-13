@@ -34,6 +34,7 @@ def purchase_error_message(error, fallback):
 
 
 @login_required
+@never_cache
 def seat_selection_view(request, pk):
     screening = get_object_or_404(Screening.published(), pk=pk)
     screening.tickets_available = TicketPurchase.available_for(screening)
