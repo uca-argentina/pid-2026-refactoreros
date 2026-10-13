@@ -171,6 +171,36 @@ class CatalogFlowTests(TestCase):
         self.assertContains(response, 'class="screening-promotion-badge"')
         self.assertContains(response, "Promoción disponible: Descuento general")
 
+    def test_indicadores_de_promocion_desaparecen_al_eliminarla(self):
+        screening = crear_funcion(status=Screening.Status.PUBLISHED, title="Promo eliminada")
+        promotion = Promotion.objects.create(
+            name="Promo temporal",
+            discount_type=Promotion.DiscountType.PERCENTAGE,
+            discount_value="15.00",
+        )
+        user = get_user_model().objects.create_user(
+            username="promo-eliminada@example.com",
+            email="promo-eliminada@example.com",
+            password="PasswordSegura123!",
+        )
+        self.client.force_login(user)
+
+        detail_url = reverse("movie_detail", args=[screening.movie.pk])
+        selector_url = reverse("seat_selection", args=[screening.pk])
+        self.assertContains(self.client.get(detail_url), "Promo temporal")
+        self.assertContains(self.client.get(selector_url), "Promo temporal")
+
+        promotion.delete()
+
+        detail = self.client.get(detail_url)
+        selector = self.client.get(selector_url)
+        self.assertNotContains(detail, 'class="screening-promotion-badge"')
+        self.assertNotContains(detail, "Promo temporal")
+        self.assertNotContains(selector, "Promo temporal")
+        self.assertNotContains(selector, "<del>", html=False)
+        self.assertIn("no-store", detail.headers["Cache-Control"])
+        self.assertIn("no-store", selector.headers["Cache-Control"])
+
     def test_seleccion_de_butacas_requiere_login_y_preserva_next(self):
         screening = crear_funcion(status=Screening.Status.PUBLISHED, title="Publicada")
         seat_url = reverse("seat_selection", args=[screening.pk])
