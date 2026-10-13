@@ -1,8 +1,9 @@
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -10,7 +11,7 @@ from domain.movies.models import Movie
 from domain.rooms.models import Room
 from domain.screenings.models import Screening
 from domain.users.models import Customer, Manager, Operator, Usher
-from .models import PurchaseRefund, TicketPurchase
+from .models import PurchaseRefund, TicketPurchase, reservation_code_for_token
 from .services import inspect_ticket, undo_ticket_validation, validate_ticket
 
 
@@ -77,6 +78,40 @@ class PurchaseAdmissionTests(AdmissionFixture):
     def test_short_reservation_code_is_case_insensitive(self):
         purchase = inspect_ticket(self.purchase.validation_code.lower(), self.operator)
         self.assertEqual(purchase.pk, self.purchase.pk)
+
+    @override_settings(SECRET_KEY="a-rotated-secret-key")
+    def test_existing_ticket_remains_valid_after_secret_key_rotation(self):
+        purchase = inspect_ticket(self.purchase.validation_code, self.operator)
+        self.assertEqual(purchase.pk, self.purchase.pk)
+
+    def test_purchase_retries_when_a_short_code_collides(self):
+        calls = 0
+        existing_code = self.purchase.validation_code
+
+        def collide_once(token):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return existing_code
+            return reservation_code_for_token(token)
+
+        with patch(
+            "domain.tickets.models.reservation_code_for_token",
+            side_effect=collide_once,
+        ):
+            second_purchase = TicketPurchase(
+                user=self.customer,
+                screening=self.screening,
+                quantity=1,
+                total=Decimal("1000"),
+            )
+            second_purchase.save()
+
+        self.assertNotEqual(
+            second_purchase.validation_code_digest,
+            self.purchase.validation_code_digest,
+        )
+        self.assertEqual(second_purchase.tickets.count(), 1)
 
     def test_invalid_code_inactive_operator_and_usher_are_rejected(self):
         with self.assertRaises(ValidationError):

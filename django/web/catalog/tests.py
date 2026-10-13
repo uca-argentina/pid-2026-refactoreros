@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from domain.movies.models import Movie
+from domain.promotions.models import Promotion
 from domain.rooms.models import Room
 from domain.seats.models import Seat
 from domain.seat_types.models import SeatType
@@ -157,6 +158,19 @@ class CatalogFlowTests(TestCase):
         self.assertContains(response, "Publica anonima")
         self.assertContains(response, reverse("seat_selection", args=[screening.pk]))
 
+    def test_chip_de_funcion_indica_promocion_disponible(self):
+        screening = crear_funcion(status=Screening.Status.PUBLISHED, title="Con promo")
+        Promotion.objects.create(
+            name="Descuento general",
+            discount_type=Promotion.DiscountType.PERCENTAGE,
+            discount_value="15.00",
+        )
+
+        response = self.client.get(reverse("movie_detail", args=[screening.movie.pk]))
+
+        self.assertContains(response, 'class="screening-promotion-badge"')
+        self.assertContains(response, "Promoción disponible: Descuento general")
+
     def test_seleccion_de_butacas_requiere_login_y_preserva_next(self):
         screening = crear_funcion(status=Screening.Status.PUBLISHED, title="Publicada")
         seat_url = reverse("seat_selection", args=[screening.pk])
@@ -199,6 +213,44 @@ class CatalogFlowTests(TestCase):
         self.assertContains(response, "1A")
         self.assertContains(response, "1B")
         self.assertContains(response, "Fila 1, columna A")
+
+    def test_mapa_muestra_icono_personalizado_en_lugar_de_la_coordenada(self):
+        movie = Movie.objects.create(
+            title="Butacas accesibles",
+            synopsis="Una pelicula de prueba.",
+            genre=Movie.Genre.ACCION,
+            rating=Movie.Rating.MAS_13,
+            duration_minutes=120,
+            image="peliculas/test.jpg",
+        )
+        room = Room.objects.create(name="Sala accesible")
+        accessible_type = SeatType.objects.create(
+            name="Accesible con icono",
+            base_price="1500.00",
+            color="#2563eb",
+            icon="seat_icons/wheelchair.png",
+        )
+        Seat.objects.create(room=room, row=0, column=0, seat_type=accessible_type)
+        screening = Screening.objects.create(
+            movie=movie,
+            room=room,
+            starts_at=timezone.now(),
+            ticket_price="1500.00",
+            status=Screening.Status.PUBLISHED,
+        )
+        user = get_user_model().objects.create_user(
+            username="accesible@mail.com",
+            email="accesible@mail.com",
+            password="PasswordSegura123!",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("seat_selection", args=[screening.pk]))
+
+        self.assertContains(response, 'class="client-seat-icon"')
+        self.assertContains(response, accessible_type.icon.url)
+        self.assertContains(response, 'class="client-seat has-custom-icon"')
+        self.assertNotContains(response, ">1A</button>")
 
     def test_detalle_muestra_pasillos_sin_saltar_letras_de_columnas(self):
         movie = Movie.objects.create(

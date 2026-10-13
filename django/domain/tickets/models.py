@@ -1,6 +1,5 @@
 from datetime import timedelta
 import hashlib
-import hmac
 import secrets
 import uuid
 
@@ -10,37 +9,37 @@ from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 
 from domain.cinema.models import CinemaSettings
+from domain.promotions.pricing import PromotionPriceCalculator
 from domain.screenings.models import Screening
 
 TICKET_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 
 def generate_ticket_code():
-    """Short, human-readable purchase reference; not used as the QR secret."""
+    """Legacy migration default for the former plaintext code column."""
     return "".join(secrets.choice(TICKET_CODE_ALPHABET) for _ in range(6))
 
 
 def generate_ticket_token():
-    """Opaque QR credential: 192 bits, independent from purchase IDs."""
+    """Persistent random source for the reservation code, independent from IDs."""
     return secrets.token_urlsafe(24)
 
 
 def reservation_code_for_token(token):
-    """Return the stable, human-readable reservation code for a purchase token."""
-    digest = hmac.new(
-        settings.SECRET_KEY.encode(),
-        f"ticket-reservation-code:{token}".encode(),
-        hashlib.sha256,
-    ).digest()
+    """Return a stable, human-readable code for a persisted purchase token.
+
+    The token is already random and unique.  Deriving the short display code
+    from it (rather than from ``SECRET_KEY``) keeps existing tickets usable
+    after a routine Django secret-key rotation.
+    """
+    digest = hashlib.sha256(f"ticket-reservation-code:{token}".encode()).digest()
     return "".join(TICKET_CODE_ALPHABET[byte % len(TICKET_CODE_ALPHABET)] for byte in digest[:6])
 
 
 def reservation_code_digest(code):
     """Indexed server-side representation of a short reservation code."""
-    return hmac.new(
-        settings.SECRET_KEY.encode(),
-        f"ticket-reservation-lookup:{code.upper()}".encode(),
-        hashlib.sha256,
+    return hashlib.sha256(
+        f"ticket-reservation-lookup:{code.upper()}".encode()
     ).hexdigest()
 
 
@@ -120,7 +119,7 @@ class TicketPurchase(models.Model):
         return max(screening.available_capacity - cls.sold_quantity(screening), 0)
 
     @classmethod
-    def seat_prices(cls, screening):
+    def seat_price_quotes(cls, screening, price_calculator=None):
         snapshot = screening.room_layout_snapshot or {}
         if isinstance(snapshot, dict):
             seats = snapshot.get("seats", [])
@@ -139,14 +138,26 @@ class TicketPurchase(models.Model):
                 column_labels[column_index] = index_to_letters(next_column_label)
                 next_column_label += 1
 
-        prices = {}
+        calculator = price_calculator or PromotionPriceCalculator.current()
+        quotes = {}
         for seat in seats:
             column_label = column_labels.get(seat["column"], "")
             if not column_label:
                 continue
             label = f"{seat['row'] + 1}{column_label}"
-            prices[label] = screening.price_for_type(seat.get("type_id"))
-        return prices
+            quotes[label] = calculator.quote(
+                base_price=screening.price_for_type(seat.get("type_id")),
+                seat_type_id=seat.get("type_id"),
+                screening_starts_at=screening.starts_at,
+            )
+        return quotes
+
+    @classmethod
+    def seat_prices(cls, screening):
+        return {
+            label: quote.final_price
+            for label, quote in cls.seat_price_quotes(screening).items()
+        }
 
     @classmethod
     def _labels_from_selected_seats(cls, selected_seats):
@@ -220,21 +231,33 @@ class TicketPurchase(models.Model):
 
     @classmethod
     def total_for_seats(cls, screening, selected_seats):
-        seat_prices = cls.seat_prices(screening)
+        seat_quotes = cls.seat_price_quotes(screening)
         labels = cls._labels_from_selected_seats(selected_seats)
 
         if not labels:
             return None, 0, []
 
-        invalid_labels = [label for label in labels if label not in seat_prices]
+        invalid_labels = [label for label in labels if label not in seat_quotes]
         if invalid_labels:
             raise ValidationError({"quantity": "La seleccion de asientos no es valida."})
 
-        selected_payload = [
-            {"label": label, "price": str(seat_prices[label])}
-            for label in labels
-        ]
-        return sum(seat_prices[label] for label in labels), len(labels), selected_payload
+        selected_payload = []
+        for label in labels:
+            quote = seat_quotes[label]
+            selected_payload.append(
+                {
+                    "label": label,
+                    "price": str(quote.final_price),
+                    "base_price": str(quote.base_price),
+                    "discount": str(quote.discount),
+                    "promotion": quote.promotion.name if quote.promotion else "",
+                }
+            )
+        return (
+            sum(seat_quotes[label].final_price for label in labels),
+            len(labels),
+            selected_payload,
+        )
 
     @classmethod
     def buy(cls, user, screening, quantity, selected_seats=None, require_reservation=False):
@@ -330,21 +353,38 @@ class TicketPurchase(models.Model):
     def save(self, *args, **kwargs):
         if self.screening_id and self.quantity and self.total in (None, ""):
             self.total = self.screening.price_from * self.quantity
-        if not self.validation_token:
-            self.validation_token = generate_ticket_token()
-        self.validation_code_digest = reservation_code_digest(self.validation_code)
         creating = self._state.adding
-        with transaction.atomic():
-            super().save(*args, **kwargs)
-            if creating:
-                labels = self._labels_from_selected_seats(self.selected_seats)
-                AdmissionTicket.objects.bulk_create([
-                    AdmissionTicket(
-                        purchase=self, number=index + 1,
-                        seat_label=labels[index] if index < len(labels) else "",
-                    )
-                    for index in range(self.quantity)
-                ])
+        for attempt in range(32 if creating else 1):
+            if not self.validation_token or (creating and attempt):
+                self.validation_token = generate_ticket_token()
+            self.validation_code_digest = reservation_code_digest(self.validation_code)
+            try:
+                with transaction.atomic():
+                    super().save(*args, **kwargs)
+                    if creating:
+                        labels = self._labels_from_selected_seats(self.selected_seats)
+                        AdmissionTicket.objects.bulk_create([
+                            AdmissionTicket(
+                                purchase=self, number=index + 1,
+                                seat_label=labels[index] if index < len(labels) else "",
+                            )
+                            for index in range(self.quantity)
+                        ])
+                return
+            except IntegrityError:
+                if not creating:
+                    raise
+                # A short code collision is unlikely but must not fail a sale.
+                # The database constraint also covers concurrent purchases.
+                collision = TicketPurchase.objects.filter(
+                    models.Q(validation_token=self.validation_token)
+                    | models.Q(validation_code_digest=self.validation_code_digest)
+                ).exists()
+                if not collision:
+                    raise
+                self.pk = None
+                self._state.adding = True
+        raise RuntimeError("No se pudo generar un código de reserva único.")
 
 class AdmissionTicket(models.Model):
     purchase = models.ForeignKey(TicketPurchase, on_delete=models.CASCADE, related_name="tickets")

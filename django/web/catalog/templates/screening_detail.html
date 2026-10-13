@@ -42,7 +42,7 @@
           </div>
           <div>
             <dt>Desde</dt>
-            <dd>${{ screening.price_from }}</dd>
+            <dd>${{ screening.current_price_from|default:screening.price_from }}</dd>
           </div>
         </dl>
 
@@ -56,9 +56,11 @@
                 <div class="screening-time-chips">
                   {% for item in day.list %}
                     {% if item.tickets_available > 0 %}
-                      <a class="screening-time-chip" href="{% url 'seat_selection' item.pk %}" title="{{ item.room.name }} - desde ${{ item.price_from }}">
+                      <a class="screening-time-chip" href="{% url 'seat_selection' item.pk %}" title="{{ item.room.name }} - desde ${{ item.current_price_from|default:item.price_from }}{% if item.has_promotion %} - Promoción disponible: {{ item.promotion_summary }}{% endif %}">
                         <span>{{ item.starts_at|date:"H:i" }}</span>
-                        <small>{{ item.room.name }} · ${{ item.price_from }}</small>
+                        <small>
+                          {{ item.room.name }} · ${{ item.current_price_from|default:item.price_from }}{% if item.has_promotion %} · <em class="screening-promotion-badge" aria-label="Promoción disponible">Promo</em>{% endif %}
+                        </small>
                       </a>
                     {% else %}
                       <span class="screening-time-chip is-sold-out" aria-disabled="true" title="Función agotada">

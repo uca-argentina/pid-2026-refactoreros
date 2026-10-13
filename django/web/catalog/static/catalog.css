@@ -519,6 +519,15 @@ body {
   color: rgba(255, 255, 255, .36);
 }
 
+.screening-promotion-badge {
+  color: #fde68a;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
 .seat-selection-main {
   width: min(980px, calc(100% - 32px));
 }
@@ -652,6 +661,31 @@ body {
   font-size: 15px;
 }
 
+.purchase-cart .cart-total-amount {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.purchase-cart .cart-total-amount del {
+  color: rgba(255, 255, 255, .48);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.purchase-savings {
+  width: fit-content;
+  margin: -8px 0 0 auto;
+  color: #fde68a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.purchase-savings strong {
+  color: #fbbf24;
+  font-weight: 900;
+}
+
 .cart-seat-lines {
   display: grid;
   gap: 6px;
@@ -692,6 +726,21 @@ body {
   gap: 6px;
 }
 
+.seat-reference-line del {
+  color: rgba(255, 255, 255, .48);
+  font-weight: 700;
+}
+
+.seat-reference-line strong {
+  color: #fde68a;
+}
+
+.seat-reference-line small {
+  color: #fbbf24;
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .seat-reference-line b {
   color: rgba(255, 255, 255, .28);
   font-weight: 400;
@@ -702,6 +751,12 @@ body {
   height: 9px;
   border-radius: 2px;
   background: var(--seat-color);
+}
+
+.seat-reference-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }
 
 .seat-reference-line .legend-selected {
@@ -838,6 +893,21 @@ body {
     0 7px 16px rgba(251, 191, 36, .22);
 }
 
+.client-seat-icon {
+  display: block;
+  width: 72%;
+  height: 72%;
+  margin: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.client-seat.has-custom-icon.is-selected {
+  color: #fff;
+  background: var(--seat-color);
+}
+
 .client-seat.is-pending {
   opacity: .68;
   cursor: wait;
@@ -854,6 +924,11 @@ body {
   cursor: not-allowed;
   filter: none;
   transform: none;
+}
+
+.client-seat.is-unavailable .client-seat-icon {
+  opacity: .42;
+  filter: grayscale(1);
 }
 
 .client-seat.aisle {
@@ -1882,7 +1957,7 @@ body {
 
 /* Single responsive header layout.  Keep all navigation inside the sticky
    header on touch devices; fixed child navigation was fragile in tablets. */
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .client-page {
     padding-top: 0;
     padding-bottom: 34px;
@@ -1957,6 +2032,12 @@ body {
 
   .client-header .client-nav-primary a.client-tickets-link,
   .client-header .client-nav-primary a.client-tickets-link:hover {
+    color: rgba(255, 255, 255, .8);
+    background: transparent;
+  }
+
+  .client-header .client-nav-primary a.client-tickets-link.has-imminent-ticket,
+  .client-header .client-nav-primary a.client-tickets-link.has-imminent-ticket:hover {
     color: #ffaaa3;
     background: rgba(180, 35, 24, .18);
   }
@@ -2001,7 +2082,7 @@ body {
 
 /* Compact desktop: preserve the single-row composition before changing to the
    tablet layout. Secondary labels are the first things to collapse. */
-@media (min-width: 901px) and (max-width: 1400px) {
+@media (min-width: 1101px) and (max-width: 1400px) {
   .client-header {
     grid-template-columns: minmax(140px, 1fr) auto minmax(0, 1fr);
     gap: 16px;
@@ -2031,6 +2112,17 @@ body {
     justify-content: center;
     min-width: 36px;
     padding: 0 8px;
+  }
+
+  .client-header .client-manager-link {
+    flex: 0 0 auto;
+    justify-content: center;
+    min-width: 36px;
+    padding: 0 8px;
+  }
+
+  .client-header .client-manager-link span {
+    display: none;
   }
 }
 

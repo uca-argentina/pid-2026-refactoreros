@@ -298,6 +298,33 @@ class TicketPurchaseTests(TestCase):
 
         self.assertContains(response, 'data-refresh-interval-seconds="11"')
         self.assertContains(response, 'data-reservation-batch-delay-ms="1000"')
+        self.assertContains(response, 'data-seat-price="1000.00"')
+        self.assertContains(response, 'data-seat-base-price="1000.00"')
+        self.assertContains(response, 'data-purchase-savings')
+        self.assertContains(response, 'data-cart-base-total')
+
+    def test_estado_de_reservas_devuelve_json_para_la_recarga_automatica(self):
+        screening = crear_funcion_con_butacas()
+        user = get_user_model().objects.create_user(
+            username="estado@mail.com",
+            email="estado@mail.com",
+            password="PasswordSegura123!",
+        )
+        other_user = get_user_model().objects.create_user(
+            username="estado-otro@mail.com",
+            email="estado-otro@mail.com",
+            password="PasswordSegura123!",
+        )
+        SeatReservation.reserve(other_user, screening, "1A")
+        SeatReservation.reserve(user, screening, "1B")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("seat_reservation_status", args=[screening.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertEqual(response.json()["unavailable"], ["1A"])
+        self.assertEqual(response.json()["reserved"][0]["label"], "1B")
 
     def test_compra_web_requiere_reserva_vigente_de_butaca(self):
         screening = crear_funcion_con_butacas()

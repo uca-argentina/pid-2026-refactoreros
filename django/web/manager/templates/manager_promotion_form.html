@@ -1,0 +1,178 @@
+{% extends "manager_base.html" %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>{{ form_title }}</h1>
+  </section>
+
+  <div class="form-layout">
+    <form class="manager-form promotion-form" method="post" novalidate>
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+
+      <div class="promotion-form-grid">
+        <label>
+          <span>{{ form.name.label }}</span>
+          {{ form.name }}
+          <small class="promotion-client-error" data-client-error-for="name" role="status" hidden></small>
+          {{ form.name.errors }}
+        </label>
+        <label class="checkbox-field promotion-active-field">
+          <span>{{ form.is_active.label }}</span>
+          {{ form.is_active }}
+          {{ form.is_active.errors }}
+        </label>
+        <label>
+          <span>{{ form.discount_type.label }}</span>
+          {{ form.discount_type }}
+          {{ form.discount_type.errors }}
+        </label>
+        <label>
+          <span>{{ form.discount_value.label }}</span>
+          <span class="promotion-discount-control" data-discount-control>
+            {{ form.discount_value }}
+            <span class="promotion-discount-affix" data-discount-affix aria-hidden="true">%</span>
+          </span>
+          <small class="promotion-client-error" data-client-error-for="discount_value" role="status" hidden></small>
+          {% if form.discount_value.help_text %}<small>{{ form.discount_value.help_text }}</small>{% endif %}
+          {{ form.discount_value.errors }}
+        </label>
+      </div>
+
+      <fieldset class="promotion-chip-fieldset">
+        <legend>{{ form.weekdays.label }}</legend>
+        <p>{{ form.weekdays.help_text }}</p>
+        <div class="promotion-chip-list" role="group" aria-label="{{ form.weekdays.label }}">
+          {% for day in form.weekday_chips %}
+            <label class="promotion-choice-chip">
+              <input type="checkbox" name="{{ form.weekdays.html_name }}" value="{{ day.value }}" id="{{ day.id }}"{% if day.checked %} checked{% endif %}>
+              <span>{{ day.label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {{ form.weekdays.errors }}
+      </fieldset>
+
+      <div class="promotion-time-fields">
+        <label>
+          <span>{{ form.starts_at.label }}</span>
+          {{ form.starts_at }}
+          <small class="promotion-client-error" data-client-error-for="starts_at" role="status" hidden></small>
+          {% if form.starts_at.help_text %}<small>{{ form.starts_at.help_text }}</small>{% endif %}
+          {{ form.starts_at.errors }}
+        </label>
+        <label>
+          <span>{{ form.ends_at.label }}</span>
+          {{ form.ends_at }}
+          <small class="promotion-client-error" data-client-error-for="ends_at" role="status" hidden></small>
+          {{ form.ends_at.errors }}
+        </label>
+      </div>
+
+      <fieldset class="promotion-chip-fieldset">
+        <legend>{{ form.seat_types.label }}</legend>
+        <p>{{ form.seat_types.help_text }}</p>
+        <div class="promotion-chip-list promotion-seat-type-list" role="group" aria-label="{{ form.seat_types.label }}">
+          {% for seat_type in form.seat_type_chips %}
+            <label class="promotion-choice-chip promotion-seat-type-chip" style="--seat-type-color: {{ seat_type.color }};">
+              <input type="checkbox" name="{{ form.seat_types.html_name }}" value="{{ seat_type.value }}" id="{{ seat_type.id }}"{% if seat_type.checked %} checked{% endif %}>
+              <span>{{ seat_type.name }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {{ form.seat_types.errors }}
+      </fieldset>
+
+      <div class="form-actions">
+        <button type="submit">
+          <i data-lucide="save" aria-hidden="true"></i>
+          <span>{{ submit_label }}</span>
+        </button>
+        <a href="{% url 'manager:promotions_list' %}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script>
+    (function () {
+      var typeField = document.getElementById("{{ form.discount_type.id_for_label }}");
+      var valueField = document.getElementById("{{ form.discount_value.id_for_label }}");
+      var nameField = document.getElementById("{{ form.name.id_for_label }}");
+      var startsAtField = document.getElementById("{{ form.starts_at.id_for_label }}");
+      var endsAtField = document.getElementById("{{ form.ends_at.id_for_label }}");
+      var form = document.querySelector(".promotion-form");
+      var control = document.querySelector("[data-discount-control]");
+      var affix = document.querySelector("[data-discount-affix]");
+      if (!form || !typeField || !valueField || !nameField || !startsAtField || !endsAtField || !control || !affix) return;
+
+      function setFieldError(field, message) {
+        var feedback = form.querySelector('[data-client-error-for="' + field.name + '"]');
+        field.setCustomValidity(message);
+        field.setAttribute("aria-invalid", message ? "true" : "false");
+        if (feedback) {
+          feedback.textContent = message;
+          feedback.hidden = !message;
+        }
+        return !message;
+      }
+
+      function syncDiscountUnit() {
+        var isPercentage = typeField.value === "percentage";
+        affix.textContent = isPercentage ? "%" : "$";
+        control.classList.toggle("is-percentage", isPercentage);
+        valueField.setAttribute(
+          "aria-label",
+          isPercentage ? "Descuento en porcentaje" : "Descuento en pesos"
+        );
+      }
+
+      function validatePromotion() {
+        var isValid = true;
+        var discount = Number(valueField.value);
+        var discountMessage = "";
+        var timeMessage = "";
+
+        if (!nameField.value.trim()) {
+          isValid = false;
+          setFieldError(nameField, "Ingresá un nombre para la promoción.");
+        } else {
+          setFieldError(nameField, "");
+        }
+
+        if (!valueField.value || !Number.isFinite(discount) || discount <= 0) {
+          discountMessage = "Ingresá un descuento mayor a cero.";
+        } else if (typeField.value === "percentage" && discount > 100) {
+          discountMessage = "El descuento porcentual no puede superar el 100%.";
+        }
+        if (discountMessage) isValid = false;
+        setFieldError(valueField, discountMessage);
+
+        if (Boolean(startsAtField.value) !== Boolean(endsAtField.value)) {
+          timeMessage = "Indicá ambos horarios o dejá los dos vacíos.";
+          isValid = false;
+        }
+        setFieldError(startsAtField, timeMessage);
+        setFieldError(endsAtField, timeMessage);
+
+        return isValid;
+      }
+
+      typeField.addEventListener("change", function () {
+        syncDiscountUnit();
+        validatePromotion();
+      });
+      [nameField, valueField, startsAtField, endsAtField].forEach(function (field) {
+        field.addEventListener("input", validatePromotion);
+        field.addEventListener("change", validatePromotion);
+      });
+      form.addEventListener("submit", function (event) {
+        if (validatePromotion()) return;
+        event.preventDefault();
+        form.querySelector('[aria-invalid="true"]')?.focus();
+      });
+      syncDiscountUnit();
+    })();
+  </script>
+{% endblock %}

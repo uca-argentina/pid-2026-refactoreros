@@ -1,4 +1,4 @@
-{% load static %}
+{% load static l10n %}
 <!doctype html>
 <html lang="es">
 <head>
@@ -22,7 +22,7 @@
         |
         {{ screening.room.name }}
         |
-        desde ${{ screening.price_from }}
+        desde ${{ screening.current_price_from|default:screening.price_from }}
       </p>
     </section>
 
@@ -33,7 +33,19 @@
       {% if screening.seat_map %}
         <div class="seat-reference-line" aria-label="Referencias de asientos">
           {% for tier in screening.seat_map.legend %}
-            <span><i style="--seat-color: {{ tier.color }};"></i>{{ tier.type }} ${{ tier.price }}</span>
+            <span>
+              {% if tier.icon_url %}
+                <img class="seat-reference-icon" src="{{ tier.icon_url }}" alt="">
+              {% else %}
+                <i style="--seat-color: {{ tier.color }};"></i>
+              {% endif %}
+              {{ tier.type }}
+              {% if tier.promotion %}
+                <del>${{ tier.base_price }}</del> <strong>${{ tier.price }}</strong> <small>{{ tier.promotion }}</small>
+              {% else %}
+                ${{ tier.price }}
+              {% endif %}
+            </span>
             {% if not forloop.last %}<b>|</b>{% endif %}
           {% endfor %}
           <b>|</b>
@@ -45,7 +57,7 @@
 
       <div class="seat-selection-layout">
       {% if screening.seat_map %}
-        <section class="client-seat-map" data-screening-id="{{ screening.pk }}" data-available="{{ screening.tickets_available }}" data-refresh-interval-seconds="{{ cinema.seat_refresh_seconds }}" data-reservation-url="{% url 'seat_reservation' screening.pk %}" data-reservation-batch-url="{% url 'seat_reservation_batch' screening.pk %}" data-reservation-status-url="{% url 'seat_reservation_status' screening.pk %}" data-reservation-batch-delay-ms="1000" aria-label="Seleccionar asientos">
+        <section class="client-seat-map" data-screening-id="{{ screening.pk }}" data-available="{{ screening.tickets_available|unlocalize }}" data-refresh-interval-seconds="{{ cinema.seat_refresh_seconds|unlocalize }}" data-reservation-url="{% url 'seat_reservation' screening.pk %}" data-reservation-batch-url="{% url 'seat_reservation_batch' screening.pk %}" data-reservation-status-url="{% url 'seat_reservation_status' screening.pk %}" data-reservation-batch-delay-ms="1000" aria-label="Seleccionar asientos">
           <div class="client-seat-stage">
             <div class="client-screen-marker" aria-hidden="true">
               <span>Pantalla</span>
@@ -65,8 +77,12 @@
                   <div class="client-seat-cells">
                     {% for cell in row.cells %}
                       {% if cell.is_seat %}
-                        <button type="button" class="client-seat{% if cell.is_unavailable %} is-unavailable{% endif %}" style="--seat-color: {{ cell.color }};" data-seat-label="{{ cell.label }}" data-seat-type-id="{{ cell.type_id }}" data-seat-price="{{ cell.price }}" title="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.is_unavailable %} - No disponible{% endif %}" aria-label="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.is_unavailable %} - No disponible{% endif %}"{% if cell.is_unavailable %} disabled aria-disabled="true"{% endif %}>
-                          {{ cell.label }}
+                        <button type="button" class="client-seat{% if cell.icon_url %} has-custom-icon{% endif %}{% if cell.is_unavailable %} is-unavailable{% endif %}" style="--seat-color: {{ cell.color }};" data-seat-label="{{ cell.label }}" data-seat-type-id="{{ cell.type_id }}" data-seat-price="{{ cell.price|unlocalize }}" data-seat-base-price="{{ cell.base_price|unlocalize }}" title="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.promotion %} · {{ cell.promotion }} aplicada, antes ${{ cell.base_price }}{% endif %}{% if cell.is_unavailable %} - No disponible{% endif %}" aria-label="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.promotion %}, {{ cell.promotion }} aplicada, antes ${{ cell.base_price }}{% endif %}{% if cell.is_unavailable %} - No disponible{% endif %}"{% if cell.is_unavailable %} disabled aria-disabled="true"{% endif %}>
+                          {% if cell.icon_url %}
+                            <img class="client-seat-icon" src="{{ cell.icon_url }}" alt="">
+                          {% else %}
+                            {{ cell.label }}
+                          {% endif %}
                         </button>
                       {% else %}
                         <span class="client-seat aisle" aria-hidden="true"></span>
@@ -101,9 +117,13 @@
             </div>
             <div class="cart-total-row">
               <dt>Total</dt>
-              <dd data-cart-total>$0,00</dd>
+              <dd class="cart-total-amount">
+                <del data-cart-base-total hidden>$0,00</del>
+                <span data-cart-total>$0,00</span>
+              </dd>
             </div>
           </dl>
+          <p class="purchase-savings" data-purchase-savings hidden>Ahorrás <strong data-purchase-savings-amount>$0,00</strong></p>
           <p class="purchase-summary" data-purchase-summary></p>
           <p class="reservation-summary" data-reservation-summary hidden>
             <i data-lucide="clock-3" aria-hidden="true"></i>
