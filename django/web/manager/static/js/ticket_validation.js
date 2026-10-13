@@ -14,10 +14,15 @@
   const codeInput = form.elements.code;
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d', { willReadFrequently: true });
+  const MAX_SCAN_DIMENSION = 960;
+  const SCAN_INTERVAL_MS = 80;
   let stream = null;
   let frame = null;
   let generation = 0;
   let previewSubmitting = false;
+  let lastScanAt = 0;
+
+  context.imageSmoothingEnabled = false;
 
   function showPreviewLoading() {
     if (previewSubmitting) return;
@@ -210,13 +215,34 @@
     cameraPicker.hidden = cameras.length < 2;
   }
 
+  async function defaultCameraId() {
+    if (!navigator.mediaDevices?.enumerateDevices) return '';
+    try {
+      const cameras = (await navigator.mediaDevices.enumerateDevices())
+        .filter(device => device.kind === 'videoinput');
+      // The browser exposes cameras in the same order shown by the picker.
+      // Start with index 0; an operator can still choose another one explicitly.
+      return cameras[0]?.deviceId || '';
+    } catch (_error) {
+      return '';
+    }
+  }
+
   function decode(source, width, height) {
-    const scale = Math.min(1, 1200 / Math.max(width, height));
-    canvas.width = Math.round(width * scale);
-    canvas.height = Math.round(height * scale);
+    const scale = Math.min(1, MAX_SCAN_DIMENSION / Math.max(width, height));
+    const scanWidth = Math.round(width * scale);
+    const scanHeight = Math.round(height * scale);
+    if (canvas.width !== scanWidth || canvas.height !== scanHeight) {
+      canvas.width = scanWidth;
+      canvas.height = scanHeight;
+    }
     context.drawImage(source, 0, 0, canvas.width, canvas.height);
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
-    return window.jsQR(pixels.data, pixels.width, pixels.height);
+    return window.jsQR(pixels.data, pixels.width, pixels.height, {
+      // Tickets use a dark QR over a light background. Avoiding the inverted
+      // pass halves the decoder work for every captured frame.
+      inversionAttempts: 'dontInvert',
+    });
   }
 
   function accept(result) {
@@ -228,13 +254,19 @@
     return true;
   }
 
-  function scan() {
+  function scan(now) {
     if (!stream) return;
-    if (video.readyState >= 2 && accept(decode(video, video.videoWidth, video.videoHeight))) return;
+    if (
+      video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+      && now - lastScanAt >= SCAN_INTERVAL_MS
+    ) {
+      lastScanAt = now;
+      if (accept(decode(video, video.videoWidth, video.videoHeight))) return;
+    }
     frame = requestAnimationFrame(scan);
   }
 
-  async function startCamera(deviceId = '') {
+  async function startCamera(deviceId = null) {
     if (!window.isSecureContext) {
       setStatus('La cámara solo funciona por HTTPS. Abrí el panel con una URL segura y permití la cámara en Brave.');
       return;
@@ -246,10 +278,19 @@
     start.disabled = true;
     const current = ++generation;
     try {
+      if (frame) cancelAnimationFrame(frame);
+      frame = null;
       if (stream) stream.getTracks().forEach(track => track.stop());
-      const videoConstraints = deviceId
-        ? { deviceId: { exact: deviceId } }
-        : { facingMode: { ideal: 'environment' } };
+      stream = null;
+      const requestedDeviceId = deviceId === null ? await defaultCameraId() : deviceId;
+      const videoConstraints = {
+        ...(requestedDeviceId
+          ? { deviceId: { exact: requestedDeviceId } }
+          : { facingMode: { ideal: 'environment' } }),
+        // Avoid opening a 4K stream only to downscale it into the scan canvas.
+        width: { ideal: 1280, max: 1920 },
+        height: { ideal: 720, max: 1080 },
+      };
       const acquired = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
       if (current !== generation) {
         acquired.getTracks().forEach(track => track.stop());
@@ -259,14 +300,15 @@
       video.srcObject = stream;
       video.hidden = false;
       await video.play();
-      const activeDeviceId = stream.getVideoTracks()[0]?.getSettings().deviceId || deviceId;
+      const activeDeviceId = stream.getVideoTracks()[0]?.getSettings().deviceId || requestedDeviceId;
       await populateCameraPicker(activeDeviceId);
       start.disabled = false;
       start.classList.add('is-camera-open');
       if (cameraButtonLabel) cameraButtonLabel.textContent = 'Cerrar cámara';
       if (cameraCloseMark) cameraCloseMark.hidden = false;
       setStatus('Apuntá al QR de una entrada.');
-      scan();
+      lastScanAt = 0;
+      frame = requestAnimationFrame(scan);
     } catch (error) {
       stopCamera();
       setStatus('No pudimos abrir la cámara. Revisá los permisos o ingresá el código manualmente.');
