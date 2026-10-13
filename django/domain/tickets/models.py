@@ -21,7 +21,7 @@ def generate_ticket_code():
 
 
 def generate_ticket_token():
-    """Opaque QR credential: 192 bits, independent from purchase IDs."""
+    """Persistent random source for the reservation code, independent from IDs."""
     return secrets.token_urlsafe(24)
 
 
