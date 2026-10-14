@@ -1,6 +1,9 @@
 :root {
   --text: #111827;
   --dark: #0b1118;
+  --client-blue-deep: #123d6a;
+  --client-blue: #2d7fbf;
+  --client-blue-gradient: linear-gradient(135deg, var(--client-blue-deep), var(--client-blue));
 }
 
 * {
@@ -142,11 +145,11 @@ body {
 }
 
 .client-header nav a.client-tickets-link {
-  color: #ff958d;
+  color: #93c5fd;
 }
 
 .client-header nav a.client-tickets-link:hover {
-  color: #ffb4ad;
+  color: #bfdbfe;
 }
 
 .client-header nav a.client-notifications-link {
@@ -158,8 +161,8 @@ body {
 
 .client-header nav a.client-notifications-link.is-active {
   color: #fff;
-  border-color: rgba(229, 53, 44, .7);
-  background: rgba(180, 35, 24, .2);
+  border-color: rgba(45, 127, 191, .7);
+  background: rgba(45, 127, 191, .2);
 }
 
 .client-notification-badge {
@@ -171,14 +174,14 @@ body {
   padding: 0 5px;
   border-radius: 999px;
   color: #fff;
-  background: #c6281d;
+  background: var(--client-blue-gradient);
   font-size: 11px;
   line-height: 1;
 }
 
 .client-header nav a.has-imminent-ticket {
   position: relative;
-  background-color: rgba(180, 35, 24, .2);
+  background-color: rgba(45, 127, 191, .2);
   animation: imminent-ticket-pulse 1.8s ease-in-out infinite;
 }
 
@@ -188,17 +191,17 @@ body {
 
 @keyframes imminent-ticket-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(229, 53, 44, 0), 0 0 0 rgba(229, 53, 44, 0);
+    box-shadow: 0 0 0 0 rgba(45, 127, 191, 0), 0 0 0 rgba(45, 127, 191, 0);
     filter: saturate(1);
   }
   50% {
-    box-shadow: 0 0 0 5px rgba(229, 53, 44, .13), 0 0 22px rgba(229, 53, 44, .28);
+    box-shadow: 0 0 0 5px rgba(45, 127, 191, .13), 0 0 22px rgba(45, 127, 191, .28);
     filter: saturate(1.16) brightness(1.08);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .client-header nav a.has-imminent-ticket { animation: none; background-color: rgba(180, 35, 24, .3); }
+  .client-header nav a.has-imminent-ticket { animation: none; background-color: rgba(45, 127, 191, .3); }
 }
 
 .client-user-pill {
@@ -1340,13 +1343,13 @@ body {
 
   .client-header .client-nav-primary a.client-tickets-link,
   .client-header .client-nav-primary a.client-tickets-link:hover {
-    background: rgba(180, 35, 24, .18);
-    color: #ffaaa3;
+    background: rgba(45, 127, 191, .18);
+    color: #93c5fd;
   }
 
   .client-header .client-nav-primary a.is-active,
   .client-header .client-nav-primary a.is-active:hover {
-    background: #b42318;
+    background: var(--client-blue-gradient);
     color: #fff;
   }
 }
@@ -1437,8 +1440,8 @@ body {
 
   .client-header .client-nav-primary a.client-tickets-link,
   .client-header .client-nav-primary a.client-tickets-link:hover {
-    background: rgba(180, 35, 24, .18);
-    color: #ffaaa3;
+    background: rgba(45, 127, 191, .18);
+    color: #93c5fd;
   }
 
   .client-header .client-nav-primary a:hover {
@@ -1448,7 +1451,7 @@ body {
 
   .client-header .client-nav-primary a.is-active,
   .client-header .client-nav-primary a.is-active:hover {
-    background: #b42318;
+    background: var(--client-blue-gradient);
     color: #fff;
   }
 
@@ -1729,8 +1732,8 @@ body {
 
   .client-header .client-nav-primary a.client-tickets-link,
   .client-header .client-nav-primary a.client-tickets-link:hover {
-    background: rgba(180, 35, 24, .18);
-    color: #ffaaa3;
+    background: rgba(45, 127, 191, .18);
+    color: #93c5fd;
   }
 
   .client-header .client-nav-primary a:hover {
@@ -1740,7 +1743,7 @@ body {
 
   .client-header .client-nav-primary a.is-active,
   .client-header .client-nav-primary a.is-active:hover {
-    background: #b42318;
+    background: var(--client-blue-gradient);
     color: #fff;
   }
 
@@ -2038,14 +2041,16 @@ body {
 
   .client-header .client-nav-primary a.client-tickets-link.has-imminent-ticket,
   .client-header .client-nav-primary a.client-tickets-link.has-imminent-ticket:hover {
-    color: #ffaaa3;
-    background: rgba(180, 35, 24, .18);
+    color: #93c5fd;
+    background: rgba(45, 127, 191, .18);
   }
 
   .client-header .client-nav-primary a.is-active,
-  .client-header .client-nav-primary a.is-active:hover {
+  .client-header .client-nav-primary a.is-active:hover,
+  .client-header .client-nav-primary a.client-tickets-link.is-active,
+  .client-header .client-nav-primary a.client-tickets-link.is-active:hover {
     color: #fff;
-    background: #b42318;
+    background: var(--client-blue-gradient);
   }
 
   .client-user-pill {
