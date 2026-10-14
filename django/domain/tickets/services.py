@@ -163,7 +163,7 @@ def refund_canceled_screening(screening):
         notice = (
             f"Se canceló la función de {screening.movie.title} del "
             f"{timezone.localtime(screening.starts_at):%d/%m/%Y %H:%M}. "
-            f"Registramos una devolución simulada de ${purchase.total:.2f} "
+            f"Registramos una devolución de ${purchase.total:.2f} "
             f"por tu compra #{purchase.pk}. No se realizó un movimiento de dinero real."
         )
         PurchaseRefund.objects.get_or_create(
@@ -197,7 +197,7 @@ def send_refund_notifications(refund_ids=None):
                 text_body = refund.notice
                 
                 msg = EmailMultiAlternatives(
-                    subject="Función cancelada · Devolución simulada",
+                    subject="Función cancelada · Devolución registrada",
                     body=text_body,
                     from_email=None,
                     to=[email],

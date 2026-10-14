@@ -445,11 +445,11 @@ class PurchaseRefund(models.Model):
     read_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        verbose_name = "Devolución simulada"
-        verbose_name_plural = "Devoluciones simuladas"
+        verbose_name = "Devolución"
+        verbose_name_plural = "Devoluciones"
 
     def __str__(self):
-        return f"Devolución simulada · Compra #{self.purchase_id}"
+        return f"Devolución · Compra #{self.purchase_id}"
 
 
 class SeatPurchase(models.Model):

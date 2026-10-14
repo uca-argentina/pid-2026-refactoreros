@@ -15,7 +15,7 @@
         <h2>Confirmar cancelación</h2>
         <p>Vas a cancelar <strong>{{ object }}</strong>. Deja de estar a la venta y no se puede volver a publicar.</p>
         {% if tickets_sold %}
-          <p>Ya se vendieron <strong>{{ tickets_sold }}</strong> entrada{{ tickets_sold|pluralize }}. Se invalidarán todas las entradas, se registrará una devolución simulada por el total de cada compra y se notificará a los compradores en "Mis entradas" y por correo.</p>
+          <p>Ya se vendieron <strong>{{ tickets_sold }}</strong> entrada{{ tickets_sold|pluralize }}. Se invalidarán todas las entradas, se registrará una devolución por el total de cada compra y se notificará a los compradores en "Mis entradas" y por correo.</p>
         {% endif %}
       </div>
     </div>

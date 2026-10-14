@@ -133,6 +133,24 @@ class PurchaseAdmissionTests(AdmissionFixture):
 
 
 class PurchaseAdmissionViewTests(AdmissionFixture):
+    def test_operator_preview_names_the_last_available_seat_on_the_validation_button(self):
+        tickets = list(self.purchase.tickets.order_by("number"))
+        tickets[-1].seat_label = "3B"
+        tickets[-1].save(update_fields=["seat_label"])
+        self.purchase.tickets.exclude(pk=tickets[-1].pk).update(
+            used_at=timezone.now(),
+            used_by=self.operator,
+        )
+        self.client.force_login(self.operator)
+
+        response = self.client.post(reverse("manager:validar_entradas"), {
+            "code": self.purchase.validation_code,
+            "action": "preview",
+        })
+
+        self.assertContains(response, 'data-single-seat-label="3B"')
+        self.assertContains(response, "Validar ingreso · 3B")
+
     def test_operator_history_is_paginated_and_limited_to_last_24_hours(self):
         ticket = self.purchase.tickets.first()
         expired_validation = AdmissionValidation.objects.create(
@@ -208,7 +226,7 @@ class PurchaseAdmissionViewTests(AdmissionFixture):
         response = self.client.get(reverse("notifications"))
 
         self.assertContains(response, "Función cancelada")
-        self.assertContains(response, "Devolución simulada registrada")
+        self.assertContains(response, "Devolución registrada")
         refund.refresh_from_db()
         self.assertIsNotNone(refund.read_at)
 

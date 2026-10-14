@@ -24,7 +24,7 @@
               <p class="notification-kicker">Función cancelada</p>
               <h2>{{ notification.purchase.screening.movie.title }}</h2>
               <p>{{ notification.purchase.screening.room.name }} · {{ notification.purchase.screening.starts_at|date:"d/m/Y H:i" }}</p>
-              <p class="notification-refund">Devolución simulada registrada · $ {{ notification.amount|floatformat:2 }}</p>
+              <p class="notification-refund">Devolución registrada · $ {{ notification.amount|floatformat:2 }}</p>
               <p class="notification-date">{{ notification.created_at|date:"d/m/Y H:i" }}</p>
             </div>
           </article>

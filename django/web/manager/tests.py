@@ -572,6 +572,20 @@ class ManagerFuncionesTests(TestCase):
         screening = Screening.objects.get()
         self.assertEqual(screening.status, Screening.Status.DRAFT)
 
+    def test_crear_funcion_recuerda_publicarla_o_programarla(self):
+        response = self.client.post(
+            reverse("manager:funciones_create"),
+            data={
+                "movie": self.movie.pk,
+                "room": self.room.pk,
+                "starts_at": self.date_form(self.date_futura()),
+                "prices_by_type": self.precios_por_tipo_form(),
+            },
+            follow=True,
+        )
+
+        self.assertContains(response, "No te olvides de publicarla o programarla")
+
     def test_no_permite_crear_funcion_con_precio_cero(self):
         response = self.client.post(
             reverse("manager:funciones_create"),
@@ -1253,7 +1267,7 @@ class ManagerDashboardTests(TestCase):
         response = self.client.get(reverse("manager:dashboard"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Recaudaci\u00f3n simulada".encode("utf-8"), response.content)
+        self.assertIn("Recaudaci\u00f3n".encode("utf-8"), response.content)
         self.assertContains(response, "Vendidas vs. utilizadas")
         self.assertIn("Pel\u00edculas m\u00e1s vistas".encode("utf-8"), response.content)
         self.assertIn("Ocupaci\u00f3n por sala".encode("utf-8"), response.content)
@@ -1336,6 +1350,38 @@ class ManagerDashboardTests(TestCase):
         self.assertEqual(build_dashboard("7", now=self.now)["summary"]["sold"], 1)
         self.assertEqual(build_dashboard("30", now=self.now)["summary"]["sold"], 3)
         self.assertEqual(build_dashboard("todo", now=self.now)["summary"]["sold"], 3)
+
+    def test_rango_personalizado_filtra_funciones_por_fechas(self):
+        self.vender(self.crear_funcion(-3), 1, "1000.00")
+        self.vender(self.crear_funcion(-20), 2, "2000.00")
+        date_from = timezone.localdate(self.now) - timedelta(days=21)
+        date_to = timezone.localdate(self.now) - timedelta(days=10)
+
+        dashboard = build_dashboard(
+            date_from=date_from,
+            date_to=date_to,
+            now=self.now,
+        )
+
+        self.assertEqual(dashboard["period"], "custom")
+        self.assertTrue(dashboard["has_custom_range"])
+        self.assertEqual(dashboard["summary"]["sold"], 2)
+        self.assertEqual(dashboard["start"], date_from)
+        self.assertEqual(dashboard["end"], date_to)
+
+    def test_dashboard_acepta_rango_personalizado_desde_la_vista(self):
+        self.client.force_login(self.gerente)
+        date_from = timezone.localdate() - timedelta(days=14)
+        date_to = timezone.localdate() - timedelta(days=7)
+
+        response = self.client.get(
+            reverse("manager:dashboard"),
+            {"date_from": date_from.isoformat(), "date_to": date_to.isoformat()},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'value="{date_from.isoformat()}"')
+        self.assertContains(response, f'value="{date_to.isoformat()}"')
 
     def test_period_invalido_usa_ultimos_30_days(self):
         dashboard = build_dashboard("cualquiera", now=self.now)
