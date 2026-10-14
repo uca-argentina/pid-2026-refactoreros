@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 import json
 
 from django.views.generic import (
@@ -167,7 +168,29 @@ class DashboardView(ManagerRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         Screening.finalize_expired()
         context["section"] = "Dashboard"
-        context["dashboard"] = build_dashboard(self.request.GET.get("period"))
+        raw_date_from = self.request.GET.get("date_from", "").strip()
+        raw_date_to = self.request.GET.get("date_to", "").strip()
+        date_from = parse_date(raw_date_from) if raw_date_from else None
+        date_to = parse_date(raw_date_to) if raw_date_to else None
+        date_filter_error = None
+        today = timezone.localdate()
+        if raw_date_from and not date_from:
+            date_filter_error = "La fecha Desde no es válida."
+        elif raw_date_to and not date_to:
+            date_filter_error = "La fecha Hasta no es válida."
+        elif date_from and date_from > today:
+            date_filter_error = "La fecha Desde no puede ser posterior a hoy."
+        elif date_to and date_to > today:
+            date_filter_error = "La fecha Hasta no puede ser posterior a hoy."
+        elif date_from and date_to and date_from > date_to:
+            date_filter_error = "La fecha Desde debe ser anterior o igual a Hasta."
+
+        context["dashboard"] = build_dashboard(
+            self.request.GET.get("period"),
+            date_from=None if date_filter_error else date_from,
+            date_to=None if date_filter_error else date_to,
+        )
+        context["date_filter_error"] = date_filter_error
         return context
 
 
@@ -280,9 +303,13 @@ class ManagerListView(ManagerRequiredMixin, ListView):
 class ManagerCreateView(ManagerRequiredMixin, CreateView):
     template_name = "manager_form.html"
     form_title = ""
+    success_message = ""
 
     def form_valid(self, form):
-        messages.success(self.request, f"{self.object_label} se creó correctamente.")
+        messages.success(
+            self.request,
+            self.success_message or f"{self.object_label} se creó correctamente.",
+        )
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -844,6 +871,7 @@ class ScreeningCreateView(ManagerCreateView):
     enctype = ""
     object_label = "La función"
     form_title = "Nueva función"
+    success_message = "La función se creó correctamente. ¡No te olvides de publicarla o programarla!"
 
     def get_initial(self):
         initial = super().get_initial()

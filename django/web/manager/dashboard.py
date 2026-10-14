@@ -28,32 +28,46 @@ X_AXIS_LABELS = 8
 TIME_SLOT_MINUTES = 30
 
 
-def build_dashboard(period=None, now=None):
+def build_dashboard(period=None, date_from=None, date_to=None, now=None):
     now = now or timezone.now()
-    key, days = resolve_period(period)
     today = timezone.localdate(now)
-    start = start_of_day(today - timedelta(days=days - 1)) if days else None
+    has_custom_range = date_from is not None or date_to is not None
 
-    rows = screening_rows(completed_screenings(start, now))
+    if has_custom_range:
+        key = "custom"
+        end_date = min(date_to or today, today)
+        start = start_of_day(date_from) if date_from else None
+        end = min(start_of_day(end_date + timedelta(days=1)), now)
+        days = (end_date - date_from).days + 1 if date_from else None
+    else:
+        key, days = resolve_period(period)
+        start = start_of_day(today - timedelta(days=days - 1)) if days else None
+        end = now
+        end_date = today
+
+    rows = screening_rows(completed_screenings(start, end))
     summary = summarize(rows)
     movies = top_movies(rows)
-    time_slots = demand_by_purchase_time(start, now)
+    time_slots = demand_by_purchase_time(start, end)
     previous = None
-    if start is not None:
-        start_previous = start_of_day(today - timedelta(days=days * 2 - 1))
+    if start is not None and days:
+        start_previous = start - timedelta(days=days)
         previous = summarize(screening_rows(completed_screenings(start_previous, start)))
 
     return {
         "periods": [
-            {"key": value, "label": label, "active": value == key}
+            {"key": value, "label": label, "active": not has_custom_range and value == key}
             for value, label, _days in PERIODS
         ],
         "period": key,
+        "date_from": date_from,
+        "date_to": date_to,
+        "has_custom_range": has_custom_range,
         "start": timezone.localdate(start) if start else first_date(rows),
-        "end": today,
+        "end": end_date,
         "summary": summary,
         "deltas": build_deltas(summary, previous),
-        "revenue": revenue_series(rows, start, today),
+        "revenue": revenue_series(rows, start, end_date),
         "movies": movies,
         "rooms": occupancy_by_room(rows),
         "time_slots": time_slots,

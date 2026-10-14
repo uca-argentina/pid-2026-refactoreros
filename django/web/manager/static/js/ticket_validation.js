@@ -100,11 +100,14 @@
     const admissionButton = admissionForm.querySelector('[data-validate-admission]');
     const availableSeats = admissionForm.dataset.availableSeats;
     const isSingleAdmission = admissionForm.dataset.singleAdmission === 'true';
+    const singleSeatLabel = admissionForm.dataset.singleSeatLabel;
     let admissionSubmitting = false;
     const updateAdmissionButton = () => {
       if (isSingleAdmission) {
         admissionButton.disabled = false;
-        admissionButton.textContent = 'Validar ingreso (única butaca)';
+        admissionButton.textContent = singleSeatLabel
+          ? `Validar ingreso · ${singleSeatLabel}`
+          : 'Validar ingreso (única butaca)';
         return;
       }
       const selected = admissionForm.querySelectorAll('input[name="ticket_numbers"]:checked').length;

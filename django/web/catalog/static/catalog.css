@@ -174,7 +174,7 @@ body {
   padding: 0 5px;
   border-radius: 999px;
   color: #fff;
-  background: var(--client-blue-gradient);
+  background: linear-gradient(135deg, #dc2626, #ef4444);
   font-size: 11px;
   line-height: 1;
 }
@@ -594,11 +594,20 @@ body {
 }
 
 .client-seat-map {
+  position: relative;
   max-width: 100%;
   padding: 14px 0 4px;
   border-top: 1px solid rgba(255, 255, 255, .14);
   border-bottom: 1px solid rgba(255, 255, 255, .08);
+  overflow: hidden;
+}
+
+.client-seat-map-viewport {
   overflow-x: auto;
+}
+
+.seat-map-pan-hint {
+  display: none;
 }
 
 .purchase-cart {
@@ -1662,9 +1671,53 @@ body {
       linear-gradient(90deg, rgba(5, 7, 11, .96), rgba(5, 7, 11, 0) 24px) left / 32px 100% no-repeat local,
       linear-gradient(270deg, rgba(5, 7, 11, .96), rgba(5, 7, 11, 0) 24px) right / 32px 100% no-repeat local,
       rgba(255, 255, 255, .025);
+  }
+
+  .client-seat-map-viewport {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
     scrollbar-width: thin;
+  }
+
+  .seat-map-pan-hint {
+    position: absolute;
+    top: 52%;
+    z-index: 1;
+    display: grid;
+    width: 28px;
+    height: 40px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, .13);
+    border-radius: 7px;
+    color: rgba(255, 255, 255, .72);
+    background: rgba(5, 7, 11, .52);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, .18);
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%);
+    transition: opacity .18s ease;
+  }
+
+  .seat-map-pan-hint-left {
+    left: 8px;
+  }
+
+  .seat-map-pan-hint-right {
+    right: 8px;
+  }
+
+  .client-seat-map.can-pan-left .seat-map-pan-hint-left,
+  .client-seat-map.can-pan-right .seat-map-pan-hint-right {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .seat-map-pan-hint:disabled {
+    cursor: default;
   }
 
   .client-seat-stage {
@@ -1921,6 +1974,14 @@ body {
   .client-seat-map {
     margin-inline: -7px;
     padding: 10px 7px 8px;
+  }
+
+  .seat-map-pan-hint-left {
+    left: 5px;
+  }
+
+  .seat-map-pan-hint-right {
+    right: 5px;
   }
 
   .client-screen-marker {

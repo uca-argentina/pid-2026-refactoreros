@@ -108,6 +108,15 @@ class TicketValidationView(StaffAccessMixin, FormView):
                     "first_name", "last_name", "username"
                 ).first() or {}
                 purchase.customer_display_name = compact_customer_name(customer)
+                if purchase.remaining_quantity == 1:
+                    remaining_ticket = next(
+                        (ticket for ticket in purchase.tickets.all() if not ticket.used_at),
+                        None,
+                    )
+                    if remaining_ticket:
+                        purchase.single_admission_label = (
+                            remaining_ticket.seat_label or f"Entrada {remaining_ticket.number}"
+                        )
                 return self.render_to_response(self.get_context_data(form=form, purchase=purchase))
             if action != "validate":
                 raise ValidationError("La acción no es válida.")

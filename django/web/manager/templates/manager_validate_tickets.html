@@ -47,7 +47,7 @@
         <p>{{ purchase.screening.room.name }} · {{ purchase.screening.starts_at|date:"d/m/Y H:i" }}</p>
         <p>Cliente: <strong>{{ purchase.customer_display_name }}</strong></p>
         <p>Compra {{ purchase.validation_code }} · {{ purchase.remaining_quantity }} de {{ purchase.quantity }} entradas sin utilizar</p>
-        <form method="post" class="admission-selection" data-confirm-admission data-available-seats="{{ purchase.remaining_quantity }}"{% if purchase.remaining_quantity == 1 %} data-single-admission="true"{% endif %}>
+        <form method="post" class="admission-selection" data-confirm-admission data-available-seats="{{ purchase.remaining_quantity }}"{% if purchase.remaining_quantity == 1 %} data-single-admission="true" data-single-seat-label="{{ purchase.single_admission_label }}"{% endif %}>
           {% csrf_token %}
           <input type="hidden" name="code" value="{{ purchase.validation_code }}">
           {% if purchase.remaining_quantity == 1 %}
@@ -71,7 +71,7 @@
             </div>
           {% endif %}
           <input type="hidden" name="action" value="validate">
-          <div class="form-actions"><button type="submit" data-validate-admission disabled>Validar ingreso</button></div>
+          <div class="form-actions"><button type="submit" data-validate-admission disabled>{% if purchase.single_admission_label %}Validar ingreso · {{ purchase.single_admission_label }}{% else %}Validar ingreso{% endif %}</button></div>
         </form>
       </section>
     {% endif %}

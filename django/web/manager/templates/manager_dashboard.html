@@ -21,6 +21,18 @@
           </a>
         {% endfor %}
       </div>
+      <form class="dashboard-date-filter" method="get">
+        <label>
+          <span>Desde</span>
+          <input type="date" name="date_from" value="{% if dashboard.date_from %}{{ dashboard.date_from|date:'Y-m-d' }}{% endif %}">
+        </label>
+        <label>
+          <span>Hasta</span>
+          <input type="date" name="date_to" value="{% if dashboard.date_to %}{{ dashboard.date_to|date:'Y-m-d' }}{% endif %}">
+        </label>
+        <button type="submit">Aplicar</button>
+        {% if dashboard.has_custom_range %}<a href="{% url 'manager:dashboard' %}">Limpiar</a>{% endif %}
+      </form>
       <p class="period-range">
         <i data-lucide="calendar-range" aria-hidden="true"></i>
         <span>
@@ -28,14 +40,15 @@
           {% if dashboard.start %}del {{ dashboard.start|date:"d/m/Y" }} al {{ dashboard.end|date:"d/m/Y" }}{% else %}hasta hoy{% endif %}
         </span>
       </p>
+      {% if date_filter_error %}<p class="dashboard-date-filter-error">{{ date_filter_error }}</p>{% endif %}
     </nav>
 
     <section class="kpi-grid" aria-label="Indicadores del período">
       <article class="kpi-card">
-        <span class="kpi-label"><i data-lucide="banknote" aria-hidden="true"></i>Recaudación simulada</span>
+        <span class="kpi-label"><i data-lucide="banknote" aria-hidden="true"></i>Recaudación</span>
         <strong class="kpi-value">${{ summary.revenue|floatformat:"0g" }}</strong>
         {% include "_dashboard_delta.html" with delta=deltas.revenue comparable=deltas %}
-        <span class="kpi-meta">Pagos simulados de {{ summary.screenings }} {{ summary.screenings|pluralize:"función,funciones" }}</span>
+        <span class="kpi-meta">Pagos de {{ summary.screenings }} {{ summary.screenings|pluralize:"función,funciones" }}</span>
       </article>
       <article class="kpi-card">
         <span class="kpi-label"><i data-lucide="ticket" aria-hidden="true"></i>Entradas vendidas</span>
@@ -75,7 +88,7 @@
       <article class="panel-section viz-card viz-card-fill">
         <header class="viz-header">
           <div>
-            <h2>Recaudación simulada</h2>
+            <h2>Recaudación</h2>
             <p>
               {% if dashboard.revenue.granularity == "week" %}Por semana{% elif dashboard.revenue.granularity == "month" %}Por mes{% else %}Por día{% endif %}
               de función
@@ -95,7 +108,7 @@
                 {% for tick in serie.ticks %}
                   <span class="column-chart-grid{% if forloop.first %} is-baseline{% endif %}" style="bottom: {{ tick.position_css }}" aria-hidden="true"></span>
                 {% endfor %}
-                <div class="column-chart-bars" style="--columns: {{ serie.columns|length }}" role="list" aria-label="Recaudación simulada por período">
+                <div class="column-chart-bars" style="--columns: {{ serie.columns|length }}" role="list" aria-label="Recaudación por período">
                   {% for column in serie.columns %}
                     <div
                       class="column-slot"

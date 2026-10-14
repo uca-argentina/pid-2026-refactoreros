@@ -3,7 +3,7 @@ from domain.tickets.services import send_refund_notifications
 
 
 class Command(BaseCommand):
-    help = "Reintenta los correos pendientes de cancelación y devolución simulada."
+    help = "Reintenta los correos pendientes de cancelación y devolución."
 
     def handle(self, *args, **options):
         sent = send_refund_notifications()

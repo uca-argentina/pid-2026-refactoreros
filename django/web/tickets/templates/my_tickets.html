@@ -33,11 +33,14 @@
                 {% if purchase.is_history and purchase.screening.status != 'cancelada' %}<span class="ticket-history-status">Función finalizada</span>{% endif %}
               </div>
               <h2>{{ purchase.screening.movie.title }}</h2>
-              <p>{{ purchase.screening.room.name }}</p>
+              <p class="ticket-room-line">
+                {{ purchase.screening.room.name }} <span class="ticket-detail-separator" aria-hidden="true">·</span>
+                <a class="ticket-detail-link" href="{% url 'ticket_detail' purchase.pk %}">Ver detalle</a>
+              </p>
             </div>
 
             <div class="ticket-card-action">
-              <span>{{ purchase.quantity }} entrada{{ purchase.quantity|pluralize }}</span>
+              <span class="ticket-quantity">{{ purchase.quantity }} entrada{{ purchase.quantity|pluralize }}</span>
               {% if purchase.admission_open %}
                 <a class="ticket-qr-link{% if purchase.is_imminent %} is-imminent-ticket{% endif %}" href="{% url 'ticket_detail' purchase.pk %}">
                   <i data-lucide="qr-code" aria-hidden="true"></i><span>MOSTRAR QR</span>
@@ -51,7 +54,7 @@
 
             {% if purchase.refund %}
               <aside class="ticket-refund ticket-refund-compact" aria-label="Aviso de cancelación">
-                <strong>Devolución simulada registrada</strong>
+                <strong>Devolución registrada</strong>
               </aside>
             {% endif %}
           </article>

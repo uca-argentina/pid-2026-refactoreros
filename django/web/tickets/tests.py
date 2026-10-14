@@ -198,6 +198,8 @@ class TicketPurchaseTests(TestCase):
 
         self.assertContains(response, "Publicada")
         self.assertContains(response, "2 entradas")
+        self.assertContains(response, 'class="ticket-quantity"')
+        self.assertContains(response, 'class="ticket-detail-link"')
         self.assertNotContains(response, "1A, 1B")
         self.assertNotContains(response, "otro@mail.com")
 
@@ -300,6 +302,9 @@ class TicketPurchaseTests(TestCase):
         self.assertContains(response, 'data-reservation-batch-delay-ms="1000"')
         self.assertContains(response, 'data-seat-price="1000.00"')
         self.assertContains(response, 'data-seat-base-price="1000.00"')
+        self.assertContains(response, 'data-seat-map-viewport')
+        self.assertContains(response, 'data-seat-map-pan="left"')
+        self.assertContains(response, 'data-seat-map-pan="right"')
         self.assertContains(response, 'data-purchase-savings')
         self.assertContains(response, 'data-cart-base-total')
 

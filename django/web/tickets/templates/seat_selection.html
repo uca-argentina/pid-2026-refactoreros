@@ -58,11 +58,12 @@
       <div class="seat-selection-layout">
       {% if screening.seat_map %}
         <section class="client-seat-map" data-screening-id="{{ screening.pk }}" data-available="{{ screening.tickets_available|unlocalize }}" data-refresh-interval-seconds="{{ cinema.seat_refresh_seconds|unlocalize }}" data-reservation-url="{% url 'seat_reservation' screening.pk %}" data-reservation-batch-url="{% url 'seat_reservation_batch' screening.pk %}" data-reservation-status-url="{% url 'seat_reservation_status' screening.pk %}" data-reservation-batch-delay-ms="1000" aria-label="Seleccionar asientos">
-          <div class="client-seat-stage">
-            <div class="client-screen-marker" aria-hidden="true">
-              <span>Pantalla</span>
-            </div>
-            <div class="client-seat-grid">
+          <div class="client-seat-map-viewport" data-seat-map-viewport>
+            <div class="client-seat-stage">
+              <div class="client-screen-marker" aria-hidden="true">
+                <span>Pantalla</span>
+              </div>
+              <div class="client-seat-grid">
               <div class="client-seat-row client-seat-column-row" aria-hidden="true">
                 <span class="client-seat-row-label"></span>
                 <div class="client-seat-cells">
@@ -91,8 +92,11 @@
                   </div>
                 </div>
               {% endfor %}
+              </div>
             </div>
           </div>
+          <button type="button" class="seat-map-pan-hint seat-map-pan-hint-left" data-seat-map-pan="left" aria-label="Ver butacas hacia la izquierda" disabled><span aria-hidden="true">&#8249;</span></button>
+          <button type="button" class="seat-map-pan-hint seat-map-pan-hint-right" data-seat-map-pan="right" aria-label="Ver butacas hacia la derecha" disabled><span aria-hidden="true">&#8250;</span></button>
         </section>
       {% endif %}
 

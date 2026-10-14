@@ -69,6 +69,68 @@
   height: 16px;
 }
 
+.dashboard-date-filter {
+  display: inline-flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dashboard-date-filter label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dashboard-date-filter input {
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dashboard-date-filter button,
+.dashboard-date-filter a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.dashboard-date-filter button {
+  border-color: var(--brand);
+  color: var(--brand-ink);
+  background: var(--brand);
+  cursor: pointer;
+}
+
+.dashboard-date-filter a:hover {
+  background: var(--row-hover);
+}
+
+.dashboard-date-filter-error {
+  width: 100%;
+  margin: -4px 0 0;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
 /* Indicadores */
 
 .kpi-grid {
@@ -805,6 +867,10 @@
 
   .period-option-prefix {
     display: none;
+  }
+
+  .dashboard-date-filter {
+    width: 100%;
   }
 
   .column-chart-x .is-secondary {
