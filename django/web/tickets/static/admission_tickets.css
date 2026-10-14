@@ -30,7 +30,7 @@
   gap: 8px;
   padding: 11px 14px;
   border-radius: 7px;
-  background: #b42318;
+  background: linear-gradient(135deg, #123d6a, #2d7fbf);
   color: #fff;
   font-weight: 900;
   text-decoration: none;
@@ -48,27 +48,27 @@
   line-height: inherit;
   text-transform: none;
 }
-.ticket-qr-link:hover { background: #d02d25; color: #fff; }
+.ticket-qr-link:hover { background: linear-gradient(135deg, #174e81, #3b8ed1); color: #fff; }
 .ticket-qr-link.is-imminent-ticket {
   position: relative;
-  border: 1px solid rgba(254, 128, 116, .9);
+  border: 1px solid rgba(147, 197, 253, .9);
   animation: ticket-qr-imminent-pulse 1.8s ease-in-out infinite;
 }
 
 @keyframes ticket-qr-imminent-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 1px rgba(229, 53, 44, .38), 0 0 0 rgba(229, 53, 44, 0);
+    box-shadow: 0 0 0 1px rgba(45, 127, 191, .38), 0 0 0 rgba(45, 127, 191, 0);
   }
   50% {
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, .82), 0 0 18px rgba(185, 28, 28, .7);
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, .82), 0 0 18px rgba(45, 127, 191, .7);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ticket-qr-link.is-imminent-ticket {
     animation: none;
-    background: #d02d25;
-    box-shadow: 0 0 0 2px rgba(239, 68, 68, .78);
+    background: linear-gradient(135deg, #174e81, #3b8ed1);
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, .78);
   }
 }
 .ticket-history-link { position: relative; z-index: 1; display: inline-flex; align-items: center; min-height: 38px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, .35); border-radius: 6px; color: rgba(255, 255, 255, .9); font-size: 13px; font-weight: 800; text-decoration: none; }
@@ -116,14 +116,14 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  color: #ff9b92;
-  background: rgba(180, 35, 24, .22);
+  color: #93c5fd;
+  background: rgba(45, 127, 191, .22);
 }
 
 .notification-icon svg { width: 20px; height: 20px; }
 .notification-card p { margin: 0; }
 .notification-card h2 { margin: 2px 0 5px; font-size: 19px; }
-.notification-kicker { color: #ffaaa3; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.notification-kicker { color: #93c5fd; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
 .notification-refund { margin-top: 12px !important; color: #fff; font-weight: 700; }
 .notification-date { margin-top: 7px !important; color: rgba(255, 255, 255, .52); font-size: 13px; }
 
@@ -144,7 +144,7 @@
   color: rgba(255, 255, 255, .72);
 }
 .ticket-code span { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.ticket-code strong { color: #ffaaa3; font-family: monospace; font-size: 28px; letter-spacing: .18em; line-height: 1; }
+.ticket-code strong { color: #93c5fd; font-family: monospace; font-size: 28px; letter-spacing: .18em; line-height: 1; }
 .ticket-admission-update { display: grid; gap: 7px; max-width: 420px; margin: 4px auto 22px; padding: 15px 17px; border: 1px solid rgba(74, 222, 128, .45); border-radius: 10px; background: linear-gradient(135deg, rgba(7, 109, 66, .62), rgba(34, 197, 94, .2)); box-shadow: 0 10px 30px rgba(7, 109, 66, .22); text-align: left; }
 .ticket-admission-update[hidden] { display: none; }
 .ticket-admission-update.is-arriving { animation: ticket-admission-arrival .45s ease-out both; }
@@ -165,10 +165,10 @@
 .ticket-purchase-details dl div { padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, .1); }
 .ticket-purchase-details dt { margin-bottom: 4px; color: rgba(255, 255, 255, .58); font-size: 12px; font-weight: 800; text-transform: uppercase; }
 .ticket-purchase-details dd { margin: 0; color: #fff; font-weight: 700; overflow-wrap: anywhere; }
-.ticket-sharing-notice { margin-top: 16px; padding: 2px 0 2px 12px; border-left: 3px solid #b42318; color: rgba(255, 255, 255, .72); font-size: 13px; line-height: 1.45; text-align: left; }
+.ticket-sharing-notice { margin-top: 16px; padding: 2px 0 2px 12px; border-left: 3px solid #2d7fbf; color: rgba(255, 255, 255, .72); font-size: 13px; line-height: 1.45; text-align: left; }
 .ticket-sharing-notice strong { color: #fff; }
 .ticket-expired-notice { margin: 16px 0 0; color: rgba(255, 255, 255, .68); font-size: 14px; }
-.ticket-entry-hint { max-width: 680px; margin: -12px 0 24px; padding-left: 12px; border-left: 3px solid #b42318; color: rgba(255, 255, 255, .78); font-size: 14px; line-height: 1.45; }
+.ticket-entry-hint { max-width: 680px; margin: -12px 0 24px; padding-left: 12px; border-left: 3px solid #2d7fbf; color: rgba(255, 255, 255, .78); font-size: 14px; line-height: 1.45; }
 
 @media (max-width: 580px) {
   .ticket-card-compact { grid-template-columns: 1fr; }

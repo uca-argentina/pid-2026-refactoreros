@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Función cancelada</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f3f4f6; font-family:Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6; padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0"
+               style="max-width:600px; width:100%; background-color:#ffffff; border-radius:8px; overflow:hidden;">
+
+          <!-- Cabecera -->
+          <tr>
+            <td align="center" style="background-color:#b91c1c; padding:28px 24px;">
+              <h1 style="margin:0; font-size:22px; color:#ffffff;">Función cancelada</h1>
+              <p style="margin:6px 0 0; font-size:14px; color:#fecaca;">Devolución simulada</p>
+            </td>
+          </tr>
+
+          <!-- Cuerpo -->
+          <tr>
+            <td style="padding:28px 32px; color:#1f2937; font-size:15px; line-height:1.6;">
+              <p style="margin:0 0 16px;">
+                Hola{% if user.first_name %} {{ user.first_name }}{% endif %},
+              </p>
+              <p style="margin:0 0 20px;">
+                Lamentamos informarte que la función de tu compra ha sido cancelada.
+              </p>
+
+              <!-- Aviso original -->
+              <div style="background-color:#fef2f2; border-left:4px solid #b91c1c; padding:14px 16px; margin:0 0 20px; border-radius:4px;">
+                {{ notice|linebreaksbr }}
+              </div>
+
+              <p style="margin:0; color:#6b7280; font-size:13px;">
+                Esta devolución es una simulación, no se realizará ningún cargo ni reembolso real.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Pie -->
+          <tr>
+            <td align="center" style="background-color:#f9fafb; padding:16px; font-size:12px; color:#9ca3af;">
+              Este es un mensaje automático, por favor no respondas a este correo.
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

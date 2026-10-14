@@ -4,6 +4,8 @@ from datetime import timedelta
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 from django.db import transaction
 from django.utils import timezone
 
@@ -185,9 +187,28 @@ def send_refund_notifications(refund_ids=None):
                 email = refund.purchase.user.email
                 if not email:
                     continue
-                delivered = send_mail(
-                    "Función cancelada · Devolución simulada", refund.notice, None, [email],
+                context = {
+                    "refund": refund,
+                    "purchase": refund.purchase,
+                    "user": refund.purchase.user,
+                    "notice": refund.notice,
+                }
+                html_body = render_to_string("emails/refund_notice.html", context)
+                text_body = refund.notice
+                
+                msg = EmailMultiAlternatives(
+                    subject="Función cancelada · Devolución simulada",
+                    body=text_body,
+                    from_email=None,
+                    to=[email],
                 )
+                msg.attach_alternative(html_body, "text/html")
+                delivered = msg.send()
+
+                if delivered:
+                    refund.email_sent_at = timezone.now()
+                    refund.save(update_fields=["email_sent_at"])
+                    sent += 1
                 if delivered:
                     refund.email_sent_at = timezone.now()
                     refund.save(update_fields=["email_sent_at"])

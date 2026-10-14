@@ -16,6 +16,7 @@
   const context = canvas.getContext('2d', { willReadFrequently: true });
   const MAX_SCAN_DIMENSION = 960;
   const SCAN_INTERVAL_MS = 80;
+  const CAMERA_STORAGE_KEY = 'ticket-validation-camera-device';
   let stream = null;
   let frame = null;
   let generation = 0;
@@ -208,11 +209,36 @@
     cameras.forEach((camera, index) => {
       const option = document.createElement('option');
       option.value = camera.deviceId;
-      option.textContent = camera.label || `Cámara ${index + 1}`;
+      option.textContent = camera.label || `Cámara ${index}`;
       option.selected = camera.deviceId === selectedDeviceId;
       cameraDevice.append(option);
     });
     cameraPicker.hidden = cameras.length < 2;
+  }
+
+  function savedCameraId() {
+    try {
+      return window.localStorage.getItem(CAMERA_STORAGE_KEY) || '';
+    } catch (_error) {
+      return '';
+    }
+  }
+
+  function saveCameraId(deviceId) {
+    if (!deviceId) return;
+    try {
+      window.localStorage.setItem(CAMERA_STORAGE_KEY, deviceId);
+    } catch (_error) {
+      // The scanner still works when browser storage is unavailable.
+    }
+  }
+
+  function clearSavedCameraId() {
+    try {
+      window.localStorage.removeItem(CAMERA_STORAGE_KEY);
+    } catch (_error) {
+      // The scanner still works when browser storage is unavailable.
+    }
   }
 
   async function defaultCameraId() {
@@ -220,8 +246,21 @@
     try {
       const cameras = (await navigator.mediaDevices.enumerateDevices())
         .filter(device => device.kind === 'videoinput');
-      // The browser exposes cameras in the same order shown by the picker.
-      // Start with index 0; an operator can still choose another one explicitly.
+      const savedDeviceId = savedCameraId();
+      if (savedDeviceId) {
+        if (cameras.some(camera => camera.deviceId === savedDeviceId)) return savedDeviceId;
+        clearSavedCameraId();
+      }
+      const rearCamera = cameras.find(camera =>
+        /back|rear|environment|trasera|posterior/i.test(`${camera.label} ${camera.deviceId}`)
+      );
+      if (rearCamera) return rearCamera.deviceId;
+
+      // Before camera permission, browsers usually hide device labels. In that
+      // case let getUserMedia select the rear-facing camera when available.
+      if (!cameras.some(camera => camera.label)) return '';
+
+      // Otherwise preserve the first camera in the picker as the fallback.
       return cameras[0]?.deviceId || '';
     } catch (_error) {
       return '';
@@ -301,6 +340,7 @@
       video.hidden = false;
       await video.play();
       const activeDeviceId = stream.getVideoTracks()[0]?.getSettings().deviceId || requestedDeviceId;
+      saveCameraId(activeDeviceId);
       await populateCameraPicker(activeDeviceId);
       start.disabled = false;
       start.classList.add('is-camera-open');

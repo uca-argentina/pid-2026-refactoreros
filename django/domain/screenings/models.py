@@ -118,8 +118,9 @@ class Screening(models.Model):
             if status_written and self.status == self.Status.CANCELED and (
                 previous is None or previous.status != self.Status.CANCELED
             ):
-                from domain.tickets.services import refund_canceled_screening
+                from domain.tickets.services import refund_canceled_screening,send_refund_notifications
                 refund_canceled_screening(self)
+                transaction.on_commit(send_refund_notifications)
 
     @property
     def has_sales(self):

@@ -25,6 +25,13 @@ services:
       DJANGO_DEBUG: "${DJANGO_DEBUG:?DJANGO_DEBUG is required. Use True for local development or False for production.}"
       DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required. Set a unique secret key in .env.}"
       DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS:?DJANGO_ALLOWED_HOSTS is required. Example: localhost,127.0.0.1}"
+      DJANGO_EMAIL_HOST: "${DJANGO_EMAIL_HOST:-localhost}"
+      DJANGO_EMAIL_PORT: "${DJANGO_EMAIL_PORT:-25}"
+      DJANGO_EMAIL_HOST_USER: "${DJANGO_EMAIL_HOST_USER:-}"
+      DJANGO_EMAIL_HOST_PASSWORD: "${DJANGO_EMAIL_HOST_PASSWORD:-}"
+      DJANGO_EMAIL_USE_TLS: "${DJANGO_EMAIL_USE_TLS:-False}"
+      DJANGO_EMAIL_USE_SSL: "${DJANGO_EMAIL_USE_SSL:-False}"
+      DJANGO_DEFAULT_FROM_EMAIL: "${DJANGO_DEFAULT_FROM_EMAIL:-webmaster@localhost}"
     ports:
       - "${DJANGO_PORT:?DJANGO_PORT is required. Example: 8000}:8000"
     volumes:
