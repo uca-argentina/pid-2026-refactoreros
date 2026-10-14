@@ -1,11 +1,14 @@
 import re
+from datetime import timedelta
 
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.views.generic import FormView
@@ -54,6 +57,7 @@ class TicketValidationForm(forms.Form):
 class TicketValidationView(StaffAccessMixin, FormView):
     template_name = "manager_validate_tickets.html"
     form_class = TicketValidationForm
+    history_page_size = 15
 
     def has_manager_access(self, role):
         return role in {"operator", "manager"}
@@ -61,9 +65,14 @@ class TicketValidationView(StaffAccessMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["section"] = "Validar entradas"
-        history = list(AdmissionValidation.objects.filter(operator=self.request.user).select_related(
-            "purchase__screening__movie"
-        ).prefetch_related("tickets").order_by("-created_at")[:15])
+        history = AdmissionValidation.objects.filter(
+            operator=self.request.user,
+            created_at__gte=timezone.now() - timedelta(hours=24),
+        ).select_related("purchase__screening__movie").prefetch_related("tickets").order_by("-created_at")
+        history_page = Paginator(history, self.history_page_size).get_page(
+            self.request.GET.get("page")
+        )
+        history = list(history_page)
         customer_ids = {validation.purchase.user_id for validation in history}
         customers = {
             customer["pk"]: customer
@@ -75,6 +84,7 @@ class TicketValidationView(StaffAccessMixin, FormView):
             customer = customers.get(validation.purchase.user_id, {})
             validation.customer_display_name = compact_customer_name(customer)
         context["validation_history"] = history
+        context["validation_history_page"] = history_page
         return context
 
     def post(self, request, *args, **kwargs):

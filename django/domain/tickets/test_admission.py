@@ -11,7 +11,7 @@ from domain.movies.models import Movie
 from domain.rooms.models import Room
 from domain.screenings.models import Screening
 from domain.users.models import Customer, Manager, Operator, Usher
-from .models import PurchaseRefund, TicketPurchase, reservation_code_for_token
+from .models import AdmissionValidation, PurchaseRefund, TicketPurchase, reservation_code_for_token
 from .services import inspect_ticket, undo_ticket_validation, validate_ticket
 
 
@@ -133,6 +133,46 @@ class PurchaseAdmissionTests(AdmissionFixture):
 
 
 class PurchaseAdmissionViewTests(AdmissionFixture):
+    def test_operator_history_is_paginated_and_limited_to_last_24_hours(self):
+        ticket = self.purchase.tickets.first()
+        expired_validation = AdmissionValidation.objects.create(
+            purchase=self.purchase,
+            operator=self.operator,
+        )
+        expired_validation.tickets.add(ticket)
+        AdmissionValidation.objects.filter(pk=expired_validation.pk).update(
+            created_at=timezone.now() - timedelta(hours=24, seconds=1)
+        )
+        recent_validations = []
+        for _ in range(16):
+            validation = AdmissionValidation.objects.create(
+                purchase=self.purchase,
+                operator=self.operator,
+            )
+            validation.tickets.add(ticket)
+            recent_validations.append(validation)
+
+        self.client.force_login(self.operator)
+        url = reverse("manager:validar_entradas")
+        first_page = self.client.get(url)
+
+        self.assertContains(first_page, "Tu historial de validaciones recientes")
+        self.assertContains(first_page, "24 horas")
+        self.assertEqual(first_page.context["validation_history_page"].paginator.count, 16)
+        self.assertEqual(len(first_page.context["validation_history"]), 15)
+        self.assertNotIn(expired_validation.pk, [
+            validation.pk for validation in first_page.context["validation_history"]
+        ])
+
+        second_page = self.client.get(url, {"page": 2})
+
+        self.assertEqual(second_page.context["validation_history_page"].number, 2)
+        self.assertEqual(len(second_page.context["validation_history"]), 1)
+        self.assertIn(
+            second_page.context["validation_history"][0].pk,
+            [validation.pk for validation in recent_validations],
+        )
+
     def test_customer_sees_one_compact_purchase_and_one_qr_for_purchase(self):
         self.client.force_login(self.customer)
         response = self.client.get(reverse("my_tickets"))
