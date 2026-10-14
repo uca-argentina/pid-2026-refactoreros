@@ -1065,6 +1065,29 @@ th {
   background: rgba(46, 211, 162, .12);
 }
 
+.status-en_proyeccion {
+  border-color: rgba(245, 158, 11, .42);
+  color: #b45309;
+  background: rgba(245, 158, 11, .13);
+}
+
+.cancel-loading-icon {
+  display: none;
+}
+
+.danger.is-loading .cancel-default-icon {
+  display: none;
+}
+
+.danger.is-loading .cancel-loading-icon {
+  display: inline-block;
+  animation: cancel-button-spin 1s linear infinite;
+}
+
+@keyframes cancel-button-spin {
+  to { transform: rotate(360deg); }
+}
+
 .status-draft,
 .status-borrador {
   border-color: var(--border);

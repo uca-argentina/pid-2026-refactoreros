@@ -18,8 +18,14 @@ PERIODS = (
     ("todo", "Todo", None),
 )
 DEFAULT_PERIOD = "30"
-# Only published screenings can sell; finished screenings keep their sales.
-SELLABLE_STATUSES = (Screening.Status.PUBLISHED, Screening.Status.FINISHED)
+# Revenue is recognized only after the screening has finished and can no longer be cancelled.
+ACCOUNTED_STATUSES = (Screening.Status.FINISHED,)
+# Demand by purchase time also includes current and future published screenings.
+PURCHASED_STATUSES = (
+    Screening.Status.PUBLISHED,
+    Screening.Status.IN_PROGRESS,
+    Screening.Status.FINISHED,
+)
 WEEKDAYS = ("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
 SHORT_WEEKDAYS = ("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
 TOP_MOVIES = 5
@@ -89,7 +95,7 @@ def start_of_day(date):
 
 def completed_screenings(start, end):
     screenings = Screening.objects.filter(
-        status__in=SELLABLE_STATUSES,
+        status__in=ACCOUNTED_STATUSES,
         starts_at__lt=end,
     )
     if start is not None:
@@ -340,7 +346,7 @@ def time_slot_label(minutes):
 def demand_by_purchase_time(start, end):
     """Aggregate demand by when tickets were bought, not when a screening starts."""
     purchases = TicketPurchase.objects.filter(
-        screening__status__in=SELLABLE_STATUSES,
+        screening__status__in=PURCHASED_STATUSES,
         created_at__lt=end,
     )
     if start is not None:

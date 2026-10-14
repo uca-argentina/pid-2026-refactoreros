@@ -34,6 +34,17 @@ class AdmissionFixture(TestCase):
 
 
 class PurchaseAdmissionTests(AdmissionFixture):
+    def test_operator_can_validate_during_projection(self):
+        self.screening.status = Screening.Status.IN_PROGRESS
+        self.screening.save(update_fields=["status"])
+
+        purchase, validated, _ = validate_ticket(
+            self.purchase.validation_token, self.operator, quantity=1
+        )
+
+        self.assertEqual(purchase.pk, self.purchase.pk)
+        self.assertEqual(len(validated), 1)
+
     def test_purchase_has_one_qr_credential_and_short_visible_code(self):
         self.assertRegex(self.purchase.validation_code, r"^[A-Z2-9]{6}$")
         self.assertRegex(self.purchase.validation_token, r"^[A-Za-z0-9_-]{32}$")

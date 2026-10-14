@@ -40,7 +40,7 @@ def crear_funcion(status=Screening.Status.PUBLISHED, title="Pelicula", capacity=
     return Screening.objects.create(
         movie=movie,
         room=room,
-        starts_at=timezone.now(),
+        starts_at=timezone.now() + timedelta(hours=1),
         ticket_price="1500.00",
         status=status,
     )
@@ -62,7 +62,7 @@ def crear_funcion_con_butacas(title="Con butacas"):
     return Screening.objects.create(
         movie=movie,
         room=room,
-        starts_at=timezone.now(),
+        starts_at=timezone.now() + timedelta(hours=1),
         ticket_price="1500.00",
         status=Screening.Status.PUBLISHED,
     )

@@ -334,7 +334,13 @@ class TicketPurchase(models.Model):
         if self.quantity < 1:
             raise ValidationError({"quantity": "Elegi al menos una entrada."})
 
-        if not self.pk and self.screening.status != Screening.Status.PUBLISHED:
+        if (
+            not self.pk
+            and (
+                self.screening.status != Screening.Status.PUBLISHED
+                or self.screening.starts_at <= timezone.now()
+            )
+        ):
             raise ValidationError("Esta funcion no tiene entradas a la venta.")
 
         available = self.available_for(self.screening)
@@ -534,6 +540,11 @@ class SeatReservation(models.Model):
     def reserve(cls, user, screening, label):
         with transaction.atomic():
             screening = Screening.objects.select_for_update().get(pk=screening.pk)
+            if (
+                screening.status != Screening.Status.PUBLISHED
+                or screening.starts_at <= timezone.now()
+            ):
+                raise ValidationError("Esta función no tiene entradas a la venta.")
             cls.clear_expired()
             TicketPurchase.sync_sold_seats(screening)
             if label not in TicketPurchase.seat_prices(screening):

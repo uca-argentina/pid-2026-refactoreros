@@ -36,6 +36,7 @@ def purchase_error_message(error, fallback):
 @login_required
 @never_cache
 def seat_selection_view(request, pk):
+    Screening.finalize_expired()
     screening = get_object_or_404(Screening.published(), pk=pk)
     screening.tickets_available = TicketPurchase.available_for(screening)
     screening.seat_map = build_seat_map(screening, user=request.user)
@@ -138,6 +139,7 @@ def admission_seat_summary(tickets):
 @login_required
 @require_POST
 def seat_reservation_view(request, pk):
+    Screening.finalize_expired()
     screening = get_object_or_404(Screening.published(), pk=pk)
     try:
         payload = json.loads(request.body.decode("utf-8") or "{}")
@@ -173,6 +175,7 @@ def seat_reservation_view(request, pk):
 @login_required
 @require_POST
 def seat_reservation_batch_view(request, pk):
+    Screening.finalize_expired()
     screening = get_object_or_404(Screening.published(), pk=pk)
     try:
         payload = json.loads(request.body.decode("utf-8") or "{}")
@@ -230,6 +233,7 @@ def seat_reservation_batch_view(request, pk):
 @login_required
 @require_GET
 def seat_reservation_status_view(request, pk):
+    Screening.finalize_expired()
     screening = get_object_or_404(Screening.published(), pk=pk)
     return JsonResponse(
         {
@@ -259,7 +263,7 @@ def my_tickets_view(request):
             or hasattr(purchase, "refund")
         )
         purchase.admission_open = (
-            purchase.screening.status == Screening.Status.PUBLISHED
+            purchase.screening.status in (Screening.Status.PUBLISHED, Screening.Status.IN_PROGRESS)
             and purchase.screening.ends_at > now
             and purchase.remaining_count > 0
             and not purchase.is_history
@@ -316,7 +320,7 @@ def ticket_detail_view(request, pk):
     used_count = len(used_tickets)
     is_expired = screening.ends_at <= timezone.now() or screening.status == Screening.Status.FINISHED
     available = (
-        used_count < purchase.quantity and screening.status == Screening.Status.PUBLISHED
+        used_count < purchase.quantity and screening.status in (Screening.Status.PUBLISHED, Screening.Status.IN_PROGRESS)
         and screening.ends_at > timezone.now() and not hasattr(purchase, "refund")
     )
     return render(request, "ticket_detail.html", {

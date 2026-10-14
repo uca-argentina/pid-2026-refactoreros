@@ -1,9 +1,9 @@
 import logging
 import re
 from datetime import timedelta
+from threading import Thread
 
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.core.mail import send_mail
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.db import transaction
@@ -43,7 +43,7 @@ def check_purchase(purchase):
     screening = purchase.screening
     if screening.status == Screening.Status.CANCELED or hasattr(purchase, "refund"):
         raise ValidationError("La función está cancelada. Esta entrada no permite ingresar.")
-    if screening.status != Screening.Status.PUBLISHED or screening.ends_at <= timezone.now():
+    if screening.status not in (Screening.Status.PUBLISHED, Screening.Status.IN_PROGRESS) or screening.ends_at <= timezone.now():
         raise ValidationError("La función no está habilitada para el ingreso o ya finalizó.")
     if purchase.remaining_quantity <= 0:
         raise ValidationError("Esta compra ya no tiene entradas disponibles.")
@@ -159,6 +159,7 @@ def undo_ticket_validation(validation_id, operator):
 
 def refund_canceled_screening(screening):
     """Caller holds the screening lock. One refund and in-app notice per purchase."""
+    refund_ids = []
     for purchase in TicketPurchase.objects.filter(screening=screening):
         notice = (
             f"Se canceló la función de {screening.movie.title} del "
@@ -166,10 +167,29 @@ def refund_canceled_screening(screening):
             f"Registramos una devolución de ${purchase.total:.2f} "
             f"por tu compra #{purchase.pk}. No se realizó un movimiento de dinero real."
         )
-        PurchaseRefund.objects.get_or_create(
+        refund, _ = PurchaseRefund.objects.get_or_create(
             purchase=purchase, defaults={"amount": purchase.total, "notice": notice},
         )
+        if refund.email_sent_at is None:
+            refund_ids.append(refund.pk)
     SeatReservation.objects.filter(screening=screening).delete()
+    return refund_ids
+
+
+def enqueue_refund_notifications(refund_ids):
+    """Deliver the persisted outbox outside the HTTP request.
+
+    A restart can interrupt this best-effort thread, but unsent rows remain in the
+    outbox and can be retried with the management command.
+    """
+    if not refund_ids:
+        return
+    Thread(
+        target=send_refund_notifications,
+        args=(refund_ids,),
+        daemon=True,
+        name="refund-notifications",
+    ).start()
 
 
 def send_refund_notifications(refund_ids=None):
@@ -205,10 +225,6 @@ def send_refund_notifications(refund_ids=None):
                 msg.attach_alternative(html_body, "text/html")
                 delivered = msg.send()
 
-                if delivered:
-                    refund.email_sent_at = timezone.now()
-                    refund.save(update_fields=["email_sent_at"])
-                    sent += 1
                 if delivered:
                     refund.email_sent_at = timezone.now()
                     refund.save(update_fields=["email_sent_at"])

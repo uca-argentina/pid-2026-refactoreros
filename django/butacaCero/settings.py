@@ -237,34 +237,11 @@ LOGOUT_REDIRECT_URL = "login"
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
 DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL")
-default_email_backend = (
-    "django.core.mail.backends.smtp.EmailBackend"
-    if DEBUG
-    else "django.core.mail.backends.smtp.EmailBackend"
-)
-
-MAILERS = {
-    "default": {
-        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
-        "OPTIONS": {
-            "host": env("DJANGO_EMAIL_HOST"),
-            "port": env.int("DJANGO_EMAIL_PORT"),
-            "username": env("DJANGO_EMAIL_HOST_USER"),
-            "password": env("DJANGO_EMAIL_HOST_PASSWORD"),
-            "use_tls": env.bool("DJANGO_EMAIL_USE_TLS"),
-            "use_ssl": env.bool("DJANGO_EMAIL_USE_SSL"),
-            "timeout": 10,
-        },
-    },
-}
-
-if MAILERS["default"]["BACKEND"] == "django.core.mail.backends.smtp.EmailBackend":
-    MAILERS["default"]["OPTIONS"] = {
-        "host": env("DJANGO_EMAIL_HOST"),
-        "port": env.int("DJANGO_EMAIL_PORT"),
-        "username": env("DJANGO_EMAIL_HOST_USER"),
-        "password": env("DJANGO_EMAIL_HOST_PASSWORD"),
-        "use_tls": env.bool("DJANGO_EMAIL_USE_TLS"),
-        "use_ssl": env.bool("DJANGO_EMAIL_USE_SSL"),
-        "timeout": 10,
-    }
+EMAIL_BACKEND = env("DJANGO_EMAIL_BACKEND")
+EMAIL_HOST = env("DJANGO_EMAIL_HOST")
+EMAIL_PORT = env.int("DJANGO_EMAIL_PORT")
+EMAIL_HOST_USER = env("DJANGO_EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("DJANGO_EMAIL_HOST_PASSWORD")
+EMAIL_USE_TLS = env.bool("DJANGO_EMAIL_USE_TLS")
+EMAIL_USE_SSL = env.bool("DJANGO_EMAIL_USE_SSL")
+EMAIL_TIMEOUT = 10
