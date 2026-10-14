@@ -421,6 +421,9 @@ class AdmissionValidation(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["operator", "-created_at"], name="admission_operator_recent_idx"),
+        ]
         verbose_name = "Validación de ingreso"
         verbose_name_plural = "Validaciones de ingreso"
 

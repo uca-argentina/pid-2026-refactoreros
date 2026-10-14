@@ -49,6 +49,7 @@
 .validation-help p { max-width: 560px; margin: 10px 0 0; }
 .validation-history { max-width: 960px; margin-top: 38px; padding-top: 22px; border-top: 1px solid var(--border); }
 .validation-history h2 { margin: 0 0 14px; font-size: 18px; }
+.validation-history-intro { margin: -7px 0 14px; color: var(--muted); font-size: 13px; }
 .validation-history-list { display: grid; gap: 8px; }
 .validation-history-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .validation-history-item strong { font-size: 14px; }

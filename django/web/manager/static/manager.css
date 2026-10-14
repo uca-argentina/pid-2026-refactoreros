@@ -422,6 +422,8 @@ svg {
   text-transform: none;
 }
 
+.mobile-logout-link { display: none; }
+
 .manager-main {
   width: min(1240px, calc(100% - 48px));
   max-width: 100%;
@@ -1873,8 +1875,33 @@ th {
 
   .topbar-user {
     width: auto;
+    min-width: 0;
     max-width: 100%;
-    flex: 1 1 180px;
+    flex: 1 1 0;
+  }
+
+  .mobile-logout-link {
+    display: inline-flex;
+    flex: 0 0 40px;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--ink);
+    background: var(--button-surface);
+  }
+
+  .mobile-logout-link:hover {
+    border-color: var(--accent);
+    background: var(--surface-soft);
+  }
+
+  .mobile-logout-link svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
   }
 
   .theme-toggle {

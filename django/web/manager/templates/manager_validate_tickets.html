@@ -82,7 +82,8 @@
   </details>
   {% if validation_history %}
     <section class="validation-history" aria-labelledby="validation-history-title">
-      <h2 id="validation-history-title">Tu historial de validaciones</h2>
+      <h2 id="validation-history-title">Tu historial de validaciones recientes</h2>
+      <p class="validation-history-intro">Mostramos las validaciones de las últimas 24 horas.</p>
       <div class="validation-history-list">
         {% for validation in validation_history %}
           <article class="validation-history-item{% if validation.reverted_at %} is-reverted{% endif %}">
@@ -111,6 +112,23 @@
           </article>
         {% endfor %}
       </div>
+      {% if validation_history_page.has_other_pages %}
+        <nav class="pagination" aria-label="Paginación del historial de validaciones">
+          {% if validation_history_page.has_previous %}
+            <a href="?page={{ validation_history_page.previous_page_number }}">
+              <i data-lucide="chevron-left" aria-hidden="true"></i>
+              <span>Anterior</span>
+            </a>
+          {% endif %}
+          <span>Página {{ validation_history_page.number }} de {{ validation_history_page.paginator.num_pages }}</span>
+          {% if validation_history_page.has_next %}
+            <a href="?page={{ validation_history_page.next_page_number }}">
+              <span>Siguiente</span>
+              <i data-lucide="chevron-right" aria-hidden="true"></i>
+            </a>
+          {% endif %}
+        </nav>
+      {% endif %}
     </section>
   {% endif %}
 {% endblock %}
