@@ -1,18 +1,18 @@
 from django.contrib import admin
 
-from .models import Pelicula
+from .models import Movie
 
-@admin.register(Pelicula)
-class PeliculaAdmin(admin.ModelAdmin):
-    list_display = ("titulo", "genero", "clasificacion", "duracion_minutos")
-    list_filter = ("genero", "clasificacion")
-    search_fields = ("titulo", "sinopsis")
-    ordering = ("titulo",)
+@admin.register(Movie)
+class MovieAdmin(admin.ModelAdmin):
+    list_display = ("title", "genre", "rating", "duration_minutes")
+    list_filter = ("genre", "rating")
+    search_fields = ("title", "synopsis")
+    ordering = ("title",)
     fields = (
-        "titulo",
-        "sinopsis",
-        "genero",
-        "clasificacion",
-        "duracion_minutos",
-        "imagen",
+        "title",
+        "synopsis",
+        "genre",
+        "rating",
+        "duration_minutes",
+        "image",
     )

@@ -12,8 +12,8 @@ if (signupForm) {
   ]);
 
   const fields = {
-    nombre: document.getElementById("id_nombre"),
-    apellido: document.getElementById("id_apellido"),
+    name: document.getElementById("id_name"),
+    lastName: document.getElementById("id_last_name"),
     email: document.getElementById("id_email"),
     password1: document.getElementById("id_password1"),
     password2: document.getElementById("id_password2"),
@@ -46,25 +46,25 @@ if (signupForm) {
 
   const validate = () => {
     let isValid = true;
-    const nombre = normalize(fields.nombre.value);
-    const apellido = normalize(fields.apellido.value);
+    const name = normalize(fields.name.value);
+    const lastName = normalize(fields.lastName.value);
     const email = normalize(fields.email.value);
     const password = fields.password1.value;
     const passwordConfirm = fields.password2.value;
 
-    setError(fields.nombre, "");
-    setError(fields.apellido, "");
+    setError(fields.name, "");
+    setError(fields.lastName, "");
     setError(fields.email, "");
     setError(fields.password1, "");
     setError(fields.password2, "");
 
-    if (nombre.length < 2) {
-      showError(fields.nombre, "El nombre debe tener al menos 2 caracteres.");
+    if (name.length < 2) {
+      showError(fields.name, "El nombre debe tener al menos 2 caracteres.");
       isValid = false;
     }
 
-    if (apellido.length < 2) {
-      showError(fields.apellido, "El apellido debe tener al menos 2 caracteres.");
+    if (lastName.length < 2) {
+      showError(fields.lastName, "El apellido debe tener al menos 2 caracteres.");
       isValid = false;
     }
 
@@ -88,10 +88,10 @@ if (signupForm) {
     } else if (commonPasswords.has(normalize(password))) {
       showError(fields.password1, "La contraseña es demasiado común.");
       isValid = false;
-    } else if (nombre && normalize(password).includes(nombre)) {
+    } else if (name && normalize(password).includes(name)) {
       showError(fields.password1, "La contraseña no debe parecerse al nombre.");
       isValid = false;
-    } else if (apellido && normalize(password).includes(apellido)) {
+    } else if (lastName && normalize(password).includes(lastName)) {
       showError(fields.password1, "La contraseña no debe parecerse al apellido.");
       isValid = false;
     } else if (email && normalize(password).includes(email.split("@")[0])) {

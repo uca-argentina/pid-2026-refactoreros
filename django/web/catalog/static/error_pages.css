@@ -1,0 +1,113 @@
+.error-page {
+  padding-top: 0;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  background:
+    radial-gradient(circle at 76% 14%, rgba(180, 35, 24, .2), transparent 30rem),
+    radial-gradient(circle at 18% 82%, rgba(255, 255, 255, .07), transparent 24rem),
+    #05070b;
+}
+
+.error-header {
+  display: flex;
+  align-items: center;
+  min-height: 76px;
+  padding: 0 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
+}
+
+.error-main {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  width: min(100% - 40px, 920px);
+  margin: 0 auto;
+  padding: 56px 0;
+}
+
+.error-card {
+  display: grid;
+  grid-template-columns: minmax(140px, .65fr) minmax(0, 1.35fr);
+  gap: 14px 42px;
+  width: 100%;
+  padding: clamp(26px, 5vw, 54px);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 18px;
+  background: rgba(16, 20, 28, .7);
+  box-shadow: 0 26px 70px rgba(0, 0, 0, .32);
+}
+
+.error-code {
+  align-self: start;
+  margin: 0;
+  color: #c93c31;
+  font-size: clamp(88px, 15vw, 164px);
+  font-weight: 900;
+  line-height: .78;
+  letter-spacing: -.08em;
+}
+
+.error-eyebrow {
+  margin: 0 0 12px;
+  color: #ffaaa3;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.error-copy h1 {
+  max-width: 14ch;
+  margin: 0;
+  font-size: clamp(29px, 4vw, 44px);
+  line-height: 1.05;
+}
+
+.error-copy > p:last-child {
+  max-width: 50ch;
+  margin: 16px 0 0;
+  color: rgba(255, 255, 255, .7);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.error-actions {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.error-actions a,
+.error-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.error-actions svg { width: 17px; height: 17px; }
+.error-primary-action { border: 1px solid #b42318; color: #fff; background: #b42318; }
+.error-primary-action:hover { background: #d02d25; }
+.error-secondary-action { border: 1px solid rgba(255, 255, 255, .24); color: rgba(255, 255, 255, .86); background: transparent; }
+.error-secondary-action:hover { border-color: rgba(255, 255, 255, .62); color: #fff; }
+
+@media (max-width: 650px) {
+  .error-header { min-height: 66px; padding: 0 20px; }
+  .error-main { width: min(100% - 24px, 920px); padding: 28px 0; }
+  .error-card { grid-template-columns: 1fr; gap: 24px; padding: 28px 22px; }
+  .error-code { font-size: 96px; }
+  .error-copy h1 { max-width: none; font-size: 31px; }
+  .error-actions { grid-column: 1; display: grid; grid-template-columns: 1fr; margin-top: 0; }
+  .error-actions a, .error-actions button { width: 100%; }
+}

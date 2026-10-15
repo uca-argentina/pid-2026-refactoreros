@@ -4,9 +4,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Butaca Cero | Gestión</title>
+  <title>{{ cinema.name|default:"Butaca Cero" }} | Gestión</title>
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
-  <link rel="icon" href="{% static 'favicon.png' %}" type="image/png">
+  <link rel="icon" href="{% static 'favicon-96x96.png' %}" type="image/png">
   <link rel="stylesheet" href="{% static 'manager.css' %}">
   <script>
     (function () {
@@ -20,30 +20,50 @@
 <body>
   <div class="manager-shell">
     <aside class="manager-sidebar" aria-label="Panel de gestión">
-      <a class="brand" href="{% url 'manager:home' %}" aria-label="Butaca Cero y {{ cinema.nombre }}">
+      <a class="brand" href="{% url 'manager:home' %}" aria-label="Butaca Cero y {{ cinema.name }}">
         <img src="{% static 'butaca-cero-logo.png' %}" alt="Butaca Cero" class="brand-logo">
         <span class="cinema-mark" aria-hidden="true">
           {% if cinema.logo %}
             <img src="{{ cinema.logo.url }}" alt="" class="cinema-logo">
           {% else %}
-            <span class="cinema-logo-placeholder">{{ cinema.nombre|slice:":1" }}</span>
+            <span class="cinema-logo-placeholder">{{ cinema.name|slice:":1" }}</span>
           {% endif %}
         </span>
       </a>
 
       <nav class="manager-nav" aria-label="Gestión">
+        {% if manager_role == "operator" or manager_role == "manager" %}
+          <a href="{% url 'manager:validar_entradas' %}" class="{% if section == 'Validar entradas' %}is-active{% endif %}">
+            <i data-lucide="scan-line" aria-hidden="true"></i>
+            <span>Validar entradas</span>
+          </a>
+        {% endif %}
+        {% if manager_role != "operator" %}
         <a href="{% url 'manager:home' %}" class="nav-dashboard {% if not section %}is-active{% endif %}">
           <i data-lucide="layout-dashboard" aria-hidden="true"></i>
           <span>Inicio</span>
         </a>
-        {% if manager_role == "gerente" %}
+        {% endif %}
+        {% if manager_role == "manager" %}
+          <a href="{% url 'manager:dashboard' %}" class="nav-analytics {% if section == 'Dashboard' %}is-active{% endif %}">
+            <i data-lucide="chart-column" aria-hidden="true"></i>
+            <span>Dashboard</span>
+          </a>
           <a href="{% url 'manager:usuarios_list' %}" class="nav-users {% if section == 'Usuarios' %}is-active{% endif %}">
             <i data-lucide="users" aria-hidden="true"></i>
             <span>Usuarios</span>
           </a>
           <a href="{% url 'manager:salas_list' %}" class="nav-rooms {% if section == 'Salas' %}is-active{% endif %}">
-            <i data-lucide="armchair" aria-hidden="true"></i>
+            <i data-lucide="building-2" aria-hidden="true"></i>
             <span>Salas</span>
+          </a>
+          <a href="{% url 'manager:seat_types_list' %}" class="nav-seat-types {% if section == 'Butacas' %}is-active{% endif %}">
+            <i data-lucide="armchair" aria-hidden="true"></i>
+            <span>Butacas</span>
+          </a>
+          <a href="{% url 'manager:promotions_list' %}" class="nav-promotions {% if section == 'Promociones' %}is-active{% endif %}">
+            <i data-lucide="badge-percent" aria-hidden="true"></i>
+            <span>Promociones</span>
           </a>
           <a href="{% url 'manager:peliculas_list' %}" class="nav-movies {% if section == 'Películas' or section == 'Peliculas' %}is-active{% endif %}">
             <i data-lucide="clapperboard" aria-hidden="true"></i>
@@ -57,8 +77,23 @@
             <i data-lucide="settings" aria-hidden="true"></i>
             <span>Configuración</span>
           </a>
+          <button type="button" class="manager-manage-toggle{% if section == 'Usuarios' or section == 'Salas' or section == 'Butacas' or section == 'Promociones' or section == 'Películas' or section == 'Peliculas' or section == 'Funciones' %} is-active{% endif %}" aria-expanded="false" aria-controls="manager-manage-menu">
+            <i data-lucide="chevron-up" aria-hidden="true"></i>
+            <span>Gestionar</span>
+          </button>
         {% endif %}
       </nav>
+
+      {% if manager_role == "manager" %}
+        <div class="manager-manage-menu" id="manager-manage-menu" hidden>
+          <a href="{% url 'manager:usuarios_list' %}"><i data-lucide="users" aria-hidden="true"></i><span>Usuarios</span></a>
+          <a href="{% url 'manager:salas_list' %}"><i data-lucide="building-2" aria-hidden="true"></i><span>Salas</span></a>
+          <a href="{% url 'manager:seat_types_list' %}"><i data-lucide="armchair" aria-hidden="true"></i><span>Butacas</span></a>
+          <a href="{% url 'manager:promotions_list' %}"><i data-lucide="badge-percent" aria-hidden="true"></i><span>Promociones</span></a>
+          <a href="{% url 'manager:peliculas_list' %}"><i data-lucide="clapperboard" aria-hidden="true"></i><span>Películas</span></a>
+          <a href="{% url 'manager:funciones_list' %}"><i data-lucide="calendar-clock" aria-hidden="true"></i><span>Funciones</span></a>
+        </div>
+      {% endif %}
 
       <a class="logout-link" href="{% url 'logout' %}">
         <i data-lucide="log-out" aria-hidden="true"></i>
@@ -69,9 +104,13 @@
     <div class="manager-workspace">
       <header class="manager-topbar">
         <div>
-          <strong>{{ cinema.nombre }}</strong>
+          <strong>{{ cinema.name }}</strong>
         </div>
         <div class="topbar-actions">
+          <a class="topbar-site-link" href="{% url 'home' %}" title="Ir al sitio del cliente">
+            <i data-lucide="eye" aria-hidden="true"></i>
+            <span>Sitio cliente</span>
+          </a>
           <button class="theme-toggle" type="button" aria-label="Cambiar modo claro u oscuro" aria-pressed="true" title="Cambiar tema">
             <span class="theme-toggle-track" aria-hidden="true">
               <i data-lucide="moon" class="theme-icon theme-icon-dark"></i>
@@ -84,6 +123,9 @@
             <i data-lucide="circle-user-round" aria-hidden="true"></i>
             <span>{{ request.user.get_full_name|default:request.user.email|default:request.user.username }}</span>
           </div>
+          <a class="mobile-logout-link" href="{% url 'logout' %}" aria-label="Cerrar sesión" title="Cerrar sesión">
+            <i data-lucide="log-out" aria-hidden="true"></i>
+          </a>
         </div>
       </header>
 
@@ -130,6 +172,29 @@
     if (window.lucide) {
       lucide.createIcons();
     }
+
+    (function () {
+      var toggle = document.querySelector(".manager-manage-toggle");
+      var menu = document.querySelector(".manager-manage-menu");
+      if (!toggle || !menu) return;
+      toggle.addEventListener("click", function () {
+        var opening = menu.hidden;
+        menu.hidden = !opening;
+        toggle.setAttribute("aria-expanded", opening ? "true" : "false");
+      });
+    })();
+
+    (function () {
+      document.addEventListener("submit", function (event) {
+        var form = event.target;
+        if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== "post") return;
+        if (form.dataset.submitting === "true") {
+          event.preventDefault();
+          return;
+        }
+        form.dataset.submitting = "true";
+      }, true);
+    })();
   </script>
   {% block extra_scripts %}{% endblock %}
   {% block scripts %}{% endblock %}

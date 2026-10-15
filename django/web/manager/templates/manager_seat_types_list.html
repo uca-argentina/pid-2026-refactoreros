@@ -1,0 +1,68 @@
+﻿{% extends "manager_base.html" %}
+
+{% block content %}
+  <section class="page-heading page-heading-row">
+    <div>
+      <h1>Butacas</h1>
+    </div>
+    {% if create_url_name %}
+      <a class="primary-link" href="{% url create_url_name %}">
+        <i data-lucide="plus" aria-hidden="true"></i>
+        <span>Nuevo tipo</span>
+      </a>
+    {% endif %}
+  </section>
+
+  {% include "_list_controls.html" %}
+
+  <section class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Precio</th>
+          <th>Color</th>
+          <th>Ícono</th>
+          <th>Butacas</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for seat_type in object_list %}
+          <tr>
+            <td data-label="Nombre"><strong class="cell-title">{{ seat_type.name }}</strong></td>
+            <td data-label="Precio">${{ seat_type.base_price|floatformat:2 }}</td>
+            <td data-label="Color">
+              <span class="seat-type-color">
+                <span style="background: {{ seat_type.color }};"></span>
+                {{ seat_type.color }}
+              </span>
+            </td>
+            <td data-label="Ícono">
+              {% if seat_type.icon %}
+                <img class="seat-type-icon-preview" src="{{ seat_type.icon.url }}" alt="Ícono de {{ seat_type.name }}">
+              {% else %}
+                <span class="muted-cell">Sin ícono</span>
+              {% endif %}
+            </td>
+            <td data-label="Butacas">{{ seat_type.seat_count }}</td>
+            <td class="table-actions" data-label="Acciones">
+              <a href="{% url 'manager:seat_types_update' seat_type.pk %}">
+                <i data-lucide="pencil" aria-hidden="true"></i>
+                <span>Editar</span>
+              </a>
+              <a href="{% url 'manager:seat_types_delete' seat_type.pk %}" class="danger-link">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                <span>Eliminar</span>
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">No hay tipos de butaca cargados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% include "_pagination.html" %}
+{% endblock %}

@@ -6,25 +6,44 @@
     <h1>Cancelar función</h1>
   </section>
 
-  <form class="manager-form danger-form" method="post" action="{% url 'manager:funciones_estado' object.pk %}">
+  <form class="manager-form danger-form" method="post" action="{% url 'manager:funciones_estado' object.pk %}" data-cancel-form>
     {% csrf_token %}
-    <input type="hidden" name="estado" value="cancelada">
+    <input type="hidden" name="status" value="cancelada">
     <div class="delete-warning">
       <i data-lucide="triangle-alert" aria-hidden="true"></i>
       <div>
         <h2>Confirmar cancelación</h2>
         <p>Vas a cancelar <strong>{{ object }}</strong>. Deja de estar a la venta y no se puede volver a publicar.</p>
-        {% if entradas_vendidas %}
-          <p>Ya se vendieron <strong>{{ entradas_vendidas }}</strong> entrada{{ entradas_vendidas|pluralize }}. Los clientes van a ver la función como cancelada en "Mis entradas".</p>
+        {% if tickets_sold %}
+          <p>Ya se vendieron <strong>{{ tickets_sold }}</strong> entrada{{ tickets_sold|pluralize }}. Se invalidarán todas las entradas, se registrará una devolución por el total de cada compra y se notificará a los compradores en "Mis entradas" y por correo.</p>
         {% endif %}
       </div>
     </div>
     <div class="form-actions">
-      <button class="danger" type="submit">
-        <i data-lucide="ban" aria-hidden="true"></i>
-        <span>Cancelar función</span>
+      <button class="danger" type="submit" data-cancel-submit>
+        <i class="cancel-default-icon" data-lucide="ban" aria-hidden="true"></i>
+        <i class="cancel-loading-icon" data-lucide="loader-circle" aria-hidden="true"></i>
+        <span data-cancel-label>Cancelar función</span>
       </button>
       <a href="{% url 'manager:funciones_list' %}">Volver</a>
     </div>
   </form>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    if (window.lucide) window.lucide.createIcons();
+    document.querySelector("[data-cancel-form]")?.addEventListener("submit", (event) => {
+      const form = event.currentTarget;
+      const button = form.querySelector("[data-cancel-submit]");
+      if (form.dataset.submitting) {
+        event.preventDefault();
+        return;
+      }
+      form.dataset.submitting = "true";
+      button.disabled = true;
+      button.classList.add("is-loading");
+      form.querySelector("[data-cancel-label]").textContent = "Cancelando función...";
+    });
+  </script>
 {% endblock %}

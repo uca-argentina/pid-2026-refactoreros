@@ -3,11 +3,13 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Case, Count, F, IntegerField, OuterRef, Q, Subquery, Sum, Value, When
+from django.db.models.deletion import ProtectedError
 from django.db.models.functions import Coalesce, Greatest
 from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 import json
 
 from django.views.generic import (
@@ -19,36 +21,36 @@ from django.views.generic import (
     UpdateView,
 )
 
-from domain.cinema.models import ConfiguracionCine
-from domain.movies.models import Pelicula
-from domain.rooms.models import Sala
-from domain.screenings.models import Funcion
+from domain.cinema.models import CinemaSettings
+from domain.movies.models import Movie
+from domain.promotions.models import Promotion
+from domain.rooms.models import Room
+from domain.screenings.models import Screening
 from domain.seats.models import Seat
 from domain.seat_types.models import SeatType
-from domain.tickets.models import CompraEntrada
+from domain.tickets.models import TicketPurchase
+from domain.users.models import Operator
+from domain.users.roles import staff_role
 
+from .dashboard import build_dashboard
 from .forms import (
-    ConfiguracionCineForm,
-    FuncionForm,
-    PeliculaForm,
-    SalaForm,
-    UsuarioGestionForm,
+    CinemaSettingsForm,
+    ScreeningForm,
+    MovieForm,
+    PromotionForm,
+    RoomForm,
+    SeatTypeForm,
+    UserManagementForm,
 )
 
 User = get_user_model()
 
 
 def manager_role(user):
-    if not user.is_authenticated:
-        return ""
-    if hasattr(user, "gerente"):
-        return "gerente"
-    if hasattr(user, "acomodador"):
-        return "acomodador"
-    return ""
+    return staff_role(user)
 
 
-class ManagerAccessMixin(LoginRequiredMixin):
+class StaffAccessMixin(LoginRequiredMixin):
     login_url = "login"
 
     def has_manager_access(self, role):
@@ -65,51 +67,80 @@ class ManagerAccessMixin(LoginRequiredMixin):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["manager_role"] = self.manager_role
-        context["cinema"] = ConfiguracionCine.actual()
+        context["cinema"] = CinemaSettings.current()
         return context
 
 
-class GerenteRequiredMixin(ManagerAccessMixin):
+class ManagerRequiredMixin(StaffAccessMixin):
     def has_manager_access(self, role):
-        return role == "gerente"
+        return role == "manager"
 
 
-class GestionHomeView(ManagerAccessMixin, TemplateView):
+class ManagementHomeView(StaffAccessMixin, TemplateView):
     template_name = "manager_home.html"
+
+    def get(self, request, *args, **kwargs):
+        if self.manager_role == "operator":
+            return redirect("manager:validar_entradas")
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if self.manager_role != "gerente":
+        if self.manager_role != "manager":
             return context
 
-        Funcion.finalizar_vencidas()
+        Screening.finalize_expired()
         now = timezone.now()
         today = timezone.localdate()
-        funciones_base = Funcion.objects.select_related("pelicula", "sala").annotate(
-            entradas_vendidas=Coalesce(
-                Sum("compras_entradas__cantidad"),
+        current_room_capacity = (
+            Room.objects.filter(pk=OuterRef("room_id"))
+            .annotate(total=Count("seats"))
+            .values("total")[:1]
+        )
+        base_screenings = Screening.objects.select_related("movie", "room").annotate(
+            tickets_sold=Coalesce(
+                Sum("ticket_purchases__quantity"),
                 Value(0),
+                output_field=IntegerField(),
+            ),
+            current_room_capacity=Coalesce(
+                Subquery(current_room_capacity),
+                Value(0),
+                output_field=IntegerField(),
+            ),
+            room_capacity=Case(
+                When(capacity_snapshot=0, then=F("current_room_capacity")),
+                default=F("capacity_snapshot"),
+                output_field=IntegerField(),
+            ),
+        ).annotate(
+            occupancy_percentage=Case(
+                When(
+                    room_capacity__gt=0,
+                    then=100 * F("tickets_sold") / F("room_capacity"),
+                ),
+                default=Value(0),
                 output_field=IntegerField(),
             )
         )
-        proximas_funciones = funciones_base.filter(fecha_horario__gte=now)
+        upcoming_screenings = base_screenings.filter(starts_at__gte=now)
         context["dashboard_stats"] = [
             {
                 "label": "Funciones hoy",
-                "value": Funcion.objects.filter(fecha_horario__date=today).count(),
+                "value": Screening.objects.filter(starts_at__date=today).count(),
                 "icon": "calendar-days",
                 "tone": "teal",
             },
             {
                 "label": "Películas activas",
-                "value": Pelicula.objects.count(),
+                "value": Movie.objects.count(),
                 "icon": "clapperboard",
                 "tone": "amber",
             },
             {
                 "label": "Salas disponibles",
-                "value": Sala.objects.count(),
-                "icon": "armchair",
+                "value": Room.objects.count(),
+                "icon": "building-2",
                 "tone": "violet",
             },
             {
@@ -119,28 +150,64 @@ class GestionHomeView(ManagerAccessMixin, TemplateView):
                 "tone": "rose",
             },
         ]
-        context["next_screenings"] = proximas_funciones.order_by("fecha_horario")[:5]
-        context["hidden_upcoming_count"] = proximas_funciones.filter(
-            estado__in=(Funcion.Estado.BORRADOR, Funcion.Estado.PROGRAMADA)
+        context["next_screenings"] = upcoming_screenings.order_by("starts_at")[:5]
+        context["hidden_upcoming_count"] = upcoming_screenings.filter(
+            status__in=(Screening.Status.DRAFT, Screening.Status.SCHEDULED)
         ).count()
-        context["published_upcoming_count"] = proximas_funciones.filter(
-            estado=Funcion.Estado.PUBLICADA
+        context["published_upcoming_count"] = upcoming_screenings.filter(
+            status=Screening.Status.PUBLISHED
         ).count()
         context["total_room_capacity"] = Seat.objects.count()
         return context
 
 
-class ConfiguracionCineUpdateView(GerenteRequiredMixin, UpdateView):
-    model = ConfiguracionCine
-    form_class = ConfiguracionCineForm
+class DashboardView(ManagerRequiredMixin, TemplateView):
+    template_name = "manager_dashboard.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        Screening.finalize_expired()
+        context["section"] = "Dashboard"
+        raw_date_from = self.request.GET.get("date_from", "").strip()
+        raw_date_to = self.request.GET.get("date_to", "").strip()
+        date_from = parse_date(raw_date_from) if raw_date_from else None
+        date_to = parse_date(raw_date_to) if raw_date_to else None
+        date_filter_error = None
+        today = timezone.localdate()
+        if raw_date_from and not date_from:
+            date_filter_error = "La fecha Desde no es válida."
+        elif raw_date_to and not date_to:
+            date_filter_error = "La fecha Hasta no es válida."
+        elif date_from and date_from > today:
+            date_filter_error = "La fecha Desde no puede ser posterior a hoy."
+        elif date_to and date_to > today:
+            date_filter_error = "La fecha Hasta no puede ser posterior a hoy."
+        elif date_from and date_to and date_from > date_to:
+            date_filter_error = "La fecha Desde debe ser anterior o igual a Hasta."
+
+        context["dashboard"] = build_dashboard(
+            self.request.GET.get("period"),
+            date_from=None if date_filter_error else date_from,
+            date_to=None if date_filter_error else date_to,
+            movie_id=self.request.GET.get("movie"),
+            room_id=self.request.GET.get("room"),
+            revenue_date=self.request.GET.get("revenue_date"),
+        )
+        context["date_filter_error"] = date_filter_error
+        return context
+
+
+class CinemaSettingsUpdateView(ManagerRequiredMixin, UpdateView):
+    model = CinemaSettings
+    form_class = CinemaSettingsForm
     template_name = "manager_form.html"
     success_url = reverse_lazy("manager:configuracion")
 
     def get_object(self, queryset=None):
-        configuracion = ConfiguracionCine.objects.order_by("id").first()
-        if configuracion:
-            return configuracion
-        return ConfiguracionCine.objects.create()
+        cinema_settings = CinemaSettings.objects.order_by("id").first()
+        if cinema_settings:
+            return cinema_settings
+        return CinemaSettings.objects.create()
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -159,7 +226,7 @@ class ConfiguracionCineUpdateView(GerenteRequiredMixin, UpdateView):
         return context
 
 
-class GerenteListView(GerenteRequiredMixin, ListView):
+class ManagerListView(ManagerRequiredMixin, ListView):
     paginate_by = 20
     page_size_options = (10, 20, 50, 100)
     search_placeholder = "Buscar"
@@ -236,12 +303,16 @@ class GerenteListView(GerenteRequiredMixin, ListView):
         return context
 
 
-class GerenteCreateView(GerenteRequiredMixin, CreateView):
+class ManagerCreateView(ManagerRequiredMixin, CreateView):
     template_name = "manager_form.html"
     form_title = ""
+    success_message = ""
 
     def form_valid(self, form):
-        messages.success(self.request, f"{self.object_label} se creó correctamente.")
+        messages.success(
+            self.request,
+            self.success_message or f"{self.object_label} se creó correctamente.",
+        )
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -253,7 +324,7 @@ class GerenteCreateView(GerenteRequiredMixin, CreateView):
         return context
 
 
-class GerenteUpdateView(GerenteRequiredMixin, UpdateView):
+class ManagerUpdateView(ManagerRequiredMixin, UpdateView):
     template_name = "manager_form.html"
     form_title = ""
 
@@ -270,7 +341,7 @@ class GerenteUpdateView(GerenteRequiredMixin, UpdateView):
         return context
 
 
-class GerenteDeleteView(GerenteRequiredMixin, DeleteView):
+class ManagerDeleteView(ManagerRequiredMixin, DeleteView):
     template_name = "manager_confirm_delete.html"
 
     def form_valid(self, form):
@@ -284,7 +355,7 @@ class GerenteDeleteView(GerenteRequiredMixin, DeleteView):
         return context
 
 
-class UsuariosListView(GerenteListView):
+class UsersListView(ManagerListView):
     model = User
     template_name = "manager_usuarios_list.html"
     section = "Usuarios"
@@ -308,24 +379,25 @@ class UsuariosListView(GerenteListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        usuarios = []
-        for usuario in context["object_list"]:
-            rol = manager_role(usuario) or "cliente"
-            is_other_manager = rol == "gerente" and usuario.pk != self.request.user.pk
-            usuarios.append(
+        users = []
+        for user in context["object_list"]:
+            rol = manager_role(user) or "customer"
+            is_other_manager = rol == "manager" and user.pk != self.request.user.pk
+            users.append(
                 {
-                    "usuario": usuario,
-                    "rol": rol,
+                    "user": user,
+                    "role": rol,
+                    "role_label": {"manager": "Gerente", "operator": "Operador", "usher": "Acomodador", "customer": "Cliente"}[rol],
                     "can_edit": not is_other_manager,
-                    "can_toggle": usuario.pk != self.request.user.pk and rol != "gerente",
+                    "can_toggle": user.pk != self.request.user.pk and rol != "manager",
                 }
             )
-        context["usuarios"] = usuarios
+        context["users"] = users
         return context
 
-class UsuarioUpdateView(GerenteRequiredMixin, UpdateView):
+class UserUpdateView(ManagerRequiredMixin, UpdateView):
     model = User
-    form_class = UsuarioGestionForm
+    form_class = UserManagementForm
     template_name = "manager_form.html"
     success_url = reverse_lazy("manager:usuarios_list")
     section = "Usuarios"
@@ -333,10 +405,10 @@ class UsuarioUpdateView(GerenteRequiredMixin, UpdateView):
     object_label = "El usuario"
 
     def get_object(self, queryset=None):
-        usuario = super().get_object(queryset)
-        if manager_role(usuario) == "gerente" and usuario.pk != self.request.user.pk:
+        user = super().get_object(queryset)
+        if manager_role(user) == "manager" and user.pk != self.request.user.pk:
             raise PermissionDenied
-        return usuario
+        return user
 
     def form_valid(self, form):
         form.instance.username = form.cleaned_data["email"]
@@ -349,56 +421,74 @@ class UsuarioUpdateView(GerenteRequiredMixin, UpdateView):
         context["form_title"] = "Editar usuario"
         context["enctype"] = self.enctype
         context["show_user_status_action"] = self.object.pk != self.request.user.pk
-        context["can_toggle_user_status"] = manager_role(self.object) != "gerente"
+        context["can_toggle_user_status"] = manager_role(self.object) != "manager"
+        context["can_toggle_operator"] = manager_role(self.object) != "manager"
+        context["is_operator"] = Operator.objects.filter(user=self.object).exists()
         return context
 
 
-class UsuarioToggleActiveView(GerenteRequiredMixin, DetailView):
+class UserToggleActiveView(ManagerRequiredMixin, DetailView):
     model = User
 
     def post(self, request, *args, **kwargs):
-        usuario = self.get_object()
-        if usuario.pk == request.user.pk:
+        user = self.get_object()
+        if user.pk == request.user.pk:
             messages.error(request, "No podés bloquear tu propio usuario.")
             return redirect("manager:usuarios_list")
-        if manager_role(usuario) == "gerente":
+        if manager_role(user) == "manager":
             messages.error(request, "No podés cambiar el estado de otro gerente.")
             return redirect("manager:usuarios_list")
-        usuario.is_active = not usuario.is_active
-        usuario.save(update_fields=["is_active"])
-        estado = "activado" if usuario.is_active else "bloqueado"
-        messages.success(request, f"Usuario {estado} correctamente.")
+        user.is_active = not user.is_active
+        user.save(update_fields=["is_active"])
+        status = "activado" if user.is_active else "bloqueado"
+        messages.success(request, f"Usuario {status} correctamente.")
         return redirect("manager:usuarios_list")
 
 
-class SalasListView(GerenteListView):
-    model = Sala
+class UserToggleOperatorView(ManagerRequiredMixin, DetailView):
+    model = User
+
+    def post(self, request, *args, **kwargs):
+        user = self.get_object()
+        if user.pk == request.user.pk or manager_role(user) == "manager":
+            raise PermissionDenied
+        operator, created = Operator.objects.get_or_create(user=user)
+        if created:
+            messages.success(request, "Usuario designado como operador de entradas.")
+        else:
+            operator.delete()
+            messages.success(request, "Se quitó el rol de operador de entradas.")
+        return redirect("manager:usuarios_update", pk=user.pk)
+
+
+class RoomsListView(ManagerListView):
+    model = Room
     template_name = "manager_salas_list.html"
     section = "Salas"
     create_url_name = "manager:salas_create"
     columns = ("Nombre", "Capacidad")
     search_placeholder = "Buscar por nombre"
     ordering_options = (
-        ("nombre_asc", "Nombre A-Z", ("nombre",)),
-        ("nombre_desc", "Nombre Z-A", ("-nombre",)),
-        ("capacidad_desc", "Mayor capacidad", ("-_capacidad", "nombre")),
-        ("capacidad_asc", "Menor capacidad", ("_capacidad", "nombre")),
+        ("nombre_asc", "Nombre A-Z", ("name",)),
+        ("nombre_desc", "Nombre Z-A", ("-name",)),
+        ("capacity_desc", "Mayor capacidad", ("-_capacity", "name")),
+        ("capacity_asc", "Menor capacidad", ("_capacity", "name")),
     )
 
     def get_queryset(self):
-        queryset = Sala.objects.annotate(_capacidad=Count("seats"))
+        queryset = Room.objects.annotate(_capacity=Count("seats"))
         search_query = self.get_search_query()
         if search_query:
             queryset = self.apply_search(queryset, search_query)
         return self.apply_ordering(queryset)
 
     def apply_search(self, queryset, search_query):
-        return queryset.filter(nombre__icontains=search_query)
+        return queryset.filter(name__icontains=search_query)
 
 
-class SalaCreateView(GerenteCreateView):
-    model = Sala
-    form_class = SalaForm
+class RoomCreateView(ManagerCreateView):
+    model = Room
+    form_class = RoomForm
     success_url = reverse_lazy("manager:salas_list")
     section = "Salas"
     enctype = ""
@@ -413,10 +503,10 @@ class SalaCreateView(GerenteCreateView):
         return context
 
     def form_valid(self,form):
-        room_layout = form.cleaned_data.get("layout_sala")
+        room_layout = form.cleaned_data.get("room_layout")
         with transaction.atomic():
             self.object = form.save(commit=False)
-            self.object.layout_configuracion = form.cleaned_data.get("layout_configuracion", {})
+            self.object.layout_configuration = form.cleaned_data.get("layout_configuration", {})
             self.object.save()
             if room_layout:
                 Seat.objects.bulk_create(self.build_seats(self.object, room_layout["seats"]))
@@ -427,13 +517,13 @@ class SalaCreateView(GerenteCreateView):
     def build_seats(self,room, seats_layout):
         seats = []
         for seat_data in seats_layout:
-            seats.append(Seat(sala=room,fila=seat_data["row"],columna=seat_data["column"],tipo_id=seat_data["type"]))
+            seats.append(Seat(room=room, row=seat_data["row"], column=seat_data["column"], seat_type_id=seat_data["type"]))
         return seats
 
 
-class SalaUpdateView(GerenteUpdateView):
-    model = Sala
-    form_class = SalaForm
+class RoomUpdateView(ManagerUpdateView):
+    model = Room
+    form_class = RoomForm
     success_url = reverse_lazy("manager:salas_list")
     section = "Salas"
     enctype = ""
@@ -448,10 +538,10 @@ class SalaUpdateView(GerenteUpdateView):
         return context
 
     def form_valid(self, form):
-        room_layout = form.cleaned_data.get("layout_sala")
+        room_layout = form.cleaned_data.get("room_layout")
         with transaction.atomic():
             self.object = form.save(commit=False)
-            self.object.layout_configuracion = form.cleaned_data.get("layout_configuracion", {})
+            self.object.layout_configuration = form.cleaned_data.get("layout_configuration", {})
             self.object.save()
             if room_layout:
                 self.sync_seats(self.object, room_layout["seats"])
@@ -459,7 +549,7 @@ class SalaUpdateView(GerenteUpdateView):
         return redirect(self.get_success_url())
 
     def sync_seats(self, room, seats_layout):
-        existing = {(s.fila, s.columna): s for s in Seat.objects.filter(sala=room)}
+        existing = {(s.row, s.column): s for s in Seat.objects.filter(room=room)}
         new_keys = {(d["row"], d["column"]) for d in seats_layout}
 
         to_delete = [s.pk for key, s in existing.items() if key not in new_keys]
@@ -469,53 +559,169 @@ class SalaUpdateView(GerenteUpdateView):
         layout_by_key = {(d["row"], d["column"]): d["type"] for d in seats_layout}
         to_update = []
         for key, seat in existing.items():
-            if key in layout_by_key and seat.tipo_id != layout_by_key[key]:
-                seat.tipo_id = layout_by_key[key]
+            if key in layout_by_key and seat.seat_type_id != layout_by_key[key]:
+                seat.seat_type_id = layout_by_key[key]
                 to_update.append(seat)
         if to_update:
-            Seat.objects.bulk_update(to_update, ["tipo"])
+            Seat.objects.bulk_update(to_update, ["seat_type"])
 
         to_create = [
-            Seat(sala=room, fila=row, columna=col, tipo_id=layout_by_key[(row, col)])
+            Seat(room=room, row=row, column=col, seat_type_id=layout_by_key[(row, col)])
             for (row, col) in new_keys
             if (row, col) not in existing
         ]
         Seat.objects.bulk_create(to_create)
 
 
-class SalaDeleteView(GerenteDeleteView):
-    model = Sala
+class RoomDeleteView(ManagerDeleteView):
+    model = Room
     success_url = reverse_lazy("manager:salas_list")
     section = "Salas"
     object_label = "La sala"
 
 
-class PeliculasListView(GerenteListView):
-    model = Pelicula
+class SeatTypesListView(ManagerListView):
+    model = SeatType
+    template_name = "manager_seat_types_list.html"
+    section = "Butacas"
+    create_url_name = "manager:seat_types_create"
+    columns = ("Nombre", "Precio", "Color", "Butacas")
+    search_placeholder = "Buscar por nombre"
+    ordering_options = (
+        ("nombre_asc", "Nombre A-Z", ("name",)),
+        ("nombre_desc", "Nombre Z-A", ("-name",)),
+        ("precio_asc", "Menor precio", ("base_price", "name")),
+        ("precio_desc", "Mayor precio", ("-base_price", "name")),
+    )
+
+    def get_queryset(self):
+        queryset = SeatType.objects.annotate(seat_count=Count("seats"))
+        search_query = self.get_search_query()
+        if search_query:
+            queryset = self.apply_search(queryset, search_query)
+        return self.apply_ordering(queryset)
+
+    def apply_search(self, queryset, search_query):
+        return queryset.filter(name__icontains=search_query)
+
+
+class SeatTypeCreateView(ManagerCreateView):
+    model = SeatType
+    form_class = SeatTypeForm
+    success_url = reverse_lazy("manager:seat_types_list")
+    section = "Butacas"
+    enctype = "multipart/form-data"
+    object_label = "El tipo de butaca"
+    form_title = "Nuevo tipo de butaca"
+
+
+class SeatTypeUpdateView(ManagerUpdateView):
+    model = SeatType
+    form_class = SeatTypeForm
+    success_url = reverse_lazy("manager:seat_types_list")
+    section = "Butacas"
+    enctype = "multipart/form-data"
+    object_label = "El tipo de butaca"
+    form_title = "Editar tipo de butaca"
+
+
+class SeatTypeDeleteView(ManagerDeleteView):
+    model = SeatType
+    success_url = reverse_lazy("manager:seat_types_list")
+    section = "Butacas"
+    object_label = "El tipo de butaca"
+
+    def form_valid(self, form):
+        try:
+            return super().form_valid(form)
+        except ProtectedError:
+            messages.error(
+                self.request,
+                "No se puede eliminar un tipo de butaca que esta usado en una sala.",
+            )
+            return redirect(self.success_url)
+
+
+class PromotionsListView(ManagerListView):
+    model = Promotion
+    template_name = "manager_promotions_list.html"
+    section = "Promociones"
+    create_url_name = "manager:promotions_create"
+    columns = ("Nombre", "Descuento", "Días", "Horario", "Butacas", "Estado")
+    search_placeholder = "Buscar por nombre"
+    ordering_options = (
+        ("activas", "Activas primero", ("-is_active", "name")),
+        ("nombre_asc", "Nombre A-Z", ("name",)),
+        ("nombre_desc", "Nombre Z-A", ("-name",)),
+        ("descuento_desc", "Mayor descuento", ("-discount_value", "name")),
+    )
+
+    def get_queryset(self):
+        queryset = Promotion.objects.prefetch_related("seat_types")
+        search_query = self.get_search_query()
+        if search_query:
+            queryset = self.apply_search(queryset, search_query)
+        return self.apply_ordering(queryset)
+
+    def apply_search(self, queryset, search_query):
+        return queryset.filter(name__icontains=search_query)
+
+
+class PromotionCreateView(ManagerCreateView):
+    model = Promotion
+    form_class = PromotionForm
+    template_name = "manager_promotion_form.html"
+    success_url = reverse_lazy("manager:promotions_list")
+    section = "Promociones"
+    enctype = ""
+    object_label = "La promoción"
+    form_title = "Nueva promoción"
+
+
+class PromotionUpdateView(ManagerUpdateView):
+    model = Promotion
+    form_class = PromotionForm
+    template_name = "manager_promotion_form.html"
+    success_url = reverse_lazy("manager:promotions_list")
+    section = "Promociones"
+    enctype = ""
+    object_label = "La promoción"
+    form_title = "Editar promoción"
+
+
+class PromotionDeleteView(ManagerDeleteView):
+    model = Promotion
+    success_url = reverse_lazy("manager:promotions_list")
+    section = "Promociones"
+    object_label = "La promoción"
+
+
+class MoviesListView(ManagerListView):
+    model = Movie
     template_name = "manager_peliculas_list.html"
     section = "Peliculas"
     create_url_name = "manager:peliculas_create"
     columns = ("Titulo", "Genero", "Clasificacion", "Duracion")
     search_placeholder = "Buscar por título, género o sinopsis"
     ordering_options = (
-        ("titulo_asc", "Título A-Z", ("titulo",)),
-        ("titulo_desc", "Título Z-A", ("-titulo",)),
-        ("genero_asc", "Género A-Z", ("genero", "titulo")),
-        ("duracion_desc", "Más largas", ("-duracion_minutos", "titulo")),
-        ("duracion_asc", "Más cortas", ("duracion_minutos", "titulo")),
+        ("titulo_asc", "Título A-Z", ("title",)),
+        ("titulo_desc", "Título Z-A", ("-title",)),
+        ("genero_asc", "Género A-Z", ("genre", "title")),
+        ("duracion_desc", "Más largas", ("-duration_minutes", "title")),
+        ("duracion_asc", "Más cortas", ("duration_minutes", "title")),
     )
 
     def apply_search(self, queryset, search_query):
         return queryset.filter(
-            Q(titulo__icontains=search_query)
-            | Q(sinopsis__icontains=search_query)
-            | Q(genero__icontains=search_query)
+            Q(title__icontains=search_query)
+            | Q(synopsis__icontains=search_query)
+            | Q(genre__icontains=search_query)
         )
 
 
-class PeliculaCreateView(GerenteCreateView):
-    model = Pelicula
-    form_class = PeliculaForm
+class MovieCreateView(ManagerCreateView):
+    model = Movie
+    form_class = MovieForm
     success_url = reverse_lazy("manager:peliculas_list")
     section = "Peliculas"
     enctype = "multipart/form-data"
@@ -523,9 +729,9 @@ class PeliculaCreateView(GerenteCreateView):
     form_title = "Nueva pelicula"
 
 
-class PeliculaUpdateView(GerenteUpdateView):
-    model = Pelicula
-    form_class = PeliculaForm
+class MovieUpdateView(ManagerUpdateView):
+    model = Movie
+    form_class = MovieForm
     success_url = reverse_lazy("manager:peliculas_list")
     section = "Peliculas"
     enctype = "multipart/form-data"
@@ -533,15 +739,15 @@ class PeliculaUpdateView(GerenteUpdateView):
     form_title = "Editar pelicula"
 
 
-class PeliculaDeleteView(GerenteDeleteView):
-    model = Pelicula
+class MovieDeleteView(ManagerDeleteView):
+    model = Movie
     success_url = reverse_lazy("manager:peliculas_list")
     section = "Peliculas"
     object_label = "La película"
 
 
-class FuncionesListView(GerenteListView):
-    model = Funcion
+class ScreeningsListView(ManagerListView):
+    model = Screening
     template_name = "manager_funciones_list.html"
     section = "Funciones"
     create_url_name = "manager:funciones_create"
@@ -556,51 +762,57 @@ class FuncionesListView(GerenteListView):
     )
     search_placeholder = "Buscar por película o sala"
     ordering_options = (
-        ("fecha_asc", "Fecha más próxima", ("fecha_horario",)),
-        ("fecha_desc", "Fecha más lejana", ("-fecha_horario",)),
-        ("pelicula_asc", "Película A-Z", ("pelicula__titulo", "fecha_horario")),
-        ("sala_asc", "Sala A-Z", ("sala__nombre", "fecha_horario")),
-        ("precio_desc", "Mayor precio desde", ("-precio_entrada", "fecha_horario")),
-        ("precio_asc", "Menor precio desde", ("precio_entrada", "fecha_horario")),
+        ("date_asc", "Fecha más próxima", ("starts_at",)),
+        ("date_desc", "Fecha más lejana", ("-starts_at",)),
+        ("pelicula_asc", "Película A-Z", ("movie__title", "starts_at")),
+        ("sala_asc", "Sala A-Z", ("room__name", "starts_at")),
+        ("precio_desc", "Mayor precio inicial", ("-ticket_price", "starts_at")),
+        ("precio_asc", "Menor precio inicial", ("ticket_price", "starts_at")),
     )
+    is_history = False
 
     def get_annotated_queryset(self):
-        Funcion.finalizar_vencidas()
+        Screening.finalize_expired()
         current_room_capacity = (
-            Sala.objects.filter(pk=OuterRef("sala_id"))
+            Room.objects.filter(pk=OuterRef("room_id"))
             .annotate(total=Count("seats"))
             .values("total")[:1]
         )
         return (
-            Funcion.objects.select_related("pelicula", "sala")
+            Screening.objects.select_related("movie", "room")
             .annotate(
-                entradas_vendidas=Coalesce(
-                    Sum("compras_entradas__cantidad"),
+                tickets_sold=Coalesce(
+                    Sum("ticket_purchases__quantity"),
                     Value(0),
                     output_field=IntegerField(),
                 ),
-                sala_capacidad_actual=Coalesce(
+                current_room_capacity=Coalesce(
                     Subquery(current_room_capacity),
                     Value(0),
                     output_field=IntegerField(),
                 ),
-                capacidad_sala=Case(
-                    When(capacidad_snapshot=0, then=F("sala_capacidad_actual")),
-                    default=F("capacidad_snapshot"),
+                room_capacity=Case(
+                    When(capacity_snapshot=0, then=F("current_room_capacity")),
+                    default=F("capacity_snapshot"),
                     output_field=IntegerField(),
                 ),
             )
             .annotate(
-                entradas_disponibles=Greatest(
-                    F("capacidad_sala") - F("entradas_vendidas"),
+                tickets_available=Greatest(
+                    F("room_capacity") - F("tickets_sold"),
                     Value(0),
                     output_field=IntegerField(),
                 )
             )
         )
 
+    def apply_history_filter(self, queryset):
+        if self.is_history:
+            return queryset.filter(status__in=(Screening.Status.CANCELED, Screening.Status.FINISHED))
+        return queryset.exclude(status__in=(Screening.Status.CANCELED, Screening.Status.FINISHED))
+
     def get_queryset(self):
-        queryset = self.get_annotated_queryset()
+        queryset = self.apply_history_filter(self.get_annotated_queryset())
         search_query = self.get_search_query()
         if search_query:
             queryset = self.apply_search(queryset, search_query)
@@ -608,13 +820,14 @@ class FuncionesListView(GerenteListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["is_history"] = self.is_history
         hidden_queryset = (
             self.get_annotated_queryset()
             .filter(
-                estado__in=(Funcion.Estado.BORRADOR, Funcion.Estado.PROGRAMADA),
-                fecha_horario__gte=timezone.now(),
+                status__in=(Screening.Status.DRAFT, Screening.Status.SCHEDULED),
+                starts_at__gte=timezone.now(),
             )
-            .order_by("fecha_horario")
+            .order_by("starts_at")
         )
         context["hidden_priority_functions"] = hidden_queryset[:6]
         context["hidden_priority_count"] = hidden_queryset.count()
@@ -622,77 +835,66 @@ class FuncionesListView(GerenteListView):
 
     def apply_search(self, queryset, search_query):
         return queryset.filter(
-            Q(pelicula__titulo__icontains=search_query)
-            | Q(sala__nombre__icontains=search_query)
+            Q(movie__title__icontains=search_query)
+            | Q(room__name__icontains=search_query)
         )
 
 
-class FuncionCreateView(GerenteCreateView):
-    model = Funcion
-    form_class = FuncionForm
+class ScreeningsHistoryListView(ScreeningsListView):
+    section = "Historial de funciones"
+    create_url_name = ""
+    is_history = True
+    ordering_options = (
+        ("date_desc", "Fecha mas reciente", ("-starts_at",)),
+        ("date_asc", "Fecha mas antigua", ("starts_at",)),
+        ("pelicula_asc", "Pelicula A-Z", ("movie__title", "-starts_at")),
+        ("sala_asc", "Sala A-Z", ("room__name", "-starts_at")),
+        ("precio_desc", "Mayor precio inicial", ("-ticket_price", "-starts_at")),
+        ("precio_asc", "Menor precio inicial", ("ticket_price", "-starts_at")),
+    )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["hidden_priority_functions"] = []
+        context["hidden_priority_count"] = 0
+        return context
+
+
+class ScreeningCreateView(ManagerCreateView):
+    model = Screening
+    form_class = ScreeningForm
     success_url = reverse_lazy("manager:funciones_list")
     section = "Funciones"
     enctype = ""
     object_label = "La función"
     form_title = "Nueva función"
-
-    def get_price_matrix(self):
-        salas = Sala.objects.prefetch_related("seats__tipo").all()
-        all_types = list(SeatType.objects.all())
-        matrix = {}
-        for sala in salas:
-            types_by_id = {seat.tipo_id: seat.tipo for seat in sala.seats.all()}
-            if not types_by_id:
-                types_by_id = {seat_type.pk: seat_type for seat_type in all_types}
-            defaults = sala.precio_configuracion or {}
-            matrix[str(sala.pk)] = [
-                {
-                    "id": str(seat_type.pk),
-                    "name": seat_type.nombre,
-                    "color": seat_type.color,
-                    "default_price": str(defaults.get(str(seat_type.pk), seat_type.precio_base)),
-                }
-                for seat_type in types_by_id.values()
-            ]
-        return matrix
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        initial_prices = {}
-        if self.object and self.object.pk:
-            initial_prices = self.object.precios_por_tipo or {}
-        elif self.get_initial().get("precios_por_tipo"):
-            initial_prices = self.get_initial()["precios_por_tipo"]
-        context["seat_price_matrix"] = self.get_price_matrix()
-        context["initial_seat_prices"] = initial_prices
-        return context
+    success_message = "La función se creó correctamente. ¡No te olvides de publicarla o programarla!"
 
     def get_initial(self):
         initial = super().get_initial()
-        plantilla_id = self.request.GET.get("plantilla")
-        if not plantilla_id:
+        template_screening_id = self.request.GET.get("plantilla")
+        if not template_screening_id:
             return initial
 
-        plantilla = get_object_or_404(Funcion, pk=plantilla_id)
+        template_screening = get_object_or_404(Screening, pk=template_screening_id)
         initial.update(
             {
-                "pelicula": plantilla.pelicula,
-                "sala": plantilla.sala,
-                "fecha_horario": plantilla.fecha_horario,
-                "precios_por_tipo": plantilla.precios_por_tipo,
+                "movie": template_screening.movie,
+                "room": template_screening.room,
+                "starts_at": template_screening.starts_at,
             }
         )
         return initial
 
     def form_valid(self, form):
-        form.instance.estado = Funcion.Estado.BORRADOR
-        form.instance.capturar_configuracion_sala()
+        form.instance.status = Screening.Status.DRAFT
+        form.instance.capture_room_configuration()
         return super().form_valid(form)
 
 
-class FuncionUpdateView(GerenteUpdateView):
-    model = Funcion
-    form_class = FuncionForm
+class ScreeningUpdateView(ManagerUpdateView):
+    model = Screening
+    form_class = ScreeningForm
     success_url = reverse_lazy("manager:funciones_list")
     section = "Funciones"
     enctype = ""
@@ -700,70 +902,61 @@ class FuncionUpdateView(GerenteUpdateView):
     form_title = "Editar función"
 
     def get_object(self, queryset=None):
-        funcion = super().get_object(queryset)
-        if not funcion.es_editable:
+        screening = super().get_object(queryset)
+        if not screening.is_editable:
             raise PermissionDenied
-        return funcion
-
-    def get_price_matrix(self):
-        return FuncionCreateView.get_price_matrix(self)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["seat_price_matrix"] = self.get_price_matrix()
-        context["initial_seat_prices"] = self.object.precios_por_tipo or {}
-        return context
+        return screening
 
     def form_valid(self, form):
-        if self.object.estado != Funcion.Estado.PUBLICADA:
-            form.instance.capturar_configuracion_sala()
+        if self.object.status != Screening.Status.PUBLISHED:
+            form.instance.capture_room_configuration()
         return super().form_valid(form)
 
 
-class FuncionDeleteView(GerenteDeleteView):
-    model = Funcion
+class ScreeningDeleteView(ManagerDeleteView):
+    model = Screening
     success_url = reverse_lazy("manager:funciones_list")
     section = "Funciones"
     object_label = "La función"
 
     def get_object(self, queryset=None):
-        funcion = super().get_object(queryset)
-        if not funcion.es_eliminable:
+        screening = super().get_object(queryset)
+        if not screening.is_deletable:
             raise PermissionDenied
-        return funcion
+        return screening
 
 
-class FuncionCambiarEstadoView(GerenteRequiredMixin, DetailView):
-    model = Funcion
-    mensajes = {
-        Funcion.Estado.BORRADOR: "La función volvió a borrador.",
-        Funcion.Estado.PROGRAMADA: "Función programada correctamente.",
-        Funcion.Estado.PUBLICADA: "Función publicada correctamente.",
-        Funcion.Estado.CANCELADA: "Función cancelada correctamente.",
+class ScreeningChangeStatusView(ManagerRequiredMixin, DetailView):
+    model = Screening
+    messages_by_status = {
+        Screening.Status.DRAFT: "La función volvió a borrador.",
+        Screening.Status.SCHEDULED: "Función programada correctamente.",
+        Screening.Status.PUBLISHED: "Función publicada correctamente.",
+        Screening.Status.CANCELED: "Función cancelada correctamente.",
     }
 
     def post(self, request, *args, **kwargs):
-        funcion = self.get_object()
-        nuevo_estado = request.POST.get("estado", "")
-        if nuevo_estado not in self.mensajes:
+        screening = self.get_object()
+        new_status = request.POST.get("status", "")
+        if new_status not in self.messages_by_status:
             messages.error(request, "Estado inválido.")
             return redirect("manager:funciones_list")
         try:
-            funcion.cambiar_estado(nuevo_estado)
+            screening.change_status(new_status)
         except ValidationError as error:
             messages.error(request, error.messages[0])
         else:
-            messages.success(request, self.mensajes[nuevo_estado])
+            messages.success(request, self.messages_by_status[new_status])
         return redirect("manager:funciones_list")
 
 
-class FuncionCancelarView(GerenteRequiredMixin, DetailView):
-    model = Funcion
+class ScreeningCancelView(ManagerRequiredMixin, DetailView):
+    model = Screening
     template_name = "manager_confirm_cancel.html"
 
     def get(self, request, *args, **kwargs):
-        funcion = self.get_object()
-        if not funcion.puede_pasar_a(Funcion.Estado.CANCELADA):
+        screening = self.get_object()
+        if not screening.can_transition_to(Screening.Status.CANCELED):
             messages.error(request, "Esta función no se puede cancelar.")
             return redirect("manager:funciones_list")
         return super().get(request, *args, **kwargs)
@@ -771,5 +964,5 @@ class FuncionCancelarView(GerenteRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["section"] = "Funciones"
-        context["entradas_vendidas"] = CompraEntrada.cantidad_vendida(self.object)
+        context["tickets_sold"] = TicketPurchase.sold_quantity(self.object)
         return context

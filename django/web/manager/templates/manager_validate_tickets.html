@@ -1,0 +1,138 @@
+{% extends "manager_base.html" %}
+{% load static %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'ticket_validation.css' %}">{% endblock %}
+{% block content %}
+  <section class="page-heading">
+    <h1>Validar entradas</h1>
+  </section>
+  <div class="validation-layout">
+    <section class="validation-scanner" aria-labelledby="scanner-title">
+      <h2 id="scanner-title" class="visually-hidden">Escanear código QR</h2>
+      <div class="form-actions">
+        <button type="button" data-start-camera>
+          <i data-lucide="camera" data-camera-icon aria-hidden="true"></i><span data-camera-close-mark hidden aria-hidden="true">×</span><span data-camera-button-label>Escanear código</span>
+        </button>
+        <details class="camera-picker" data-camera-picker hidden>
+          <summary aria-label="Elegir cámara" title="Elegir cámara"><i data-lucide="settings-2" aria-hidden="true"></i></summary>
+          <div class="camera-picker-menu">
+            <label for="camera-device">Cámara</label>
+            <select id="camera-device" data-camera-device></select>
+          </div>
+        </details>
+      </div>
+      <video data-camera playsinline muted hidden></video>
+      <p class="visually-hidden" data-scanner-status role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="validation-manual" aria-labelledby="manual-title">
+      <h2 id="manual-title">Buscar por código de reserva</h2>
+      <form class="manager-form validation-code-form" method="post" data-validation-form>
+        {% csrf_token %}
+        <div role="alert">{{ form.non_field_errors }}</div>
+        <div class="reservation-code" data-reservation-code aria-label="{{ form.code.label }}">
+          {% for position in "123456" %}
+            <input type="text" inputmode="text" autocomplete="{% if forloop.first %}one-time-code{% else %}off{% endif %}" autocapitalize="characters" spellcheck="false" aria-label="Carácter {{ forloop.counter }} del código de reserva" data-code-character>
+          {% endfor %}
+        </div>
+        <span class="visually-hidden">{{ form.code.as_hidden }}</span>{{ form.code.errors }}
+        <input type="hidden" name="action" value="preview">
+        <div class="form-actions"><button type="submit" data-preview>Consultar</button></div>
+      </form>
+    </section>
+
+    {% if purchase %}
+      <section class="validation-result" aria-labelledby="validation-result-title" data-found-entry>
+        <h2 id="validation-result-title">Entrada encontrada</h2>
+        <h3>{{ purchase.screening.movie.title }}</h3>
+        <p>{{ purchase.screening.room.name }} · {{ purchase.screening.starts_at|date:"d/m/Y H:i" }}</p>
+        <p>Cliente: <strong>{{ purchase.customer_display_name }}</strong></p>
+        <p>Compra {{ purchase.validation_code }} · {{ purchase.remaining_quantity }} de {{ purchase.quantity }} entradas sin utilizar</p>
+        <form method="post" class="admission-selection" data-confirm-admission data-available-seats="{{ purchase.remaining_quantity }}"{% if purchase.remaining_quantity == 1 %} data-single-admission="true" data-single-seat-label="{{ purchase.single_admission_label }}"{% endif %}>
+          {% csrf_token %}
+          <input type="hidden" name="code" value="{{ purchase.validation_code }}">
+          {% if purchase.remaining_quantity == 1 %}
+            {% for ticket in purchase.tickets.all %}{% if not ticket.used_at %}<input type="hidden" name="ticket_numbers" value="{{ ticket.number }}">{% endif %}{% endfor %}
+          {% else %}
+            <div class="admission-seat-group" role="group" aria-label="Butacas a validar">
+              <div class="admission-seat-heading">
+                <span>Butacas a validar</span>
+                <button type="button" class="admission-select-all" data-select-all-seats>Seleccionar todo</button>
+              </div>
+              <div class="admission-seat-grid">
+                {% for ticket in purchase.tickets.all %}
+                  {% if not ticket.used_at %}
+                    <label class="admission-seat-option">
+                      <input type="checkbox" name="ticket_numbers" value="{{ ticket.number }}">
+                      <span>{% if ticket.seat_label %}{{ ticket.seat_label }}{% else %}Entrada {{ ticket.number }}{% endif %}</span>
+                    </label>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+          <input type="hidden" name="action" value="validate">
+          <div class="form-actions"><button type="submit" data-validate-admission disabled>{% if purchase.single_admission_label %}Validar ingreso · {{ purchase.single_admission_label }}{% else %}Validar ingreso{% endif %}</button></div>
+        </form>
+      </section>
+    {% endif %}
+  </div>
+  <details class="validation-help">
+    <summary>Ayuda</summary>
+    <p>Activá la cámara y apuntá al QR, o ingresá el código de reserva. Luego marcá las butacas que ingresan y validá.</p>
+  </details>
+  {% if validation_history %}
+    <section class="validation-history" aria-labelledby="validation-history-title">
+      <h2 id="validation-history-title">Tu historial de validaciones recientes</h2>
+      <p class="validation-history-intro">Mostramos las validaciones de las últimas 24 horas.</p>
+      <div class="validation-history-list">
+        {% for validation in validation_history %}
+          <article class="validation-history-item{% if validation.reverted_at %} is-reverted{% endif %}">
+            <div>
+              <strong>{{ validation.purchase.screening.movie.title }}</strong>
+              <span class="validation-history-customer">{{ validation.customer_display_name }}</span>
+              <p>
+                {% for ticket in validation.tickets.all %}{% if ticket.seat_label %}{{ ticket.seat_label }}{% else %}Entrada {{ ticket.number }}{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}
+                · {{ validation.created_at|date:"H:i:s" }}
+              </p>
+            </div>
+            {% if validation.reverted_at %}
+              <span class="validation-history-status">Deshecha</span>
+            {% elif validation.can_undo %}
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="validation_id" value="{{ validation.pk }}">
+                <input type="hidden" name="action" value="undo">
+                <button type="submit" class="undo-validation" data-undo-validation data-undo-window-seconds="{{ cinema.admission_undo_seconds }}" data-undo-deadline="{{ validation.created_at|date:'U'|add:cinema.admission_undo_seconds }}">
+                  <span>Deshacer</span><span data-undo-countdown></span>
+                </button>
+              </form>
+            {% else %}
+              <span class="validation-history-status">Validada</span>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+      {% if validation_history_page.has_other_pages %}
+        <nav class="pagination" aria-label="Paginación del historial de validaciones">
+          {% if validation_history_page.has_previous %}
+            <a href="?page={{ validation_history_page.previous_page_number }}">
+              <i data-lucide="chevron-left" aria-hidden="true"></i>
+              <span>Anterior</span>
+            </a>
+          {% endif %}
+          <span>Página {{ validation_history_page.number }} de {{ validation_history_page.paginator.num_pages }}</span>
+          {% if validation_history_page.has_next %}
+            <a href="?page={{ validation_history_page.next_page_number }}">
+              <span>Siguiente</span>
+              <i data-lucide="chevron-right" aria-hidden="true"></i>
+            </a>
+          {% endif %}
+        </nav>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}
+{% block scripts %}
+  <script src="{% static 'vendor/jsQR-1.4.0.js' %}" defer></script>
+  <script src="{% static 'js/ticket_validation.js' %}" defer></script>
+{% endblock %}

@@ -7,9 +7,85 @@ const reservationSummary = document.querySelector("[data-reservation-summary]");
 const reservationSummaryText = document.querySelector("[data-reservation-summary-text]");
 const cartSeatLines = document.querySelector("[data-cart-seat-lines]");
 const cartTotal = document.querySelector("[data-cart-total]");
+const cartBaseTotal = document.querySelector("[data-cart-base-total]");
+const purchaseSavings = document.querySelector("[data-purchase-savings]");
+const purchaseSavingsAmount = document.querySelector("[data-purchase-savings-amount]");
+const purchasePromotions = document.querySelector("[data-purchase-promotions]");
+const purchasePromotionsList = document.querySelector("[data-purchase-promotions-list]");
 const seatMaps = document.querySelectorAll(".client-seat-map");
 let reservationExpiresAt = null;
 let reservationTimer = null;
+let submitAfterReservationFlush = false;
+let purchaseSubmitting = false;
+let purchasePreparing = false;
+const pendingSeatOperations = new WeakMap();
+const pendingSeatTimers = new WeakMap();
+const pendingSeatFlushes = new WeakMap();
+
+function updateSeatMapPanHints(seatMap) {
+  const viewport = seatMap.querySelector("[data-seat-map-viewport]");
+  if (!viewport) {
+    return;
+  }
+
+  const maxScrollLeft = Math.max(viewport.scrollWidth - viewport.clientWidth, 0);
+  const isCompactViewport = window.matchMedia("(max-width: 860px)").matches;
+  const canPanLeft = isCompactViewport && viewport.scrollLeft > 1;
+  const canPanRight = isCompactViewport && viewport.scrollLeft < maxScrollLeft - 1;
+  seatMap.classList.toggle("can-pan-left", canPanLeft);
+  seatMap.classList.toggle("can-pan-right", canPanRight);
+  seatMap.querySelectorAll("[data-seat-map-pan]").forEach((button) => {
+    button.disabled = button.dataset.seatMapPan === "left" ? !canPanLeft : !canPanRight;
+  });
+}
+
+function centerSeatMapViewport(seatMap) {
+  const viewport = seatMap.querySelector("[data-seat-map-viewport]");
+  if (!viewport || seatMap.dataset.viewportCentered) {
+    return;
+  }
+
+  const maxScrollLeft = Math.max(viewport.scrollWidth - viewport.clientWidth, 0);
+  viewport.scrollLeft = maxScrollLeft / 2;
+  seatMap.dataset.viewportCentered = "true";
+  updateSeatMapPanHints(seatMap);
+}
+
+function initializeSeatMapViewport(seatMap) {
+  const viewport = seatMap.querySelector("[data-seat-map-viewport]");
+  if (!viewport) {
+    return;
+  }
+
+  viewport.addEventListener("scroll", () => updateSeatMapPanHints(seatMap), {passive: true});
+  seatMap.querySelectorAll("[data-seat-map-pan]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const direction = button.dataset.seatMapPan === "left" ? -1 : 1;
+      viewport.scrollBy({
+        left: direction * viewport.clientWidth * 0.7,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      });
+    });
+  });
+  window.requestAnimationFrame(() => centerSeatMapViewport(seatMap));
+
+  if ("ResizeObserver" in window) {
+    new ResizeObserver(() => updateSeatMapPanHints(seatMap)).observe(viewport);
+  }
+  window.addEventListener("resize", () => updateSeatMapPanHints(seatMap));
+}
+
+function setPurchaseProcessing(processing) {
+  if (!purchaseButton) {
+    return;
+  }
+  purchaseButton.disabled = processing;
+  purchaseButton.classList.toggle("is-processing", processing);
+  purchaseButton.setAttribute("aria-busy", String(processing));
+  if (processing) {
+    purchaseButton.innerHTML = '<span class="purchase-loading-clock" aria-hidden="true"></span>Procesando compra…';
+  }
+}
 
 function getActiveSeatMap() {
   return Array.from(seatMaps).find((seatMap) => !seatMap.classList.contains("is-hidden"));
@@ -41,6 +117,23 @@ function formatMoney(value) {
   });
 }
 
+function parseSeatPrice(rawValue) {
+  const rawPrice = String(rawValue || "").trim();
+  const normalizedPrice = rawPrice.includes(",")
+    ? rawPrice.replace(/\./g, "").replace(",", ".")
+    : rawPrice;
+  const price = Number(normalizedPrice);
+  return Number.isFinite(price) ? price : null;
+}
+
+function seatPrice(seat) {
+  return parseSeatPrice(seat?.dataset.seatPrice) ?? 0;
+}
+
+function seatBasePrice(seat) {
+  return parseSeatPrice(seat?.dataset.seatBasePrice) ?? seatPrice(seat);
+}
+
 function csrfToken() {
   return purchaseForm?.querySelector('input[name="csrfmiddlewaretoken"]')?.value || "";
 }
@@ -48,6 +141,11 @@ function csrfToken() {
 function refreshIntervalMs(seatMap) {
   const seconds = Number(seatMap?.dataset.refreshIntervalSeconds || 5);
   return Math.max(seconds, 1) * 1000;
+}
+
+function reservationBatchDelayMs(seatMap) {
+  const milliseconds = Number(seatMap?.dataset.reservationBatchDelayMs || 1000);
+  return Math.max(milliseconds, 0);
 }
 
 function formatTimeLeft(milliseconds) {
@@ -119,22 +217,16 @@ function markUnavailableSeats(seatMap, labels) {
   });
 }
 
-async function syncSeatStatus(seatMap) {
-  const statusUrl = seatMap?.dataset.reservationStatusUrl;
-  if (!statusUrl) {
-    return;
-  }
-  const response = await fetch(statusUrl, {headers: {"Accept": "application/json"}});
-  if (!response.ok) {
-    return;
-  }
-  const payload = await response.json();
+function applyReservationState(seatMap, payload) {
   markUnavailableSeats(seatMap, payload.unavailable);
   const ownReserved = new Set((payload.reserved || []).map((reservation) => reservation.label));
   seatMap?.querySelectorAll("button.client-seat").forEach((seat) => {
+    if (seat.classList.contains("is-pending")) {
+      return;
+    }
     if (ownReserved.has(seat.dataset.seatLabel) && !seat.classList.contains("is-unavailable")) {
       seat.classList.add("is-selected");
-    } else if (seat.classList.contains("is-selected")) {
+    } else if (seat.classList.contains("is-selected") && !seat.classList.contains("is-pending")) {
       seat.classList.remove("is-selected");
     }
   });
@@ -143,7 +235,24 @@ async function syncSeatStatus(seatMap) {
   updateSeatDrivenPurchaseState();
 }
 
-async function requestSeatReservation(seat, action) {
+async function syncSeatStatus(seatMap) {
+  const statusUrl = seatMap?.dataset.reservationStatusUrl;
+  if (!statusUrl) {
+    return;
+  }
+  try {
+    const response = await fetch(statusUrl, {headers: {"Accept": "application/json"}});
+    if (!response.ok) {
+      return;
+    }
+    const payload = await response.json();
+    applyReservationState(seatMap, payload);
+  } catch (_error) {
+    return;
+  }
+}
+
+async function requestSingleSeatReservation(seat, action) {
   const seatMap = seat.closest(".client-seat-map");
   const reservationUrl = seatMap?.dataset.reservationUrl;
   if (!reservationUrl) {
@@ -163,8 +272,128 @@ async function requestSeatReservation(seat, action) {
     markUnavailableSeats(seatMap, payload.unavailable || [seat.dataset.seatLabel]);
     throw new Error(payload.error || "La butaca ya no está disponible.");
   }
-  await syncSeatStatus(seatMap);
   return payload;
+}
+
+function queuedOperationsFor(seatMap) {
+  let queue = pendingSeatOperations.get(seatMap);
+  if (!queue) {
+    queue = new Map();
+    pendingSeatOperations.set(seatMap, queue);
+  }
+  return queue;
+}
+
+async function sendSeatOperations(seatMap, operations) {
+  const batchUrl = seatMap?.dataset.reservationBatchUrl;
+  if (!batchUrl) {
+    const processed = [];
+    for (const operation of operations) {
+      const seat = seatMap.querySelector(`[data-seat-label="${operation.label}"]`);
+      await requestSingleSeatReservation(seat, operation.action);
+      processed.push(operation);
+    }
+    await syncSeatStatus(seatMap);
+    return {ok: true, processed};
+  }
+
+  const response = await fetch(batchUrl, {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrfToken(),
+    },
+    body: JSON.stringify({operations}),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (payload.unavailable || payload.reserved) {
+    applyReservationState(seatMap, payload);
+  }
+  if (!response.ok || !payload.ok) {
+    const firstError = (payload.errors || [])[0]?.error;
+    throw new Error(firstError || payload.error || "Algunas butacas ya no estan disponibles.");
+  }
+  return payload;
+}
+
+function clearPendingState(seatMap, operations) {
+  const queuedOperations = queuedOperationsFor(seatMap);
+  operations.forEach((operation) => {
+    const seat = seatMap.querySelector(`[data-seat-label="${operation.label}"]`);
+    if (!queuedOperations.has(operation.label)) {
+      seat?.classList.remove("is-pending");
+    }
+  });
+}
+
+async function flushSeatReservations(seatMap) {
+  if (!seatMap) {
+    return {ok: true};
+  }
+
+  const activeFlush = pendingSeatFlushes.get(seatMap);
+  if (activeFlush) {
+    return activeFlush.catch(() => null).then(() => {
+      if (queuedOperationsFor(seatMap).size) {
+        return flushSeatReservations(seatMap);
+      }
+      return {ok: true};
+    });
+  }
+
+  window.clearTimeout(pendingSeatTimers.get(seatMap));
+  pendingSeatTimers.delete(seatMap);
+
+  const queue = queuedOperationsFor(seatMap);
+  if (!queue.size) {
+    return {ok: true};
+  }
+
+  const operations = Array.from(queue.values()).map(({action, label}) => ({action, label}));
+  queue.clear();
+  const flush = sendSeatOperations(seatMap, operations)
+    .finally(() => {
+      clearPendingState(seatMap, operations);
+      pendingSeatFlushes.delete(seatMap);
+      updateSeatDrivenPurchaseState();
+    });
+  pendingSeatFlushes.set(seatMap, flush);
+  return flush;
+}
+
+function showReservationError(error) {
+  if (purchaseSummary) {
+    purchaseSummary.hidden = false;
+    purchaseSummary.textContent = error.message;
+  }
+}
+
+function queueSeatReservation(seat, action, flushImmediately = false) {
+  const seatMap = seat.closest(".client-seat-map");
+  const queue = queuedOperationsFor(seatMap);
+  queue.set(seat.dataset.seatLabel, {
+    action,
+    label: seat.dataset.seatLabel,
+  });
+  seat.classList.add("is-pending");
+  window.clearTimeout(pendingSeatTimers.get(seatMap));
+  if (flushImmediately) {
+    flushSeatReservations(seatMap).catch(showReservationError);
+    return;
+  }
+  pendingSeatTimers.set(
+    seatMap,
+    window.setTimeout(() => {
+      flushSeatReservations(seatMap).catch(showReservationError);
+    }, reservationBatchDelayMs(seatMap)),
+  );
+}
+
+function hasPendingSeatOperations(seatMap) {
+  return Boolean(seatMap && (
+    queuedOperationsFor(seatMap).size || pendingSeatFlushes.get(seatMap)
+  ));
 }
 
 function updateSeatDrivenPurchaseState() {
@@ -172,10 +401,16 @@ function updateSeatDrivenPurchaseState() {
   const selectedSeats = selectedSeatsFor(activeSeatMap);
   const requiresSeatSelection = Boolean(activeSeatMap);
   const selectedCount = selectedSeats.length;
+  const seatStateUpdating = hasPendingSeatOperations(activeSeatMap);
   const total = selectedSeats.reduce(
-    (sum, seat) => sum + Number(seat.dataset.seatPrice || 0),
+    (sum, seat) => sum + seatPrice(seat),
     0,
   );
+  const baseTotal = selectedSeats.reduce(
+    (sum, seat) => sum + seatBasePrice(seat),
+    0,
+  );
+  const savings = Math.max(baseTotal - total, 0);
 
   if (purchaseSummary) {
     purchaseSummary.hidden = !requiresSeatSelection || selectedCount > 0;
@@ -196,10 +431,18 @@ function updateSeatDrivenPurchaseState() {
       selectedSeats.forEach((seat) => {
         const item = document.createElement("li");
         const label = document.createElement("span");
-        const price = document.createElement("strong");
+        const price = document.createElement("span");
 
         label.textContent = seat.dataset.seatLabel;
-        price.textContent = `$${formatMoney(Number(seat.dataset.seatPrice || 0))}`;
+        price.className = "cart-seat-price";
+        if (seatBasePrice(seat) > seatPrice(seat)) {
+          const previousPrice = document.createElement("del");
+          previousPrice.textContent = `$${formatMoney(seatBasePrice(seat))}`;
+          price.appendChild(previousPrice);
+        }
+        const currentPrice = document.createElement("strong");
+        currentPrice.textContent = `$${formatMoney(seatPrice(seat))}`;
+        price.appendChild(currentPrice);
         item.appendChild(label);
         item.appendChild(price);
         cartSeatLines.appendChild(item);
@@ -211,10 +454,32 @@ function updateSeatDrivenPurchaseState() {
     cartTotal.textContent = `$${formatMoney(total)}`;
   }
 
-  if (purchaseButton && requiresSeatSelection) {
-    purchaseButton.disabled = selectedCount === 0;
+  if (cartBaseTotal) {
+    cartBaseTotal.hidden = savings <= 0;
+    cartBaseTotal.textContent = `$${formatMoney(baseTotal)}`;
+  }
+
+  if (purchaseSavings && purchaseSavingsAmount) {
+    purchaseSavings.hidden = savings <= 0;
+    purchaseSavingsAmount.textContent = `$${formatMoney(savings)}`;
+  }
+
+  if (purchasePromotions && purchasePromotionsList) {
+    const promotions = [...new Set(
+      selectedSeats.map((seat) => (seat.dataset.seatPromotion || "").trim()).filter(Boolean),
+    )];
+    purchasePromotions.hidden = promotions.length === 0;
+    purchasePromotionsList.textContent = promotions.join(" · ");
+  }
+
+  if (purchaseButton && requiresSeatSelection && !purchaseSubmitting && !purchasePreparing) {
+    purchaseButton.disabled = selectedCount === 0 || seatStateUpdating;
+    purchaseButton.classList.toggle("is-processing", seatStateUpdating && selectedCount > 0);
+    purchaseButton.setAttribute("aria-busy", String(seatStateUpdating && selectedCount > 0));
     if (selectedCount === 0) {
       purchaseButton.textContent = purchaseButton.dataset.selectSeatLabel;
+    } else if (seatStateUpdating) {
+      purchaseButton.innerHTML = '<span class="purchase-loading-clock" aria-hidden="true"></span>Actualizando butacas…';
     } else {
       purchaseButton.textContent = selectedCount >= 2
         ? purchaseButton.dataset.pluralLabel
@@ -272,7 +537,7 @@ if (!document.querySelector('input[name="funcion"]')) {
 }
 
 document.querySelectorAll("button.client-seat").forEach((seat) => {
-  seat.addEventListener("click", async () => {
+  seat.addEventListener("click", () => {
     if (seat.disabled || seat.classList.contains("is-unavailable") || seat.classList.contains("is-pending")) {
       return;
     }
@@ -285,37 +550,67 @@ document.querySelectorAll("button.client-seat").forEach((seat) => {
       return;
     }
 
-    seat.classList.add("is-pending");
-    try {
-      if (seat.classList.contains("is-selected")) {
-        await requestSeatReservation(seat, "release");
-        seat.classList.remove("is-selected");
-      } else {
-        await requestSeatReservation(seat, "reserve");
-        seat.classList.add("is-selected");
-      }
-      serializeSelectedSeats(seatMap);
-      updateSeatDrivenPurchaseState();
-    } catch (error) {
-      if (purchaseSummary) {
-        purchaseSummary.hidden = false;
-        purchaseSummary.textContent = error.message;
-      }
-    } finally {
-      seat.classList.remove("is-pending");
+    if (seat.classList.contains("is-selected")) {
+      seat.classList.remove("is-selected");
+      queueSeatReservation(seat, "release", true);
+    } else {
+      seat.classList.add("is-selected");
+      queueSeatReservation(seat, "reserve");
     }
+    serializeSelectedSeats(seatMap);
+    updateSeatDrivenPurchaseState();
   });
 });
 
 seatMaps.forEach((seatMap) => {
+  initializeSeatMapViewport(seatMap);
   syncSeatStatus(seatMap);
   window.setInterval(() => syncSeatStatus(seatMap), refreshIntervalMs(seatMap));
 });
 
-purchaseForm?.addEventListener("submit", (event) => {
+purchaseForm?.addEventListener("submit", async (event) => {
+  if (purchaseSubmitting || purchasePreparing) {
+    event.preventDefault();
+    return;
+  }
+
+  if (submitAfterReservationFlush) {
+    submitAfterReservationFlush = false;
+    purchaseSubmitting = true;
+    setPurchaseProcessing(true);
+    return;
+  }
+
   const activeSeatMap = getActiveSeatMap();
   if (activeSeatMap && selectedSeatsFor(activeSeatMap).length === 0) {
     event.preventDefault();
     updateSeatDrivenPurchaseState();
+    return;
   }
+
+  const hasPendingOperations = hasPendingSeatOperations(activeSeatMap);
+  if (hasPendingOperations) {
+    event.preventDefault();
+    purchasePreparing = true;
+    setPurchaseProcessing(true);
+    try {
+      await flushSeatReservations(activeSeatMap);
+      if (selectedSeatsFor(activeSeatMap).length > 0) {
+        purchasePreparing = false;
+        purchaseButton.disabled = false;
+        submitAfterReservationFlush = true;
+        purchaseForm.requestSubmit();
+      }
+    } catch (error) {
+      purchasePreparing = false;
+      purchaseButton.classList.remove("is-processing");
+      purchaseButton.removeAttribute("aria-busy");
+      updateSeatDrivenPurchaseState();
+      showReservationError(error);
+    }
+    return;
+  }
+
+  purchaseSubmitting = true;
+  setPurchaseProcessing(true);
 });

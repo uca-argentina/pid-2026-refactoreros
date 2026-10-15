@@ -6,7 +6,7 @@
 {% block main_class %} manager-main-wide{% endblock %}
 {% block extra_scripts %}
   {% load static %}
-  <script type="module" src="{% static './js/manager_nueva_sala_form_script.js'%}" ></script>
+  <script type="module" src="{% static 'js/manager_nueva_sala_form_script.js' %}"></script>
 {% endblock %}
 {% block content %}
   <section class="page-heading">
@@ -26,8 +26,8 @@
         {% else %}
           <label{% if field.field.widget.input_type == "checkbox" %} class="checkbox-field"{% endif %}>
             <span>{{ field.label }}</span>
-            {% if field.name == "imagen" and object.imagen %}
-              <img class="image-preview" src="{{ object.imagen.url }}" alt="{{ object.titulo }}">
+            {% if field.name == "image" and object.image %}
+              <img class="image-preview" src="{{ object.image.url }}" alt="{{ object.title }}">
             {% endif %}
             {{ field }}
             {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
@@ -38,7 +38,7 @@
 
 
       <div class="controles">
-        <label class="dimension-control">
+        <label class="dimension-controle">
           <span>Filas</span>
           <div class="number-stepper">
             <button type="button" class="dimension-step-button" data-dimension-target="rows" data-dimension-step="-1" aria-label="Restar una fila">
@@ -50,7 +50,7 @@
             </button>
           </div>
         </label>
-        <label class="dimension-control">
+        <label class="dimension-controle">
           <span>Asientos por fila</span>
           <div class="number-stepper">
             <button type="button" class="dimension-step-button" data-dimension-target="columns" data-dimension-step="-1" aria-label="Restar un asiento por fila">
@@ -69,12 +69,12 @@
 
       <div class="tool-selector">
         {% for seat_type in seat_types %}
-          <button type="button" id="tool-{{ seat_type.nombre }}-button" class="tool-btn seat" data-type-id="{{ seat_type.pk }}" data-color="{{ seat_type.color }}" data-nombre="{{seat_type.nombre}}" {% if seat_type.icono %}data-icon="{{ seat_type.icono.url }}"{% endif %}>
+          <button type="button" id="tool-{{ seat_type.name }}-button" class="tool-btn seat" data-type-id="{{ seat_type.pk }}" data-color="{{ seat_type.color }}" data-name="{{seat_type.name}}" {% if seat_type.icon %}data-icon="{{ seat_type.icon.url }}"{% endif %}>
             <i data-lucide="armchair" aria-hidden="true"></i>
-            <span>{{ seat_type.nombre }}</span>
+            <span>{{ seat_type.name }}</span>
           </button>
         {% endfor %}
-        <button type="button" id="tool-eraser-button" class="tool-btn erase" data-color="#64748b" data-nombre="eraser">
+        <button type="button" id="tool-eraser-button" class="tool-btn erase" data-color="#64748b" data-name="eraser">
           <i data-lucide="x" aria-hidden="true"></i>
           <span>Borrar / Pasillo</span>
         </button>
@@ -103,22 +103,6 @@
       </div>
 
       <div class="room-design-workspace">
-        <section class="room-default-prices" aria-label="Precios por defecto por tipo de asiento">
-          <h2>Precios por defecto</h2>
-          <div class="room-default-price-grid">
-            {% for seat_type in seat_types %}
-              <label class="seat-price-field">
-                <span class="seat-price-swatch" style="background: {{ seat_type.color }};"></span>
-                <span>{{ seat_type.nombre }}</span>
-                <span class="price-input-shell">
-                  <span aria-hidden="true">$</span>
-                  <input type="number" min="1" step="0.01" data-room-seat-price data-seat-type-id="{{ seat_type.pk }}" data-default-price="{{ seat_type.precio_base }}" value="{{ seat_type.precio_base }}" required>
-                </span>
-              </label>
-            {% endfor %}
-          </div>
-        </section>
-
         <div class="room-layout-scroll" aria-label="Plano de sala">
           <div class="room-layout-stage">
             <div class="screen-marker" aria-hidden="true">

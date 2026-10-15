@@ -1,0 +1,64 @@
+{% extends "manager_base.html" %}
+
+{% block content %}
+  <section class="page-heading page-heading-row">
+    <div>
+      <h1>Promociones</h1>
+      <p>Se aplica la mejor promoción válida por butaca, sin acumular descuentos.</p>
+    </div>
+    <a class="primary-link" href="{% url 'manager:promotions_create' %}">
+      <i data-lucide="badge-percent" aria-hidden="true"></i>
+      <span>Nueva promoción</span>
+    </a>
+  </section>
+
+  {% include "_list_controls.html" %}
+
+  <section class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Descuento</th>
+          <th>Días</th>
+          <th>Horario</th>
+          <th>Butacas</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for promotion in object_list %}
+          <tr>
+            <td data-label="Nombre"><strong class="cell-title">{{ promotion.name }}</strong></td>
+            <td data-label="Descuento">{{ promotion.discount_label }}</td>
+            <td data-label="Días">{{ promotion.weekdays_label }}</td>
+            <td data-label="Horario">{{ promotion.schedule_label }}</td>
+            <td data-label="Butacas">{{ promotion.seat_types_label }}</td>
+            <td data-label="Estado">
+              {% if promotion.is_active %}
+                <span class="status-pill is-published">Activa</span>
+              {% else %}
+                <span class="status-pill">Inactiva</span>
+              {% endif %}
+            </td>
+            <td class="table-actions" data-label="Acciones">
+              <a href="{% url 'manager:promotions_update' promotion.pk %}">
+                <i data-lucide="pencil" aria-hidden="true"></i>
+                <span>Editar</span>
+              </a>
+              <a href="{% url 'manager:promotions_delete' promotion.pk %}" class="danger-link">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                <span>Eliminar</span>
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7">Todavía no hay promociones configuradas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% include "_pagination.html" %}
+{% endblock %}

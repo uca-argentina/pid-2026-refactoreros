@@ -1,0 +1,43 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notificaciones | {{ cinema.name|default:"Butaca Cero" }}</title>
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+  <link rel="icon" href="{% static 'favicon-96x96.png' %}" type="image/png">
+  <link rel="stylesheet" href="{% static 'catalog.css' %}">
+  <link rel="stylesheet" href="{% static 'admission_tickets.css' %}">
+</head>
+<body class="client-page">
+  {% include "_client_header.html" %}
+  <main class="client-main notification-main">
+    <section class="client-heading"><h1>Notificaciones</h1></section>
+    {% if notifications %}
+      <p class="notification-intro">Avisos sobre tus compras y funciones.</p>
+      <section class="notification-list" aria-label="Notificaciones">
+        {% for notification in notifications %}
+          <article class="notification-card">
+            <span class="notification-icon"><i data-lucide="circle-alert" aria-hidden="true"></i></span>
+            <div>
+              <p class="notification-kicker">Función cancelada</p>
+              <h2>{{ notification.purchase.screening.movie.title }}</h2>
+              <p>{{ notification.purchase.screening.room.name }} · {{ notification.purchase.screening.starts_at|date:"d/m/Y H:i" }}</p>
+              <p class="notification-refund">Devolución registrada · $ {{ notification.amount|floatformat:2 }}</p>
+              <p class="notification-date">{{ notification.created_at|date:"d/m/Y H:i" }}</p>
+            </div>
+          </article>
+        {% endfor %}
+      </section>
+    {% else %}
+      <section class="client-empty">
+        <h2>No tenés notificaciones</h2>
+        <p>Cuando haya novedades sobre una compra, las vas a ver acá.</p>
+      </section>
+    {% endif %}
+  </main>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>if (window.lucide) { lucide.createIcons(); }</script>
+</body>
+</html>

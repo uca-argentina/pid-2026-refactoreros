@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: butaca-cero
+    runtime: docker
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./docker/django/Dockerfile
+    healthCheckPath: /health/
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_REQUIRE_CLOUDINARY
+        value: "True"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        fromService:
+          name: butaca-cero
+          type: web
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: DJANGO_SERVE_MEDIA
+        value: "False"

@@ -1,0 +1,86 @@
+.validation-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; max-width: 960px; overflow-x: clip; }
+.validation-scanner, .validation-manual { min-width: 0; padding: 8px 32px 8px 0; }
+.validation-manual { padding: 8px 0 8px 32px; border-left: 1px solid var(--border); }
+.validation-manual h2 { margin: 0 0 16px; font-size: 20px; }
+.validation-layout .manager-form { width: 100%; max-width: none; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.validation-code-form { gap: 12px; }
+.validation-code-form [data-preview].is-loading { display: inline-flex; align-items: center; justify-content: center; gap: .55rem; cursor: wait; }
+.validation-code-form [data-preview].is-loading::before { content: ''; width: .8rem; height: .8rem; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: validation-button-spinner 650ms linear infinite; }
+@keyframes validation-button-spinner { to { transform: rotate(360deg); } }
+.reservation-code { display: flex; gap: 8px; }
+.reservation-code input { width: 46px; height: 54px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--input-bg); color: var(--ink); font: 800 25px/1 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; text-transform: uppercase; }
+:root:not([data-theme="light"]) .reservation-code input { border-color: #59677a; }
+.reservation-code input:focus { outline: 0; border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 24%, transparent); }
+.validation-layout .errorlist { color: var(--danger); }
+.validation-result { grid-column: 1 / -1; display: grid; gap: 10px; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--success); scroll-margin-top: 112px; }
+.validation-result h2 { margin: 0; color: var(--success); font-size: 15px; text-transform: uppercase; letter-spacing: .06em; }
+.validation-result h3, .validation-result p { margin: 0; }
+.validation-result h3 { font-size: 22px; }
+.admission-selection { display: grid; gap: 18px; padding-top: 8px; }
+.admission-seat-group { min-width: 0; }
+.admission-seat-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.admission-seat-heading > span { font-size: 13px; font-weight: 800; }
+.admission-select-all { min-height: auto; padding: 4px 8px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--brand); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.admission-select-all:hover { border-color: var(--brand); }
+.admission-seat-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.admission-seat-option { position: relative; }
+.admission-seat-option input { position: absolute; opacity: 0; pointer-events: none; }
+.admission-seat-option span { position: relative; display: inline-flex; min-width: 52px; min-height: 40px; align-items: center; justify-content: center; padding: 0 11px; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-weight: 800; cursor: pointer; }
+.admission-seat-option input:not(:checked) + span::after { content: ""; position: absolute; inset: -5px; border: 1px solid rgba(251, 191, 36, .95); border-radius: 7px; pointer-events: none; animation: seat-alert-ring 1.35s ease-out infinite; }
+.admission-seat-option input:checked + span { border-color: var(--brand); background: var(--brand); color: var(--brand-ink); }
+.admission-seat-option input:focus-visible + span { outline: 3px solid color-mix(in srgb, var(--brand) 30%, transparent); outline-offset: 2px; }
+.admission-selection [data-validate-admission]:disabled { border-color: #68727f; background: #68727f; color: #eef1f4; cursor: not-allowed; }
+@keyframes seat-alert-ring { 0%, 24% { inset: -7px; opacity: 0; } 35% { opacity: .95; } 100% { inset: 3px; opacity: 0; } }
+.validation-scanner video { width: 100%; max-height: 360px; margin-top: 16px; border-radius: 8px; background: #000; }
+.validation-scanner [hidden] { display: none; }
+.validation-scanner [data-start-camera].is-camera-open [data-camera-icon] { display: none; }
+.validation-scanner [data-camera-close-mark] { font-size: 22px; font-weight: 400; line-height: .7; }
+.validation-scanner .form-actions { position: relative; min-width: 0; }
+.camera-picker { position: relative; min-width: 0; }
+.camera-picker summary { display: inline-flex; align-items: center; justify-content: center; min-width: 42px; min-height: 40px; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; list-style: none; }
+.camera-picker summary::-webkit-details-marker { display: none; }
+.camera-picker summary:hover, .camera-picker[open] summary { border-color: var(--brand); color: var(--brand); }
+.camera-picker-menu { position: absolute; z-index: 5; top: calc(100% + 8px); right: 0; left: auto; display: grid; gap: 6px; width: min(280px, calc(100vw - 32px)); max-width: calc(100vw - 32px); padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface, #fff); box-shadow: 0 12px 25px rgba(0, 0, 0, .18); }
+.camera-picker-menu label { font-size: 12px; font-weight: 800; }
+.camera-picker-menu select { width: 100%; min-width: 0; max-width: 100%; min-height: 38px; border: 1px solid var(--border); border-radius: 5px; background: var(--input-bg); color: var(--ink); }
+.validation-scanner [data-scanner-status].is-visible { position: static; width: auto; height: auto; padding: 0; margin: 12px 0 0; overflow: visible; clip: auto; white-space: normal; color: var(--muted); }
+.validation-help { max-width: 960px; margin-top: 30px; color: var(--muted); }
+.validation-help summary { width: fit-content; color: var(--brand); font-weight: 700; cursor: pointer; }
+.validation-help p { max-width: 560px; margin: 10px 0 0; }
+.validation-history { max-width: 960px; margin-top: 38px; padding-top: 22px; border-top: 1px solid var(--border); }
+.validation-history h2 { margin: 0 0 14px; font-size: 18px; }
+.validation-history-intro { margin: -7px 0 14px; color: var(--muted); font-size: 13px; }
+.validation-history-list { display: grid; gap: 8px; }
+.validation-history-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.validation-history-item strong { font-size: 14px; }
+.validation-history-customer { margin-left: 7px; color: var(--muted); font-size: 13px; }
+.validation-history-item p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.validation-history-status { color: var(--muted); font-size: 13px; font-weight: 700; }
+.validation-history-item.is-reverted { opacity: .62; }
+.validation-history-item form { margin: 0; }
+.undo-validation { --undo-progress: 100%; position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 34px; padding: 0 12px; overflow: hidden; isolation: isolate; border: 1px solid #e34b4b; border-radius: 999px; background: rgba(227, 75, 75, .12); color: #ffb6b6; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.undo-validation::before { content: ""; position: absolute; z-index: 0; inset: 0 auto 0 0; width: var(--undo-progress); background: #c72d2d; transition: width .2s linear; }
+.undo-validation span { position: relative; z-index: 1; }
+.undo-validation:disabled { border-color: var(--border); background: transparent; color: var(--muted); cursor: not-allowed; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+@media (max-width: 680px) {
+  .validation-layout { grid-template-columns: 1fr; gap: 26px; }
+  .validation-scanner, .validation-manual { padding: 0; }
+  .validation-manual { padding-top: 26px; border-top: 1px solid var(--border); border-left: 0; }
+  .validation-result { margin-top: 0; }
+  .admission-selection .form-actions, .admission-selection .form-actions button { width: 100%; }
+  .reservation-code { gap: 6px; }
+  .reservation-code input { width: min(13.5vw, 46px); height: 52px; }
+  .validation-history-item { align-items: center; }
+}
+
+@media (max-width: 1024px) {
+  .validation-scanner .form-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; }
+  .validation-scanner [data-start-camera] { width: 100%; min-height: 52px; font-size: 16px; }
+  .camera-picker summary { min-height: 52px; min-width: 52px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admission-seat-option input:not(:checked) + span::after { animation: none; opacity: .9; }
+}
