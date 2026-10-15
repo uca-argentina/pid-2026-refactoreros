@@ -1,11 +1,15 @@
 import math
 from datetime import datetime, time, timedelta
 from decimal import Decimal
+from urllib.parse import urlencode
 
 from django.db.models import Count, Sum
 from django.db.models.functions import ExtractHour, ExtractMinute, ExtractWeekDay
 from django.utils import timezone
+from django.utils.formats import date_format
 
+from domain.movies.models import Movie
+from domain.rooms.models import Room
 from domain.screenings.models import Screening
 from domain.seats.models import Seat
 from domain.tickets.models import SeatPurchase, TicketPurchase
@@ -18,9 +22,7 @@ PERIODS = (
     ("todo", "Todo", None),
 )
 DEFAULT_PERIOD = "30"
-# Revenue is recognized only after the screening has finished and can no longer be cancelled.
 ACCOUNTED_STATUSES = (Screening.Status.FINISHED,)
-# Demand by purchase time also includes current and future published screenings.
 PURCHASED_STATUSES = (
     Screening.Status.PUBLISHED,
     Screening.Status.IN_PROGRESS,
@@ -34,7 +36,10 @@ X_AXIS_LABELS = 8
 TIME_SLOT_MINUTES = 30
 
 
-def build_dashboard(period=None, date_from=None, date_to=None, now=None):
+def build_dashboard(
+    period=None, date_from=None, date_to=None, now=None,
+    movie_id=None, room_id=None, revenue_date=None,
+):
     now = now or timezone.now()
     today = timezone.localdate(now)
     has_custom_range = date_from is not None or date_to is not None
@@ -51,16 +56,46 @@ def build_dashboard(period=None, date_from=None, date_to=None, now=None):
         end = now
         end_date = today
 
-    rows = screening_rows(completed_screenings(start, end))
+    movie = selected_object(Movie, movie_id)
+    room = selected_object(Room, room_id)
+    movie_id = movie.pk if movie else None
+    room_id = room.pk if room else None
+    all_rows = screening_rows(completed_screenings(start, end))
+    revenue = revenue_series(
+        filter_rows(all_rows, movie_id, room_id), start, end_date,
+        axis_start=first_date(all_rows),
+    )
+    selected_column = None
+    if revenue and revenue_date:
+        selected_column = next(
+            (column for column in revenue["columns"] if column["date"].isoformat() == revenue_date),
+            None,
+        )
+    selected_range = None
+    if selected_column:
+        first = selected_column["date"]
+        granularity = revenue["granularity"]
+        after = add_month(first) if granularity == "month" else first + timedelta(
+            days=7 if granularity == "week" else 1
+        )
+        first = max(first, timezone.localdate(start)) if start else first
+        after = min(after, end_date + timedelta(days=1))
+        selected_range = (start_of_day(first), min(start_of_day(after), end))
+    rows = filter_rows(all_rows, movie_id, room_id, selected_range)
     summary = summarize(rows)
     movies = top_movies(rows)
-    time_slots = demand_by_purchase_time(start, end)
+    time_slots = demand_by_purchase_time(start, end, movie_id, room_id, selected_range)
     previous = None
-    if start is not None and days:
-        start_previous = start - timedelta(days=days)
-        previous = summarize(screening_rows(completed_screenings(start_previous, start)))
+    comparison_start = selected_range[0] if selected_range else start
+    comparison_days = (after - first).days if selected_range else days
+    if comparison_start is not None and comparison_days:
+        start_previous = comparison_start - timedelta(days=comparison_days)
+        previous = summarize(filter_rows(
+            screening_rows(completed_screenings(start_previous, comparison_start)),
+            movie_id, room_id,
+        ))
 
-    return {
+    dashboard = {
         "periods": [
             {"key": value, "label": label, "active": not has_custom_range and value == key}
             for value, label, _days in PERIODS
@@ -69,17 +104,108 @@ def build_dashboard(period=None, date_from=None, date_to=None, now=None):
         "date_from": date_from,
         "date_to": date_to,
         "has_custom_range": has_custom_range,
-        "start": timezone.localdate(start) if start else first_date(rows),
+        "start": timezone.localdate(start) if start else first_date(all_rows),
         "end": end_date,
         "summary": summary,
         "deltas": build_deltas(summary, previous),
-        "revenue": revenue_series(rows, start, end_date),
-        "movies": movies,
-        "rooms": occupancy_by_room(rows),
+        "revenue": revenue,
+        "movies": top_movies(filter_rows(all_rows, room_id=room_id, date_range=selected_range), movie_id),
+        "rooms": occupancy_by_room(filter_rows(all_rows, movie_id=movie_id, date_range=selected_range)),
         "time_slots": time_slots,
         "insights": decision_insights(summary, movies, time_slots),
-        "presale": presale(now),
+        "presale": presale(now, movie_id, room_id, selected_range),
+        "selected_movie": movie,
+        "selected_room": room,
+        "selected_revenue_date": selected_column["date"] if selected_column else None,
     }
+    add_filter_links(dashboard)
+    return dashboard
+
+
+def selected_object(model, value):
+    try:
+        value = int(value)
+    except (ValueError, TypeError):
+        return None
+    if not 0 < value <= 9223372036854775807:
+        return None
+    return model.objects.filter(pk=value).first()
+
+
+def filter_rows(rows, movie_id=None, room_id=None, date_range=None):
+    return [
+        row for row in rows
+        if (not movie_id or row["screening"].movie_id == movie_id)
+        and (not room_id or row["screening"].room_id == room_id)
+        and (not date_range or date_range[0] <= row["starts_at"] < date_range[1])
+    ]
+
+
+def add_filter_links(dashboard):
+    params = {}
+    if dashboard["has_custom_range"]:
+        for key in ("date_from", "date_to"):
+            if dashboard[key]:
+                params[key] = dashboard[key].isoformat()
+    else:
+        params["period"] = dashboard["period"]
+    dashboard["clear_filters_url"] = "?" + urlencode(params)
+    selected = {
+        "movie": str(dashboard["selected_movie"].pk) if dashboard["selected_movie"] else None,
+        "room": str(dashboard["selected_room"].pk) if dashboard["selected_room"] else None,
+        "revenue_date": dashboard["selected_revenue_date"].isoformat() if dashboard["selected_revenue_date"] else None,
+    }
+    params.update({key: value for key, value in selected.items() if value})
+
+    def link(key, value):
+        updated = dict(params)
+        if value is None or selected.get(key) == str(value):
+            updated.pop(key, None)
+        else:
+            updated[key] = str(value)
+        return "?" + urlencode(updated)
+
+    for period in dashboard["periods"]:
+        period["url"] = "?" + urlencode({
+            "period": period["key"],
+            **{key: selected[key] for key in ("movie", "room") if selected[key]},
+        })
+    for key, items, object_key in (
+        ("movie", dashboard["movies"], "movie"),
+        ("room", dashboard["rooms"], "room"),
+    ):
+        for item in items:
+            value = str(item[object_key].pk)
+            item["filter_url"] = link(key, value)
+            item["is_selected"] = value == selected[key]
+            item["is_muted"] = bool(selected[key]) and not item["is_selected"]
+    if dashboard["revenue"]:
+        for column in dashboard["revenue"]["columns"]:
+            value = column["date"].isoformat()
+            column["filter_url"] = link("revenue_date", value)
+            column["is_selected"] = value == selected["revenue_date"]
+            column["is_muted"] = bool(selected["revenue_date"]) and not column["is_selected"]
+
+    dashboard["active_filters"] = []
+    for key, label, icon, value in (
+        ("movie", "Película", "clapperboard", dashboard["selected_movie"]),
+        ("room", "Sala", "armchair", dashboard["selected_room"]),
+        ("revenue_date", "Fecha de función", "calendar-days", dashboard["selected_revenue_date"]),
+    ):
+        if value is not None:
+            if key == "movie":
+                text = value.title
+            elif key == "room":
+                text = value.name
+            else:
+                granularity = dashboard["revenue"]["granularity"]
+                text = date_format(value, "F Y" if granularity == "month" else "d/m/Y")
+                if granularity == "week":
+                    text = "Semana del " + text
+            dashboard["active_filters"].append({
+                "key": key, "label": label, "value": text,
+                "icon": icon, "remove_url": link(key, None),
+            })
 
 
 def resolve_period(period):
@@ -171,7 +297,6 @@ def first_date(rows):
 
 
 def css_percentage(value):
-    # Se formatea acá para que la localización de la plantilla no use coma decimal en el CSS.
     return f"{max(min(value, 100), 0):.2f}%"
 
 
@@ -235,10 +360,10 @@ def grouping_key(date, granularity):
     return date
 
 
-def revenue_series(rows, start, today):
-    if not rows:
+def revenue_series(rows, start, today, axis_start=None):
+    if not rows and axis_start is None:
         return None
-    start = timezone.localdate(start) if start else first_date(rows)
+    start = timezone.localdate(start) if start else axis_start or first_date(rows)
     total_days = (today - start).days + 1
     if total_days <= 31:
         granularity, advance = "day", lambda date: date + timedelta(days=1)
@@ -278,7 +403,6 @@ def revenue_series(rows, start, today):
                 **data,
                 "height_css": css_percentage(percentage(data["revenue"], top)),
                 "show_label": index % skip == 0,
-                # On small screens, hide every other axis label.
                 "secondary_label": index % skip == 0 and (index // skip) % 2 == 1,
                 "is_peak": is_peak,
             }
@@ -293,7 +417,7 @@ def revenue_series(rows, start, today):
     }
 
 
-def top_movies(rows):
+def top_movies(rows, selected_id=None):
     by_movie = {}
     for row in rows:
         movie = row["screening"].movie
@@ -315,7 +439,11 @@ def top_movies(rows):
     ranking = sorted(
         (data for data in by_movie.values() if data["sold"]),
         key=lambda data: (-data["sold"], -data["revenue"], data["movie"].title),
-    )[:TOP_MOVIES]
+    )
+    selected = next((data for data in ranking if data["movie"].pk == selected_id), None)
+    ranking = ranking[:TOP_MOVIES]
+    if selected and selected not in ranking:
+        ranking.append(selected)
     for data in ranking:
         data["width_css"] = css_percentage(percentage(data["sold"], ranking[0]["sold"]))
     return ranking
@@ -343,14 +471,26 @@ def time_slot_label(minutes):
     return f"{minutes // 60:02d}:{minutes % 60:02d}"
 
 
-def demand_by_purchase_time(start, end):
-    """Aggregate demand by when tickets were bought, not when a screening starts."""
+def filter_screenings(screenings, movie_id=None, room_id=None, date_range=None):
+    if movie_id:
+        screenings = screenings.filter(movie_id=movie_id)
+    if room_id:
+        screenings = screenings.filter(room_id=room_id)
+    if date_range:
+        screenings = screenings.filter(starts_at__gte=date_range[0], starts_at__lt=date_range[1])
+    return screenings
+
+
+def demand_by_purchase_time(start, end, movie_id=None, room_id=None, date_range=None):
     purchases = TicketPurchase.objects.filter(
         screening__status__in=PURCHASED_STATUSES,
         created_at__lt=end,
     )
     if start is not None:
         purchases = purchases.filter(created_at__gte=start)
+    if movie_id or room_id or date_range:
+        screenings = filter_screenings(Screening.objects.all(), movie_id, room_id, date_range)
+        purchases = purchases.filter(screening__in=screenings.values("pk"))
 
     current_timezone = timezone.get_current_timezone()
     grouped_purchases = (
@@ -366,10 +506,8 @@ def demand_by_purchase_time(start, end):
 
 
 def purchase_time_slots(grouped_purchases):
-    """Build a Monday-to-Sunday heatmap in thirty-minute purchase windows."""
     slots = {}
     for purchase in grouped_purchases:
-        # ExtractWeekDay follows Django's convention: Sunday=1, Monday=2.
         day = (int(purchase["weekday"]) + 5) % 7
         hour = int(purchase["hour"])
         minute = (int(purchase["minute"]) // TIME_SLOT_MINUTES) * TIME_SLOT_MINUTES
@@ -394,7 +532,6 @@ def purchase_time_slots(grouped_purchases):
 
     maximum = max(data["tickets"] for data in slots.values())
     for data in slots.values():
-        # Blocks with purchases start at 18% so they are distinct from empty ones.
         intensity = 18 + 82 * data["tickets"] / maximum if data["tickets"] else 0
         data["intensity_css"] = css_percentage(intensity)
 
@@ -403,10 +540,17 @@ def purchase_time_slots(grouped_purchases):
         max(minutes for _day, minutes in slots) + TIME_SLOT_MINUTES,
         TIME_SLOT_MINUTES,
     )
+    label_interval = 2 if len(time_blocks) <= 16 else 4
     return {
         "time_blocks": [
-            {"minutes": minutes, "label": time_slot_label(minutes)}
-            for minutes in time_blocks
+            {
+                "minutes": minutes,
+                "label": time_slot_label(minutes),
+                "show_label": index == 0 or (
+                    index >= 2 and minutes % (TIME_SLOT_MINUTES * label_interval) == 0
+                ),
+            }
+            for index, minutes in enumerate(time_blocks)
         ],
         "days": [
             {
@@ -438,7 +582,6 @@ def purchase_time_slots(grouped_purchases):
 
 
 def decision_insights(summary, movies, time_slots):
-    """Surface the signals a manager can act on before reading each chart."""
     insights = []
     if movies:
         movie = movies[0]
@@ -482,11 +625,11 @@ def decision_insights(summary, movies, time_slots):
     return insights
 
 
-def presale(now):
-    screenings = Screening.objects.filter(
+def presale(now, movie_id=None, room_id=None, date_range=None):
+    screenings = filter_screenings(Screening.objects.filter(
         status=Screening.Status.PUBLISHED,
         starts_at__gte=now,
-    )
+    ), movie_id, room_id, date_range)
     sales = TicketPurchase.objects.filter(screening__in=screenings.values("pk")).aggregate(
         sold=Sum("quantity"),
         revenue=Sum("total"),

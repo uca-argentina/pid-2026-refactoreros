@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    # Historical room and screening data migrations use the Spanish fields.
     dependencies = [
         ("seat_types", "0002_seed_default_seat_types"),
         ("tickets", "0009_purchaserefund_read_at"),

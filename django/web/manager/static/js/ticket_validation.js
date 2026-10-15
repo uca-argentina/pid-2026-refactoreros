@@ -232,7 +232,6 @@
     try {
       window.localStorage.setItem(CAMERA_STORAGE_KEY, deviceId);
     } catch (_error) {
-      // The scanner still works when browser storage is unavailable.
     }
   }
 
@@ -240,7 +239,6 @@
     try {
       window.localStorage.removeItem(CAMERA_STORAGE_KEY);
     } catch (_error) {
-      // The scanner still works when browser storage is unavailable.
     }
   }
 
@@ -259,11 +257,8 @@
       );
       if (rearCamera) return rearCamera.deviceId;
 
-      // Before camera permission, browsers usually hide device labels. In that
-      // case let getUserMedia select the rear-facing camera when available.
       if (!cameras.some(camera => camera.label)) return '';
 
-      // Otherwise preserve the first camera in the picker as the fallback.
       return cameras[0]?.deviceId || '';
     } catch (_error) {
       return '';
@@ -281,8 +276,6 @@
     context.drawImage(source, 0, 0, canvas.width, canvas.height);
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
     return window.jsQR(pixels.data, pixels.width, pixels.height, {
-      // Tickets use a dark QR over a light background. Avoiding the inverted
-      // pass halves the decoder work for every captured frame.
       inversionAttempts: 'dontInvert',
     });
   }
@@ -329,7 +322,6 @@
         ...(requestedDeviceId
           ? { deviceId: { exact: requestedDeviceId } }
           : { facingMode: { ideal: 'environment' } }),
-        // Avoid opening a 4K stream only to downscale it into the scan canvas.
         width: { ideal: 1280, max: 1920 },
         height: { ideal: 720, max: 1080 },
       };

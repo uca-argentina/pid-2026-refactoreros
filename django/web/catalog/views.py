@@ -204,7 +204,6 @@ def screening_detail_view(request, pk):
 
 
 def _error_page(request, status, title, description, eyebrow):
-    """Render project error pages without relying on the normal navigation."""
     try:
         cinema = CinemaSettings.current()
     except Exception:

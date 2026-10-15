@@ -221,9 +221,6 @@ function applyReservationState(seatMap, payload) {
   markUnavailableSeats(seatMap, payload.unavailable);
   const ownReserved = new Set((payload.reserved || []).map((reservation) => reservation.label));
   seatMap?.querySelectorAll("button.client-seat").forEach((seat) => {
-    // Keep the optimistic selection while its reserve/release request is in flight.
-    // A polling response can otherwise still contain the previous reservation and
-    // briefly paint a just-released seat as selected again.
     if (seat.classList.contains("is-pending")) {
       return;
     }
@@ -251,7 +248,6 @@ async function syncSeatStatus(seatMap) {
     const payload = await response.json();
     applyReservationState(seatMap, payload);
   } catch (_error) {
-    // La recarga automática no debe romper la selección si el servidor se reinicia.
     return;
   }
 }

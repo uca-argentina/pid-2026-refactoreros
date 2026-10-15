@@ -214,8 +214,6 @@
         });
       }
 
-      // La tabla tiene overflow-x: auto, así que el menú se posiciona "fixed"
-      // respecto de la ventana para que no quede recortado.
       function placeMenu(menu) {
         const trigger = menu.querySelector("summary").getBoundingClientRect();
         const list = menu.querySelector(".row-menu-list");

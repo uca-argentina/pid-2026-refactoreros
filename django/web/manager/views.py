@@ -189,6 +189,9 @@ class DashboardView(ManagerRequiredMixin, TemplateView):
             self.request.GET.get("period"),
             date_from=None if date_filter_error else date_from,
             date_to=None if date_filter_error else date_to,
+            movie_id=self.request.GET.get("movie"),
+            room_id=self.request.GET.get("room"),
+            revenue_date=self.request.GET.get("revenue_date"),
         )
         context["date_filter_error"] = date_filter_error
         return context

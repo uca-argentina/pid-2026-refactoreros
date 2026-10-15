@@ -247,7 +247,6 @@ class Screening(models.Model):
 
     @classmethod
     def finalize_expired(cls):
-        """Advance started screenings and finish those whose runtime has elapsed."""
         now = timezone.now()
         candidates = cls.objects.filter(
             status__in=(cls.Status.SCHEDULED, cls.Status.PUBLISHED, cls.Status.IN_PROGRESS),

@@ -1258,8 +1258,6 @@ body {
   }
 }
 
-/* Tablets use the same stable two-level navigation as mobile.  The centered
-   desktop capsule needs considerably more room once account controls exist. */
 @media (min-width: 861px) and (max-width: 900px) {
   .client-page {
     padding-top: 0;
@@ -2045,8 +2043,6 @@ body {
   color: #c0392b;
 }
 
-/* Single responsive header layout.  Keep all navigation inside the sticky
-   header on touch devices; fixed child navigation was fragile in tablets. */
 @media (max-width: 1100px) {
   .client-page {
     padding-top: 0;
@@ -2172,8 +2168,6 @@ body {
   }
 }
 
-/* Compact desktop: preserve the single-row composition before changing to the
-   tablet layout. Secondary labels are the first things to collapse. */
 @media (min-width: 1101px) and (max-width: 1400px) {
   .client-header {
     grid-template-columns: minmax(140px, 1fr) auto minmax(0, 1fr);

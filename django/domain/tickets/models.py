@@ -17,28 +17,19 @@ TICKET_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 
 def generate_ticket_code():
-    """Legacy migration default for the former plaintext code column."""
     return "".join(secrets.choice(TICKET_CODE_ALPHABET) for _ in range(6))
 
 
 def generate_ticket_token():
-    """Persistent random source for the reservation code, independent from IDs."""
     return secrets.token_urlsafe(24)
 
 
 def reservation_code_for_token(token):
-    """Return a stable, human-readable code for a persisted purchase token.
-
-    The token is already random and unique.  Deriving the short display code
-    from it (rather than from ``SECRET_KEY``) keeps existing tickets usable
-    after a routine Django secret-key rotation.
-    """
     digest = hashlib.sha256(f"ticket-reservation-code:{token}".encode()).digest()
     return "".join(TICKET_CODE_ALPHABET[byte % len(TICKET_CODE_ALPHABET)] for byte in digest[:6])
 
 
 def reservation_code_digest(code):
-    """Indexed server-side representation of a short reservation code."""
     return hashlib.sha256(
         f"ticket-reservation-lookup:{code.upper()}".encode()
     ).hexdigest()
@@ -89,7 +80,6 @@ class TicketPurchase(models.Model):
 
     @property
     def seat_pricing_snapshot(self):
-        """Immutable per-seat prices captured when the purchase was made."""
         seats = []
         for selected_seat in self.selected_seats or []:
             if not isinstance(selected_seat, dict):
@@ -424,8 +414,6 @@ class TicketPurchase(models.Model):
             except IntegrityError:
                 if not creating:
                     raise
-                # A short code collision is unlikely but must not fail a sale.
-                # The database constraint also covers concurrent purchases.
                 collision = TicketPurchase.objects.filter(
                     models.Q(validation_token=self.validation_token)
                     | models.Q(validation_code_digest=self.validation_code_digest)
@@ -460,7 +448,6 @@ class AdmissionTicket(models.Model):
 
 
 class AdmissionValidation(models.Model):
-    """An operator's reversible, auditable admission action."""
 
     purchase = models.ForeignKey(TicketPurchase, on_delete=models.CASCADE, related_name="admission_validations")
     operator = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL,

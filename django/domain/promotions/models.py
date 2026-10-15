@@ -92,7 +92,6 @@ class Promotion(models.Model):
         return ", ".join(seat_type.name for seat_type in seat_types) or "Todos los tipos"
 
     def applies_to(self, seat_type_id, screening_starts_at):
-        """Return whether this rule applies to a seat in the scheduled screening."""
         if not self.is_active:
             return False
 

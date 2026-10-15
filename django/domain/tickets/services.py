@@ -30,9 +30,6 @@ def normalize_purchase_credential(value):
     if value.startswith("BC2:"):
         value = value[4:]
     if re.fullmatch(r"[A-Za-z2-9]{6}", value):
-        # The short, human-entered reservation code is intentionally
-        # case-insensitive. Store/query its canonical uppercase form so the
-        # unique indexed lookup stays fast.
         return value.upper()
     if not re.fullmatch(r"[A-Za-z0-9_-]{32}", value):
         raise ValidationError("El código de entrada no es válido.")
@@ -78,8 +75,6 @@ def validate_ticket(code, operator, quantity=None, ticket_numbers=None):
         if len(selected_numbers) != len(set(selected_numbers)):
             raise ValidationError("No podés validar la misma butaca más de una vez.")
     else:
-        # Compatibility for service callers; the operator UI always sends the
-        # specific seats selected for admission.
         try:
             quantity = int(quantity or 1)
         except (TypeError, ValueError):
@@ -91,8 +86,6 @@ def validate_ticket(code, operator, quantity=None, ticket_numbers=None):
     if candidate is None:
         raise ValidationError("No encontramos una entrada con ese código.")
     with transaction.atomic():
-        # Same lock order as sales/cancellation: screening first, then ticket.
-        # Serializes simultaneous scans and cancellation against admissions.
         screening = Screening.objects.select_for_update().filter(pk=candidate.screening_id).first()
         if screening is None:
             raise ValidationError("La función no existe.")
@@ -117,7 +110,6 @@ def validate_ticket(code, operator, quantity=None, ticket_numbers=None):
             raise ValidationError("Las entradas disponibles cambiaron. Volvé a consultar la compra.")
         now = timezone.now()
         AdmissionTicket.objects.filter(pk__in=[ticket.pk for ticket in tickets]).update(used_at=now, used_by=operator)
-        # Preserve the existing sold-seat audit used by older admin/reporting.
         SeatPurchase.objects.filter(purchase=purchase, label__in=[ticket.seat_label for ticket in tickets],
                                     used_at__isnull=True).update(used_at=now)
         validation = AdmissionValidation.objects.create(purchase=purchase, operator=operator)
@@ -158,7 +150,6 @@ def undo_ticket_validation(validation_id, operator):
 
 
 def refund_canceled_screening(screening):
-    """Caller holds the screening lock. One refund and in-app notice per purchase."""
     refund_ids = []
     for purchase in TicketPurchase.objects.filter(screening=screening):
         notice = (
@@ -177,11 +168,6 @@ def refund_canceled_screening(screening):
 
 
 def enqueue_refund_notifications(refund_ids):
-    """Deliver the persisted outbox outside the HTTP request.
-
-    A restart can interrupt this best-effort thread, but unsent rows remain in the
-    outbox and can be retried with the management command.
-    """
     if not refund_ids:
         return
     Thread(
@@ -193,7 +179,6 @@ def enqueue_refund_notifications(refund_ids):
 
 
 def send_refund_notifications(refund_ids=None):
-    """Retryable outbox: SMTP failure never undoes a cancellation/refund."""
     pending = PurchaseRefund.objects.filter(email_sent_at__isnull=True)
     if refund_ids is not None:
         pending = pending.filter(pk__in=refund_ids)

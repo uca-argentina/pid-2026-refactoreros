@@ -6,22 +6,28 @@
 {% endblock %}
 
 {% block content %}
+  <p id="dashboard-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+  <div id="dashboard-content" data-dashboard>
   {% with summary=dashboard.summary deltas=dashboard.deltas %}
     <section class="page-heading dashboard-heading">
       <div>
         <h1>Dashboard</h1>
+        <p>Explorá los resultados de tu cine, una selección a la vez.</p>
       </div>
     </section>
 
     <nav class="period-filter" aria-label="Período del dashboard">
       <div class="period-options">
         {% for period in dashboard.periods %}
-          <a href="?period={{ period.key }}" class="period-option{% if period.active %} is-active{% endif %}"{% if period.active %} aria-current="page"{% endif %}>
+          <a href="{{ period.url }}" data-dashboard-link class="period-option{% if period.active %} is-active{% endif %}"{% if period.active %} aria-current="page"{% endif %}>
             <span>{% if period.key != "todo" %}<span class="period-option-prefix">Últimos </span>{% endif %}{{ period.label }}</span>
           </a>
         {% endfor %}
       </div>
-      <form class="dashboard-date-filter" method="get">
+      <form class="dashboard-date-filter" method="get" data-dashboard-form>
+        {% if not dashboard.has_custom_range %}<input type="hidden" name="period" value="{{ dashboard.period }}">{% endif %}
+        {% if dashboard.selected_movie %}<input type="hidden" name="movie" value="{{ dashboard.selected_movie.pk }}">{% endif %}
+        {% if dashboard.selected_room %}<input type="hidden" name="room" value="{{ dashboard.selected_room.pk }}">{% endif %}
         <label>
           <span>Desde</span>
           <input type="date" name="date_from" value="{% if dashboard.date_from %}{{ dashboard.date_from|date:'Y-m-d' }}{% endif %}">
@@ -31,7 +37,7 @@
           <input type="date" name="date_to" value="{% if dashboard.date_to %}{{ dashboard.date_to|date:'Y-m-d' }}{% endif %}">
         </label>
         <button type="submit">Aplicar</button>
-        {% if dashboard.has_custom_range %}<a href="{% url 'manager:dashboard' %}">Limpiar</a>{% endif %}
+        {% if dashboard.has_custom_range %}<a href="{{ dashboard.periods.1.url }}" data-dashboard-link>Limpiar fechas</a>{% endif %}
       </form>
       <p class="period-range">
         <i data-lucide="calendar-range" aria-hidden="true"></i>
@@ -42,6 +48,38 @@
       </p>
       {% if date_filter_error %}<p class="dashboard-date-filter-error">{{ date_filter_error }}</p>{% endif %}
     </nav>
+
+    <section class="dashboard-explorer{% if dashboard.active_filters %} has-filters{% endif %}" aria-label="Filtros visuales">
+      <div class="explorer-heading">
+        <span class="explorer-icon"><i data-lucide="sliders-horizontal" aria-hidden="true"></i></span>
+        <div>
+          <strong>{% if dashboard.active_filters %}Vista filtrada <span class="filter-count">{{ dashboard.active_filters|length }}</span>{% else %}Explorá el dashboard{% endif %}</strong>
+          <p>{% if dashboard.active_filters %}Los indicadores reflejan tu selección. Combiná filtros para profundizar.{% else %}Hacé clic en una película, una sala o una barra de recaudación para filtrar.{% endif %}</p>
+        </div>
+      </div>
+      {% if dashboard.active_filters %}
+        <a class="dashboard-clear" href="{{ dashboard.clear_filters_url }}" data-dashboard-link data-focus-key="clear-filters">
+          <i data-lucide="rotate-ccw" aria-hidden="true"></i>Borrar filtros
+        </a>
+        <div class="dashboard-filter-chips" aria-label="Filtros activos">
+          {% for filter in dashboard.active_filters %}
+            <a class="dashboard-filter-chip" href="{{ filter.remove_url }}" data-dashboard-link data-focus-key="chip-{{ filter.key }}" aria-label="Quitar filtro {{ filter.label }}: {{ filter.value }}">
+              <i data-lucide="{{ filter.icon }}" aria-hidden="true"></i>
+              <span><span class="filter-chip-label">{{ filter.label }}:</span> {{ filter.value }}</span>
+              <i data-lucide="x" class="filter-chip-remove" aria-hidden="true"></i>
+            </a>
+          {% endfor %}
+          <span class="filter-scope-note">Se conserva el período elegido</span>
+        </div>
+      {% endif %}
+    </section>
+
+    {% if dashboard.active_filters and not summary.screenings %}
+      <div class="dashboard-no-results" role="note">
+        <i data-lucide="search-x" aria-hidden="true"></i>
+        <div><strong>No hay funciones realizadas para esta selección</strong><p>Probá con otra película, sala o fecha, o borrá los filtros para volver a la vista general.</p></div>
+      </div>
+    {% endif %}
 
     <section class="kpi-grid" aria-label="Indicadores del período">
       <article class="kpi-card">
@@ -91,9 +129,10 @@
             <h2>Recaudación</h2>
             <p>
               {% if dashboard.revenue.granularity == "week" %}Por semana{% elif dashboard.revenue.granularity == "month" %}Por mes{% else %}Por día{% endif %}
-              de función
+              de función{% if dashboard.selected_revenue_date %} · contexto del período{% endif %}
             </p>
           </div>
+          <span class="viz-interaction-hint"><i data-lucide="mouse-pointer-2" aria-hidden="true"></i>Filtrar por fecha</span>
         </header>
 
         {% with serie=dashboard.revenue %}
@@ -108,23 +147,25 @@
                 {% for tick in serie.ticks %}
                   <span class="column-chart-grid{% if forloop.first %} is-baseline{% endif %}" style="bottom: {{ tick.position_css }}" aria-hidden="true"></span>
                 {% endfor %}
-                <div class="column-chart-bars" style="--columns: {{ serie.columns|length }}" role="list" aria-label="Recaudación por período">
+                <div class="column-chart-bars" style="--columns: {{ serie.columns|length }}" role="group" aria-label="Recaudación por período; seleccioná una barra para filtrar por fecha">
                   {% for column in serie.columns %}
-                    <div
-                      class="column-slot"
-                      role="listitem"
-                      tabindex="0"
+                    <a
+                      class="column-slot{% if column.is_selected %} is-selected{% elif column.is_muted %} is-muted{% endif %}"
+                      href="{{ column.filter_url }}"
+                      data-dashboard-link
+                      data-focus-key="revenue-{{ column.date|date:'Y-m-d' }}"
+                      {% if column.is_selected %}aria-current="true"{% endif %}
                       data-tip-title="{% if serie.granularity == 'week' %}Semana del {{ column.date|date:'d/m/Y' }}{% elif serie.granularity == 'month' %}{{ column.date|date:'F Y' }}{% else %}{{ column.date|date:'l d/m' }}{% endif %}"
                       data-tip-value="${{ column.revenue|floatformat:'0g' }}"
                       data-tip-meta="{{ column.sold }} {{ column.sold|pluralize:'entrada,entradas' }} · {{ column.screenings }} {{ column.screenings|pluralize:'función,funciones' }}"
-                      aria-label="{% if serie.granularity == 'week' %}Semana del {{ column.date|date:'d/m/Y' }}{% elif serie.granularity == 'month' %}{{ column.date|date:'F Y' }}{% else %}{{ column.date|date:'l d/m' }}{% endif %}: ${{ column.revenue|floatformat:'0g' }}"
+                      aria-label="{% if column.is_selected %}Quitar filtro:{% else %}Filtrar por{% endif %} {% if serie.granularity == 'week' %}semana del {{ column.date|date:'d/m/Y' }}{% elif serie.granularity == 'month' %}{{ column.date|date:'F Y' }}{% else %}{{ column.date|date:'l d/m' }}{% endif %}: ${{ column.revenue|floatformat:'0g' }}"
                     >
                       <span class="column-bar" style="height: {{ column.height_css }}">
                         {% if column.is_peak %}
                           <span class="column-peak{% if forloop.counter <= 2 %} is-start{% elif forloop.revcounter <= 2 %} is-end{% endif %}">${{ column.revenue|floatformat:"0g" }}</span>
                         {% endif %}
                       </span>
-                    </div>
+                    </a>
                   {% endfor %}
                 </div>
               </div>
@@ -249,18 +290,21 @@
         <header class="viz-header">
           <div>
             <h2>Películas más vistas</h2>
-            <p>Ranking por entradas vendidas</p>
+            <p>Ranking por entradas vendidas{% if dashboard.selected_movie %} · contexto de películas{% endif %}</p>
           </div>
+          <span class="viz-interaction-hint"><i data-lucide="mouse-pointer-2" aria-hidden="true"></i>Filtrar por película</span>
         </header>
 
         {% if dashboard.movies %}
           <ol class="bar-list">
             {% for data in dashboard.movies %}
               <li class="bar-item">
+                <a class="bar-select{% if data.is_selected %} is-selected{% elif data.is_muted %} is-muted{% endif %}" href="{{ data.filter_url }}" data-dashboard-link data-focus-key="movie-{{ data.movie.pk }}" {% if data.is_selected %}aria-current="true"{% endif %} aria-label="{% if data.is_selected %}Quitar filtro de película:{% else %}Filtrar por película:{% endif %} {{ data.movie.title }}">
                 <div class="bar-item-head">
                   <span class="bar-item-rank">{{ forloop.counter }}</span>
                   <span class="bar-item-name">{{ data.movie.title }}</span>
                   <strong class="bar-item-value">{{ data.sold|floatformat:"0g" }}</strong>
+                  <span class="bar-select-indicator" aria-hidden="true"><i data-lucide="{% if data.is_selected %}check{% else %}plus{% endif %}"></i></span>
                 </div>
                 <div class="bar-track"><span class="bar-fill" style="width: {{ data.width_css }}"></span></div>
                 <span class="bar-item-meta">
@@ -268,6 +312,7 @@
                   · {{ data.screenings }} {{ data.screenings|pluralize:"función,funciones" }}
                   · {{ data.used }} {{ data.used|pluralize:"utilizada,utilizadas" }}
                 </span>
+                </a>
               </li>
             {% endfor %}
           </ol>
@@ -286,23 +331,27 @@
         <header class="viz-header">
           <div>
             <h2>Ocupación por sala</h2>
-            <p>Butacas vendidas sobre capacidad</p>
+            <p>Butacas vendidas sobre capacidad{% if dashboard.selected_room %} · contexto de salas{% endif %}</p>
           </div>
+          <span class="viz-interaction-hint"><i data-lucide="mouse-pointer-2" aria-hidden="true"></i>Filtrar por sala</span>
         </header>
 
         {% if dashboard.rooms %}
           <ol class="bar-list">
             {% for data in dashboard.rooms %}
               <li class="bar-item">
+                <a class="bar-select{% if data.is_selected %} is-selected{% elif data.is_muted %} is-muted{% endif %}" href="{{ data.filter_url }}" data-dashboard-link data-focus-key="room-{{ data.room.pk }}" {% if data.is_selected %}aria-current="true"{% endif %} aria-label="{% if data.is_selected %}Quitar filtro de sala:{% else %}Filtrar por sala:{% endif %} {{ data.room.name }}">
                 <div class="bar-item-head">
                   <span class="bar-item-name">{{ data.room.name }}</span>
                   <strong class="bar-item-value">{{ data.occupancy|floatformat:"-1" }}%</strong>
+                  <span class="bar-select-indicator" aria-hidden="true"><i data-lucide="{% if data.is_selected %}check{% else %}plus{% endif %}"></i></span>
                 </div>
                 <div class="bar-track is-meter"><span class="bar-fill" style="width: {{ data.width_css }}"></span></div>
                 <span class="bar-item-meta">
                   {{ data.sold|floatformat:"0g" }} de {{ data.capacity|floatformat:"0g" }} butacas
                   · {{ data.screenings }} {{ data.screenings|pluralize:"función,funciones" }}
                 </span>
+                </a>
               </li>
             {% endfor %}
           </ol>
@@ -311,23 +360,23 @@
             <i data-lucide="armchair" aria-hidden="true"></i>
             <div>
               <h3>Sin funciones realizadas</h3>
-              <p>La ocupación se calcula sobre las funciones publicadas que ya empezaron.</p>
+              <p>La ocupación se calcula sobre las funciones finalizadas de la selección actual.</p>
             </div>
           </div>
         {% endif %}
       </article>
     </section>
 
-    <section class="panel-section viz-card">
+    <section class="panel-section viz-card demand-card">
       <header class="viz-header">
         <div>
           <h2>Demanda de compra</h2>
-          <p>Entradas compradas por día y bloque de 30 minutos</p>
+          <p>Descubrí qué días y horarios concentran las compras de entradas.</p>
         </div>
         {% if dashboard.time_slots %}
           <div class="heatmap-scale" aria-hidden="true">
             <span>Menos</span>
-            <span class="heatmap-scale-ramp"></span>
+            <span class="heatmap-scale-steps"><span></span><span></span><span></span><span></span><span></span></span>
             <span>Más</span>
           </div>
         {% endif %}
@@ -336,46 +385,56 @@
       {% with time_slots=dashboard.time_slots %}
         {% if time_slots %}
           <div class="heatmap-layout">
-            <div class="heatmap-scroll">
-              <div class="heatmap" style="--blocks: {{ time_slots.time_blocks|length }}" role="list" aria-label="Entradas compradas por día y bloque de media hora">
-                <span class="heatmap-corner" aria-hidden="true"></span>
-                {% for block in time_slots.time_blocks %}
-                  <span class="heatmap-hour" aria-hidden="true">{{ block.label }}</span>
-                {% endfor %}
-                {% for day in time_slots.days %}
-                  <span class="heatmap-day" aria-hidden="true">{{ day.short_day }}</span>
-                  {% for slot in day.slots %}
-                    {% if slot.purchases %}
-                      <span
-                        class="heatmap-cell"
-                        role="listitem"
-                        tabindex="0"
-                        style="--level: {{ slot.intensity_css }}"
-                        data-tip-title="{{ slot.day }} · {{ slot.label }}"
-                        data-tip-value="{{ slot.tickets }} {{ slot.tickets|pluralize:'entrada,entradas' }}"
-                        data-tip-meta="{{ slot.purchases }} {{ slot.purchases|pluralize:'compra,compras' }} de entradas"
-                        aria-label="{{ slot.day }} {{ slot.label }}: {{ slot.tickets }} entradas en {{ slot.purchases }} compras"
-                      ></span>
-                    {% else %}
-                      <span class="heatmap-cell is-empty" aria-hidden="true"></span>
-                    {% endif %}
-                  {% endfor %}
-                {% endfor %}
+            <div class="heatmap-chart">
+              <div class="heatmap-caption">
+                <span><i data-lucide="clock-3" aria-hidden="true"></i>Cada celda representa 30 minutos</span>
+                <span class="heatmap-total"><strong>{{ time_slots.total_tickets|floatformat:"0g" }}</strong> entradas · {{ time_slots.total_purchases }} {{ time_slots.total_purchases|pluralize:"compra,compras" }}</span>
               </div>
+              <div class="heatmap-scroll" tabindex="0" role="region" aria-label="Mapa semanal de compras; desplazá horizontalmente para ver todos los horarios">
+                <div class="heatmap" style="--blocks: {{ time_slots.time_blocks|length }}" role="list" aria-label="Entradas compradas por día y bloque de media hora">
+                  <span class="heatmap-corner" aria-hidden="true">Día</span>
+                  {% for block in time_slots.time_blocks %}
+                    <span class="heatmap-hour" aria-hidden="true">{% if block.show_label %}{{ block.label }}{% endif %}</span>
+                  {% endfor %}
+                  {% for day in time_slots.days %}
+                    <span class="heatmap-day" aria-hidden="true">{{ day.short_day }}</span>
+                    {% for slot in day.slots %}
+                      {% if slot.purchases %}
+                        <span
+                          class="heatmap-cell"
+                          role="listitem"
+                          tabindex="0"
+                          style="--level: {{ slot.intensity_css }}"
+                          data-tip-title="{{ slot.day }} · {{ slot.label }}"
+                          data-tip-value="{{ slot.tickets }} {{ slot.tickets|pluralize:'entrada,entradas' }}"
+                          data-tip-meta="{{ slot.purchases }} {{ slot.purchases|pluralize:'compra,compras' }} de entradas"
+                          aria-label="{{ slot.day }} {{ slot.label }}: {{ slot.tickets }} entradas en {{ slot.purchases }} compras"
+                        ></span>
+                      {% else %}
+                        <span class="heatmap-cell is-empty" aria-hidden="true"></span>
+                      {% endif %}
+                    {% endfor %}
+                  {% endfor %}
+                </div>
+              </div>
+              <p class="heatmap-help">
+                <span><i data-lucide="info" aria-hidden="true"></i>El color indica la cantidad de entradas de cada bloque.</span>
+                <span class="heatmap-pan-hint" data-heatmap-overflow-hint hidden><i data-lucide="move-horizontal" aria-hidden="true"></i>Deslizá para ver más horarios</span>
+              </p>
             </div>
 
             <div class="peak-panel">
-              <p class="viz-note">{{ time_slots.total_tickets }} entradas en {{ time_slots.total_purchases }} {{ time_slots.total_purchases|pluralize:"compra,compras" }} registradas en este período.</p>
-              <h3>Bloques con más compras</h3>
+              <h3><i data-lucide="trending-up" aria-hidden="true"></i>Horarios destacados <span>Mayor cantidad de entradas compradas</span></h3>
               {% if time_slots.top %}
                 <ol class="peak-list">
                   {% for slot in time_slots.top %}
                     <li>
                       <span class="peak-rank">{{ forloop.counter }}</span>
                       <div>
-                        <strong>{{ slot.day }} · {{ slot.label }}</strong>
-                        <span>{{ slot.tickets|floatformat:"0g" }} entradas · {{ slot.purchases }} {{ slot.purchases|pluralize:"compra,compras" }}</span>
+                        <span class="peak-day">{{ slot.day }}</span>
+                        <strong>{{ slot.label }}</strong>
                       </div>
+                      <div class="peak-metric"><strong>{{ slot.tickets|floatformat:"0g" }} <span>entradas</span></strong><span>{{ slot.purchases }} {{ slot.purchases|pluralize:"compra,compras" }}</span></div>
                     </li>
                   {% endfor %}
                 </ol>
@@ -422,6 +481,7 @@
       {% endwith %}
     </section>
   {% endwith %}
+  </div>
 {% endblock %}
 
 {% block extra_scripts %}

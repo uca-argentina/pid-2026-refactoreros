@@ -25,9 +25,6 @@ RATING_CHOICES = [
 
 
 class Migration(migrations.Migration):
-    # Historical screening and ticket data migrations still access Pelicula
-    # and its Spanish field names. Translate the migration state only after
-    # they have finished.
     dependencies = [
         ("movies", "0001_initial"),
         ("tickets", "0009_purchaserefund_read_at"),

@@ -2,7 +2,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    # Earlier migrations in screenings and tickets still use Sala.
     dependencies = [
         ("rooms", "0007_remove_sala_precio_configuracion"),
         ("tickets", "0009_purchaserefund_read_at"),

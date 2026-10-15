@@ -48,7 +48,6 @@
         showAdmission(payload);
       }
     } catch (_error) {
-      // Silent retry: a status refresh must never interrupt the QR experience.
     } finally {
       polling = false;
     }

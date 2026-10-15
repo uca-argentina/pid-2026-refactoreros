@@ -8,7 +8,6 @@ from domain.users.roles import staff_role
 
 
 def client_navigation(request):
-    """Shared state used by the public-site header on every client page."""
     has_imminent_admission = False
     unread_notifications = 0
     if request.user.is_authenticated:

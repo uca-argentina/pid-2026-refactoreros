@@ -2,11 +2,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    """Align Django's migration state with the English runtime model names.
-
-    The database has always used the legacy Spanish table and column names.
-    Keep that schema intact while recording the Python-level renames.
-    """
 
     dependencies = [("cinema", "0004_configuracioncine_deshacer_validacion_segundos")]
 
