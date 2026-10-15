@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from datetime import timedelta
+
 from django.utils import timezone
 
 from domain.movies.models import Movie
@@ -38,7 +40,7 @@ def crear_funcion(
     return Screening.objects.create(
         movie=movie,
         room=room,
-        starts_at=timezone.now(),
+        starts_at=timezone.now() + timedelta(hours=1),
         ticket_price="1500.00",
         status=status,
     )
@@ -225,7 +227,7 @@ class CatalogFlowTests(TestCase):
         screening = Screening.objects.create(
             movie=movie,
             room=room,
-            starts_at=timezone.now(),
+            starts_at=timezone.now() + timedelta(hours=1),
             ticket_price="1500.00",
             status=Screening.Status.PUBLISHED,
         )
@@ -264,7 +266,7 @@ class CatalogFlowTests(TestCase):
         screening = Screening.objects.create(
             movie=movie,
             room=room,
-            starts_at=timezone.now(),
+            starts_at=timezone.now() + timedelta(hours=1),
             ticket_price="1500.00",
             status=Screening.Status.PUBLISHED,
         )
@@ -296,7 +298,7 @@ class CatalogFlowTests(TestCase):
         screening = Screening.objects.create(
             movie=movie,
             room=room,
-            starts_at=timezone.now(),
+            starts_at=timezone.now() + timedelta(hours=1),
             ticket_price="1500.00",
             status=Screening.Status.PUBLISHED,
             capacity_snapshot=2,

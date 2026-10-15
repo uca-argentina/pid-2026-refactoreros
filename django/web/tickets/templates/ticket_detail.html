@@ -53,9 +53,11 @@
       <section class="ticket-purchase-details" aria-label="Detalle de la compra">
         <h2>Detalle de la compra</h2>
         <dl>
-          <div><dt>Butacas · {{ purchase.quantity }} en total</dt><dd>{{ purchase.seat_labels|default:"Sin asignar" }}</dd></div>
+          <div class="ticket-seat-pricing"><dt>Butacas · {{ purchase.quantity }} en total</dt><dd>{% if purchase.seat_pricing_snapshot %}<ul>{% for seat in purchase.seat_pricing_snapshot %}<li><span>{{ seat.label }}</span><span>{% if seat.saving %}<del>$ {{ seat.base_price|floatformat:2 }}</del>{% endif %}<strong>$ {{ seat.price|floatformat:2 }}</strong></span></li>{% endfor %}</ul>{% else %}{{ purchase.seat_labels|default:"Sin asignar" }}{% endif %}</dd></div>
           <div><dt>Total pagado</dt><dd>$ {{ purchase.total|floatformat:2 }}</dd></div>
+          {% if purchase.savings_snapshot %}<div><dt>Ahorro total</dt><dd class="ticket-savings">$ {{ purchase.savings_snapshot|floatformat:2 }}</dd></div>{% endif %}
           <div><dt>Fecha de pago</dt><dd>{{ purchase.created_at|date:"d/m/Y H:i" }}</dd></div>
+          {% if purchase.promotions_snapshot %}<div class="ticket-promotions"><dt>Promociones aplicadas</dt><dd><ul>{% for promotion in purchase.promotions_snapshot %}<li>{{ promotion }}</li>{% endfor %}</ul></dd></div>{% endif %}
         </dl>
       </section>
     </article>

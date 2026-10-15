@@ -3,6 +3,7 @@ import tempfile
 import json
 from datetime import datetime, timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -744,6 +745,17 @@ class ManagerFuncionesTests(TestCase):
         screening.refresh_from_db()
         self.assertEqual(screening.status, Screening.Status.CANCELED)
 
+    @patch("domain.tickets.services.Thread")
+    def test_cancelacion_encola_correos_fuera_del_request(self, thread):
+        screening = self.crear_funcion(Screening.Status.PUBLISHED)
+        self.vender_entradas(screening)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            self.change_status(screening, Screening.Status.CANCELED)
+
+        thread.assert_called_once()
+        thread.return_value.start.assert_called_once()
+
     def test_funcion_cancelada_no_admite_mas_cambios(self):
         screening = self.crear_funcion(Screening.Status.CANCELED)
 
@@ -809,7 +821,7 @@ class ManagerFuncionesTests(TestCase):
         self.assertRedirects(response, reverse("manager:funciones_list"))
         self.assertEqual(Screening.objects.count(), 2)
 
-    def test_funcion_terminada_pasa_a_finalizada_al_listar(self):
+    def test_funcion_en_proyeccion_permanece_en_lista_y_no_se_puede_cancelar(self):
         # The movie lasts 100 minutes: it started 3 hours ago, so it has already finished.
         terminada = self.crear_funcion(
             Screening.Status.PUBLISHED,
@@ -830,7 +842,12 @@ class ManagerFuncionesTests(TestCase):
         en_curso.refresh_from_db()
         borrador_vencido.refresh_from_db()
         self.assertEqual(terminada.status, Screening.Status.FINISHED)
-        self.assertEqual(en_curso.status, Screening.Status.PUBLISHED)
+        self.assertEqual(en_curso.status, Screening.Status.IN_PROGRESS)
+        self.assertContains(
+            self.client.get(reverse("manager:funciones_list")),
+            "En proyecci\u00f3n",
+        )
+        self.assertFalse(en_curso.can_transition_to(Screening.Status.CANCELED))
         self.assertEqual(borrador_vencido.status, Screening.Status.DRAFT)
 
     def test_lista_funciones_muestra_acciones_de_borrador(self):
@@ -1297,7 +1314,7 @@ class ManagerDashboardTests(TestCase):
         primera = self.crear_funcion(-2)
         self.vender(primera, 3, "3000.00", used=2)
         self.vender(primera, 2, "2500.00")
-        segunda = self.crear_funcion(-1, hour=18, status=Screening.Status.PUBLISHED)
+        segunda = self.crear_funcion(-1, hour=18, status=Screening.Status.FINISHED)
         self.vender(segunda, 1, "1000.00")
 
         summary = build_dashboard("30", now=self.now)["summary"]
@@ -1342,6 +1359,15 @@ class ManagerDashboardTests(TestCase):
         self.assertEqual(dashboard["presale"]["sold"], 5)
         self.assertEqual(dashboard["presale"]["revenue"], Decimal("5000.00"))
         self.assertEqual(dashboard["time_slots"]["total_tickets"], 7)
+
+    def test_no_contabiliza_una_funcion_en_proyeccion(self):
+        en_proyeccion = self.crear_funcion(0, hour=22, status=Screening.Status.IN_PROGRESS)
+        self.vender(en_proyeccion, 3, "3000.00")
+
+        dashboard = build_dashboard("30", now=self.now)
+
+        self.assertEqual(dashboard["summary"]["screenings"], 0)
+        self.assertEqual(dashboard["summary"]["revenue"], Decimal("0"))
 
     def test_period_filtra_funciones_por_date(self):
         self.vender(self.crear_funcion(-3), 1, "1000.00")

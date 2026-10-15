@@ -804,15 +804,9 @@ class ScreeningsListView(ManagerListView):
         )
 
     def apply_history_filter(self, queryset):
-        now = timezone.now()
         if self.is_history:
-            return queryset.filter(
-                Q(starts_at__lt=now)
-                | Q(status__in=(Screening.Status.CANCELED, Screening.Status.FINISHED))
-            )
-        return queryset.filter(
-            starts_at__gte=now,
-        ).exclude(status__in=(Screening.Status.CANCELED, Screening.Status.FINISHED))
+            return queryset.filter(status__in=(Screening.Status.CANCELED, Screening.Status.FINISHED))
+        return queryset.exclude(status__in=(Screening.Status.CANCELED, Screening.Status.FINISHED))
 
     def get_queryset(self):
         queryset = self.apply_history_filter(self.get_annotated_queryset())

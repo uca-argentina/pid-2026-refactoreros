@@ -78,7 +78,7 @@
                   <div class="client-seat-cells">
                     {% for cell in row.cells %}
                       {% if cell.is_seat %}
-                        <button type="button" class="client-seat{% if cell.icon_url %} has-custom-icon{% endif %}{% if cell.is_unavailable %} is-unavailable{% endif %}" style="--seat-color: {{ cell.color }};" data-seat-label="{{ cell.label }}" data-seat-type-id="{{ cell.type_id }}" data-seat-price="{{ cell.price|unlocalize }}" data-seat-base-price="{{ cell.base_price|unlocalize }}" title="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.promotion %} · {{ cell.promotion }} aplicada, antes ${{ cell.base_price }}{% endif %}{% if cell.is_unavailable %} - No disponible{% endif %}" aria-label="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.promotion %}, {{ cell.promotion }} aplicada, antes ${{ cell.base_price }}{% endif %}{% if cell.is_unavailable %} - No disponible{% endif %}"{% if cell.is_unavailable %} disabled aria-disabled="true"{% endif %}>
+                        <button type="button" class="client-seat{% if cell.icon_url %} has-custom-icon{% endif %}{% if cell.is_unavailable %} is-unavailable{% endif %}" style="--seat-color: {{ cell.color }};" data-seat-label="{{ cell.label }}" data-seat-type-id="{{ cell.type_id }}" data-seat-price="{{ cell.price|unlocalize }}" data-seat-base-price="{{ cell.base_price|unlocalize }}" data-seat-promotion="{{ cell.promotion }}" title="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.promotion %} · {{ cell.promotion }} aplicada, antes ${{ cell.base_price }}{% endif %}{% if cell.is_unavailable %} - No disponible{% endif %}" aria-label="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.promotion %}, {{ cell.promotion }} aplicada, antes ${{ cell.base_price }}{% endif %}{% if cell.is_unavailable %} - No disponible{% endif %}"{% if cell.is_unavailable %} disabled aria-disabled="true"{% endif %}>
                           {% if cell.icon_url %}
                             <img class="client-seat-icon" src="{{ cell.icon_url }}" alt="">
                           {% else %}
@@ -128,6 +128,7 @@
             </div>
           </dl>
           <p class="purchase-savings" data-purchase-savings hidden>Ahorrás <strong data-purchase-savings-amount>$0,00</strong></p>
+          <p class="purchase-promotions" data-purchase-promotions hidden>Promociones aplicadas: <strong data-purchase-promotions-list></strong></p>
           <p class="purchase-summary" data-purchase-summary></p>
           <p class="reservation-summary" data-reservation-summary hidden>
             <i data-lucide="clock-3" aria-hidden="true"></i>

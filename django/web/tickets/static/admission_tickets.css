@@ -215,6 +215,15 @@
 .ticket-purchase-details dl div { padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, .1); }
 .ticket-purchase-details dt { margin-bottom: 4px; color: rgba(255, 255, 255, .58); font-size: 12px; font-weight: 800; text-transform: uppercase; }
 .ticket-purchase-details dd { margin: 0; color: #fff; font-weight: 700; overflow-wrap: anywhere; }
+.ticket-seat-pricing { grid-column: 1 / -1; }
+.ticket-seat-pricing ul,
+.ticket-promotions ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.ticket-seat-pricing li { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+.ticket-seat-pricing li > span:last-child { display: inline-flex; align-items: baseline; gap: 7px; white-space: nowrap; }
+.ticket-seat-pricing del { color: rgba(255, 255, 255, .52); font-size: 12px; font-weight: 700; }
+.ticket-savings { color: #fde68a !important; }
+.ticket-promotions { grid-column: 1 / -1; }
+.ticket-promotions li { color: #fde68a; }
 .ticket-sharing-notice { margin-top: 16px; padding: 2px 0 2px 12px; border-left: 3px solid #2d7fbf; color: rgba(255, 255, 255, .72); font-size: 13px; line-height: 1.45; text-align: left; }
 .ticket-sharing-notice strong { color: #fff; }
 .ticket-expired-notice { margin: 16px 0 0; color: rgba(255, 255, 255, .68); font-size: 14px; }

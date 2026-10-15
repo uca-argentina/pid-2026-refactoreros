@@ -15,7 +15,7 @@ def client_navigation(request):
         now = timezone.now()
         candidates = TicketPurchase.objects.filter(
             user=request.user,
-            screening__status=Screening.Status.PUBLISHED,
+            screening__status__in=(Screening.Status.PUBLISHED, Screening.Status.IN_PROGRESS),
             screening__starts_at__lte=now + timedelta(hours=2),
             refund__isnull=True,
         ).select_related("screening__movie").prefetch_related("tickets")

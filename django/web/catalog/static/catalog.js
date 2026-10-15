@@ -10,6 +10,8 @@ const cartTotal = document.querySelector("[data-cart-total]");
 const cartBaseTotal = document.querySelector("[data-cart-base-total]");
 const purchaseSavings = document.querySelector("[data-purchase-savings]");
 const purchaseSavingsAmount = document.querySelector("[data-purchase-savings-amount]");
+const purchasePromotions = document.querySelector("[data-purchase-promotions]");
+const purchasePromotionsList = document.querySelector("[data-purchase-promotions-list]");
 const seatMaps = document.querySelectorAll(".client-seat-map");
 let reservationExpiresAt = null;
 let reservationTimer = null;
@@ -433,10 +435,18 @@ function updateSeatDrivenPurchaseState() {
       selectedSeats.forEach((seat) => {
         const item = document.createElement("li");
         const label = document.createElement("span");
-        const price = document.createElement("strong");
+        const price = document.createElement("span");
 
         label.textContent = seat.dataset.seatLabel;
-        price.textContent = `$${formatMoney(seatPrice(seat))}`;
+        price.className = "cart-seat-price";
+        if (seatBasePrice(seat) > seatPrice(seat)) {
+          const previousPrice = document.createElement("del");
+          previousPrice.textContent = `$${formatMoney(seatBasePrice(seat))}`;
+          price.appendChild(previousPrice);
+        }
+        const currentPrice = document.createElement("strong");
+        currentPrice.textContent = `$${formatMoney(seatPrice(seat))}`;
+        price.appendChild(currentPrice);
         item.appendChild(label);
         item.appendChild(price);
         cartSeatLines.appendChild(item);
@@ -456,6 +466,14 @@ function updateSeatDrivenPurchaseState() {
   if (purchaseSavings && purchaseSavingsAmount) {
     purchaseSavings.hidden = savings <= 0;
     purchaseSavingsAmount.textContent = `$${formatMoney(savings)}`;
+  }
+
+  if (purchasePromotions && purchasePromotionsList) {
+    const promotions = [...new Set(
+      selectedSeats.map((seat) => (seat.dataset.seatPromotion || "").trim()).filter(Boolean),
+    )];
+    purchasePromotions.hidden = promotions.length === 0;
+    purchasePromotionsList.textContent = promotions.join(" · ");
   }
 
   if (purchaseButton && requiresSeatSelection && !purchaseSubmitting && !purchasePreparing) {

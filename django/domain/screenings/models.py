@@ -14,6 +14,7 @@ class Screening(models.Model):
         DRAFT = "borrador", "Borrador"
         SCHEDULED = "programada", "Programada"
         PUBLISHED = "publicada", "Publicada"
+        IN_PROGRESS = "en_proyeccion", "En proyección"
         CANCELED = "cancelada", "Cancelada"
         FINISHED = "finalizada", "Finalizada"
 
@@ -21,6 +22,7 @@ class Screening(models.Model):
         Status.DRAFT: (Status.SCHEDULED, Status.PUBLISHED),
         Status.SCHEDULED: (Status.DRAFT, Status.PUBLISHED, Status.CANCELED),
         Status.PUBLISHED: (Status.SCHEDULED, Status.CANCELED),
+        Status.IN_PROGRESS: (),
         Status.CANCELED: (),
         Status.FINISHED: (),
     }
@@ -118,9 +120,15 @@ class Screening(models.Model):
             if status_written and self.status == self.Status.CANCELED and (
                 previous is None or previous.status != self.Status.CANCELED
             ):
-                from domain.tickets.services import refund_canceled_screening,send_refund_notifications
-                refund_canceled_screening(self)
-                transaction.on_commit(send_refund_notifications)
+                from domain.tickets.services import (
+                    enqueue_refund_notifications,
+                    refund_canceled_screening,
+                )
+
+                refund_ids = refund_canceled_screening(self)
+                transaction.on_commit(
+                    lambda refund_ids=refund_ids: enqueue_refund_notifications(refund_ids)
+                )
 
     @property
     def has_sales(self):
@@ -133,7 +141,11 @@ class Screening(models.Model):
     def is_editable(self):
         if self.status in (self.Status.DRAFT, self.Status.SCHEDULED):
             return True
-        return self.status == self.Status.PUBLISHED and not self.has_sales
+        return (
+            self.status == self.Status.PUBLISHED
+            and self.starts_at > timezone.now()
+            and not self.has_sales
+        )
 
     @property
     def is_deletable(self):
@@ -141,6 +153,8 @@ class Screening(models.Model):
 
     def can_transition_to(self, new_status):
         if new_status not in self.TRANSITIONS[self.status]:
+            return False
+        if new_status == self.Status.CANCELED and self.starts_at <= timezone.now():
             return False
         if (
             self.status == self.Status.PUBLISHED
@@ -233,14 +247,23 @@ class Screening(models.Model):
 
     @classmethod
     def finalize_expired(cls):
+        """Advance started screenings and finish those whose runtime has elapsed."""
         now = timezone.now()
         candidates = cls.objects.filter(
-            status__in=(cls.Status.SCHEDULED, cls.Status.PUBLISHED),
+            status__in=(cls.Status.SCHEDULED, cls.Status.PUBLISHED, cls.Status.IN_PROGRESS),
             starts_at__lte=now,
         ).select_related("movie")
-        expired = [screening.pk for screening in candidates if screening.ends_at <= now]
-        if expired:
-            cls.objects.filter(pk__in=expired).update(status=cls.Status.FINISHED)
+        finished = []
+        in_progress = []
+        for screening in candidates:
+            if screening.ends_at <= now:
+                finished.append(screening.pk)
+            elif screening.status in (cls.Status.SCHEDULED, cls.Status.PUBLISHED):
+                in_progress.append(screening.pk)
+        if in_progress:
+            cls.objects.filter(pk__in=in_progress).update(status=cls.Status.IN_PROGRESS)
+        if finished:
+            cls.objects.filter(pk__in=finished).update(status=cls.Status.FINISHED)
 
     @classmethod
     def published(cls):
