@@ -716,6 +716,32 @@ body {
   font-weight: 900;
 }
 
+.cart-seat-price {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.cart-seat-price del {
+  color: rgba(255, 255, 255, .48);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.purchase-promotions {
+  margin: 7px 0 0;
+  color: rgba(255, 255, 255, .76);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.purchase-promotions strong {
+  color: #fde68a;
+}
+
 .client-seat-map.is-hidden {
   display: none;
 }

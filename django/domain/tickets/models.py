@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 import hashlib
 import secrets
 import uuid
@@ -85,6 +86,49 @@ class TicketPurchase(models.Model):
     def seat_labels(self):
         labels = self._labels_from_selected_seats(self.selected_seats)
         return ", ".join(labels)
+
+    @property
+    def seat_pricing_snapshot(self):
+        """Immutable per-seat prices captured when the purchase was made."""
+        seats = []
+        for selected_seat in self.selected_seats or []:
+            if not isinstance(selected_seat, dict):
+                continue
+            label = str(selected_seat.get("label", "")).strip()
+            if not label:
+                continue
+            try:
+                price = Decimal(str(selected_seat.get("price")))
+                base_price = Decimal(str(selected_seat.get("base_price", price)))
+            except (InvalidOperation, TypeError, ValueError):
+                continue
+            seats.append(
+                {
+                    "label": label,
+                    "price": price,
+                    "base_price": base_price,
+                    "saving": max(base_price - price, Decimal("0")),
+                    "promotion": str(selected_seat.get("promotion", "")).strip(),
+                }
+            )
+        return seats
+
+    @property
+    def promotions_snapshot(self):
+        return list(
+            dict.fromkeys(
+                seat["promotion"]
+                for seat in self.seat_pricing_snapshot
+                if seat["promotion"]
+            )
+        )
+
+    @property
+    def savings_snapshot(self):
+        return sum(
+            (seat["saving"] for seat in self.seat_pricing_snapshot),
+            Decimal("0"),
+        )
 
     @property
     def validation_code(self):

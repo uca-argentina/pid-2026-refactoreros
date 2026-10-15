@@ -206,6 +206,45 @@ class TicketPurchaseTests(TestCase):
         detail = self.client.get(reverse("ticket_detail", args=[purchase.pk]))
         self.assertContains(detail, "1A, 1B")
 
+    def test_detalle_de_compra_muestra_precios_y_promociones_del_snapshot(self):
+        screening = crear_funcion_con_butacas(title="Con promo")
+        user = get_user_model().objects.create_user(
+            username="promo@mail.com",
+            email="promo@mail.com",
+            password="PasswordSegura123!",
+        )
+        purchase = TicketPurchase.objects.create(
+            user=user,
+            screening=screening,
+            quantity=2,
+            total=Decimal("1800.00"),
+            selected_seats=[
+                {
+                    "label": "1A",
+                    "price": "800.00",
+                    "base_price": "1000.00",
+                    "discount": "200.00",
+                    "promotion": "Miércoles 2x1",
+                },
+                {
+                    "label": "1B",
+                    "price": "1000.00",
+                    "base_price": "1000.00",
+                    "discount": "0.00",
+                    "promotion": "",
+                },
+            ],
+        )
+        self.client.force_login(user)
+
+        detail = self.client.get(reverse("ticket_detail", args=[purchase.pk]))
+
+        self.assertEqual(purchase.savings_snapshot, Decimal("200.00"))
+        self.assertEqual(purchase.promotions_snapshot, ["Miércoles 2x1"])
+        self.assertContains(detail, "Ahorro total")
+        self.assertContains(detail, "Miércoles 2x1")
+        self.assertContains(detail, "1A")
+
     def test_compra_no_permite_funcion_cancelada(self):
         screening = crear_funcion(status=Screening.Status.CANCELED, title="Cancelada")
         user = get_user_model().objects.create_user(
@@ -302,10 +341,12 @@ class TicketPurchaseTests(TestCase):
         self.assertContains(response, 'data-reservation-batch-delay-ms="1000"')
         self.assertContains(response, 'data-seat-price="1000.00"')
         self.assertContains(response, 'data-seat-base-price="1000.00"')
+        self.assertContains(response, 'data-seat-promotion=""')
         self.assertContains(response, 'data-seat-map-viewport')
         self.assertContains(response, 'data-seat-map-pan="left"')
         self.assertContains(response, 'data-seat-map-pan="right"')
         self.assertContains(response, 'data-purchase-savings')
+        self.assertContains(response, 'data-purchase-promotions')
         self.assertContains(response, 'data-cart-base-total')
 
     def test_estado_de_reservas_devuelve_json_para_la_recarga_automatica(self):
