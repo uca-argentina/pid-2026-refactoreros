@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timedelta
 from decimal import Decimal
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlsplit
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -822,12 +823,10 @@ class ManagerFuncionesTests(TestCase):
         self.assertEqual(Screening.objects.count(), 2)
 
     def test_funcion_en_proyeccion_permanece_en_lista_y_no_se_puede_cancelar(self):
-        # The movie lasts 100 minutes: it started 3 hours ago, so it has already finished.
         terminada = self.crear_funcion(
             Screening.Status.PUBLISHED,
             starts_at=timezone.now() - timedelta(hours=3),
         )
-        # It started 30 minutes ago, so it is still in progress.
         en_curso = self.crear_funcion(
             Screening.Status.PUBLISHED,
             starts_at=timezone.now() - timedelta(minutes=30),
@@ -1494,3 +1493,113 @@ class ManagerDashboardTests(TestCase):
 
         self.assertContains(response, 'style="width: 33.33%"')
         self.assertContains(response, "33,3%")
+
+    def test_filtro_pelicula_actualiza_indicadores_comparacion_demanda_y_preventa(self):
+        otra = self.crear_pelicula("Pelicula B")
+        self.vender(self.crear_funcion(-2), 3, "3000.00", used=2, purchased_at=self.now)
+        self.vender(self.crear_funcion(-9), 2, "2000.00")
+        self.vender(self.crear_funcion(-1, movie=otra), 5, "9000.00", purchased_at=self.now)
+        self.vender(self.crear_funcion(-9, movie=otra), 8, "8000.00")
+        self.vender(self.crear_funcion(2, status=Screening.Status.PUBLISHED), 1, "1000.00", purchased_at=self.now)
+        self.vender(self.crear_funcion(2, movie=otra, status=Screening.Status.PUBLISHED), 4, "4000.00", purchased_at=self.now)
+
+        dashboard = build_dashboard("7", now=self.now + timedelta(seconds=1), movie_id=self.movie.pk)
+
+        self.assertEqual(dashboard["summary"]["sold"], 3)
+        self.assertEqual(dashboard["summary"]["used"], 2)
+        self.assertEqual(dashboard["summary"]["capacity"], 10)
+        self.assertEqual(dashboard["summary"]["revenue"], Decimal("3000.00"))
+        self.assertAlmostEqual(dashboard["deltas"]["sold"]["value"], 50)
+        self.assertEqual(dashboard["presale"]["sold"], 1)
+        self.assertEqual(dashboard["time_slots"]["total_tickets"], 4)
+        self.assertEqual(sum(column["sold"] for column in dashboard["revenue"]["columns"]), 3)
+        self.assertEqual(len(dashboard["movies"]), 2)
+        self.assertEqual([item["movie"] for item in dashboard["movies"] if item["is_selected"]], [self.movie])
+
+    def test_filtros_pelicula_y_sala_se_intersectan_y_permiten_cambiar_seleccion(self):
+        otra_sala = crear_sala_con_butacas("Sala 2", 20)
+        otra_pelicula = self.crear_pelicula("Pelicula B")
+        self.vender(self.crear_funcion(-2), 2, "2000.00")
+        funcion = self.crear_funcion(-1)
+        Screening.objects.filter(pk=funcion.pk).update(room=otra_sala, capacity_snapshot=20)
+        self.vender(funcion, 3, "3000.00")
+        self.vender(self.crear_funcion(-1, movie=otra_pelicula), 5, "5000.00")
+
+        dashboard = build_dashboard("30", now=self.now, movie_id=self.movie.pk, room_id=self.room.pk)
+
+        self.assertEqual(dashboard["summary"]["sold"], 2)
+        self.assertEqual(dashboard["summary"]["capacity"], 10)
+        self.assertEqual(len(dashboard["rooms"]), 2)
+        self.assertEqual(len(dashboard["movies"]), 2)
+        alternate = next(item for item in dashboard["movies"] if item["movie"] == otra_pelicula)
+        params = parse_qs(urlsplit(alternate["filter_url"]).query)
+        self.assertEqual(params["room"], [str(self.room.pk)])
+        self.assertEqual(params["movie"], [str(otra_pelicula.pk)])
+
+    def test_barra_fecha_filtra_funciones_y_no_confunde_fecha_de_compra(self):
+        funcion = self.crear_funcion(-1)
+        self.vender(funcion, 3, "3000.00", purchased_at=self.now - timedelta(days=5))
+        self.vender(self.crear_funcion(-2), 4, "4000.00", purchased_at=self.now - timedelta(days=1))
+
+        dashboard = build_dashboard("7", now=self.now, revenue_date=timezone.localdate(funcion.starts_at).isoformat())
+
+        self.assertEqual(dashboard["summary"]["sold"], 3)
+        self.assertEqual(dashboard["time_slots"]["total_tickets"], 3)
+        self.assertEqual(sum(column["sold"] for column in dashboard["revenue"]["columns"]), 7)
+        self.assertEqual(len([column for column in dashboard["revenue"]["columns"] if column["is_selected"]]), 1)
+        self.assertAlmostEqual(dashboard["deltas"]["sold"]["value"], 25)
+        self.assertEqual(dashboard["deltas"]["sold"]["direction"], "down")
+
+    def test_barra_semanal_y_mensual_respeta_limites_del_periodo(self):
+        self.vender(self.crear_funcion(-2), 2, "2000.00")
+        self.vender(self.crear_funcion(-20), 3, "3000.00")
+        self.vender(self.crear_funcion(-210), 4, "4000.00")
+        for period in ("90", "todo"):
+            with self.subTest(period=period):
+                base = build_dashboard(period, now=self.now)
+                column = next(column for column in base["revenue"]["columns"] if column["sold"] == 2)
+                dashboard = build_dashboard(period, now=self.now, revenue_date=column["date"].isoformat())
+                self.assertEqual(dashboard["summary"]["sold"], 2)
+
+    def test_borrar_filtros_conserva_rango_y_quitar_chip_conserva_otros_filtros(self):
+        self.vender(self.crear_funcion(-2), 2, "2000.00")
+        date_from = timezone.localdate(self.now) - timedelta(days=6)
+        date_to = timezone.localdate(self.now)
+        dashboard = build_dashboard(
+            date_from=date_from, date_to=date_to, now=self.now,
+            movie_id=self.movie.pk, room_id=self.room.pk,
+        )
+        clear = parse_qs(urlsplit(dashboard["clear_filters_url"]).query)
+        self.assertEqual(clear, {"date_from": [date_from.isoformat()], "date_to": [date_to.isoformat()]})
+        movie_chip = next(chip for chip in dashboard["active_filters"] if chip["key"] == "movie")
+        remove = parse_qs(urlsplit(movie_chip["remove_url"]).query)
+        self.assertNotIn("movie", remove)
+        self.assertEqual(remove["room"], [str(self.room.pk)])
+
+    def test_seleccion_sin_resultados_conserva_filtros_y_eje_de_fechas(self):
+        self.vender(self.crear_funcion(-1), 2, "2000.00")
+        otra = self.crear_pelicula("Sin funciones")
+        date = (timezone.localdate(self.now) - timedelta(days=1)).isoformat()
+
+        dashboard = build_dashboard("30", now=self.now, movie_id=otra.pk, revenue_date=date)
+
+        self.assertEqual(dashboard["summary"]["sold"], 0)
+        self.assertIsNone(dashboard["time_slots"])
+        self.assertEqual(len(dashboard["active_filters"]), 2)
+        self.assertEqual(len(dashboard["revenue"]["columns"]), 30)
+        self.assertTrue(any(column["is_selected"] for column in dashboard["revenue"]["columns"]))
+
+    def test_vista_restaura_seleccion_desde_url_y_descarta_filtros_invalidos(self):
+        self.vender(self.crear_funcion(-1, now=timezone.now()), 3, "3000.00")
+        self.client.force_login(self.gerente)
+        response = self.client.get(reverse("manager:dashboard"), {"movie": self.movie.pk, "room": self.room.pk})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Borrar filtros")
+        self.assertContains(response, 'class="bar-select is-selected"', count=2)
+        self.assertEqual(response.context["dashboard"]["summary"]["sold"], 3)
+        for invalid in ("abc", "-1", "99999999999999999999999", "999999"):
+            with self.subTest(invalid=invalid):
+                response = self.client.get(reverse("manager:dashboard"), {"movie": invalid, "room": invalid, "revenue_date": "invalid"})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.context["dashboard"]["active_filters"], [])
+                self.assertNotContains(response, "Borrar filtros")

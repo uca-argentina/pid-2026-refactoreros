@@ -33,9 +33,6 @@ def migrate_reservation_codes(apps, schema_editor):
         token = purchase.validation_token
         code = reservation_code_for_token(token)
         digest = reservation_code_digest(code)
-        # A six-character code can theoretically collide. Regenerate only the
-        # internal legacy token in that exceptional case before removing the
-        # former plaintext code column.
         while digest in used_digests:
             token = secrets.token_urlsafe(24)
             code = reservation_code_for_token(token)

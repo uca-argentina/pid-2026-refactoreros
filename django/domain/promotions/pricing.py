@@ -6,7 +6,6 @@ from .models import Promotion
 
 
 class SeatPriceComponent(ABC):
-    """Component in the seat-price decorator chain."""
 
     @property
     @abstractmethod
@@ -37,7 +36,6 @@ class BaseSeatPrice(SeatPriceComponent):
 
 
 class PromotionDiscountDecorator(SeatPriceComponent):
-    """Decorator that applies exactly one eligible promotion to a base price."""
 
     def __init__(self, wrapped, promotion):
         self.wrapped = wrapped
@@ -68,7 +66,6 @@ class SeatPriceQuote:
 
 
 class PromotionPriceCalculator:
-    """Select the best single promotion for each seat without stacking offers."""
 
     def __init__(self, promotions):
         self.promotions = list(promotions)
@@ -85,7 +82,6 @@ class PromotionPriceCalculator:
             if promotion.applies_to(seat_type_id, screening_starts_at):
                 candidates.append(PromotionDiscountDecorator(base_component, promotion))
 
-        # Keep the regular price in a tie so a no-op promotion is never reported.
         selected = min(candidates, key=lambda component: component.amount)
         return SeatPriceQuote(
             base_price=selected.base_amount,

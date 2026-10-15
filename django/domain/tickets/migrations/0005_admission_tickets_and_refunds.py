@@ -7,8 +7,6 @@ from domain.tickets.models import generate_ticket_token
 
 
 def backfill_tickets(apps, schema_editor):
-    # The historical migrations retain Spanish names; db_table/db_column in the
-    # runtime English models still point to these same tables and columns.
     Purchase = apps.get_model("tickets", "CompraEntrada")
     Seat = apps.get_model("tickets", "CompraAsiento")
     Ticket = apps.get_model("tickets", "AdmissionTicket")

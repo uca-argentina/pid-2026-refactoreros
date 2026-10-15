@@ -43,7 +43,6 @@ class AdminUserChangeForm(UniqueEmailMixin, UserChangeForm):
         model = User
 
 
-# Desde este formulario puede acceder cualquier usuario (Cliente, Acomodador o Gerente)
 class LoginForm(AuthenticationForm):
     error_messages = {
         "invalid_login": "No encontramos una cuenta con esos datos. Revisá el email y la contraseña.",

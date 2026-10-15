@@ -1452,8 +1452,6 @@ th {
   padding: 22px;
 }
 
-/* Sin min-width: 0, un <select> con opciones largas o un datetime-local
-   imponen su ancho mínimo y desbordan el formulario en pantallas chicas. */
 .manager-form label {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1777,7 +1775,6 @@ th {
     border-bottom: 0;
   }
 
-  /* En celulares el menú pasa a ser una barra de pestañas fija abajo. */
   .manager-shell {
     padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px));
   }
