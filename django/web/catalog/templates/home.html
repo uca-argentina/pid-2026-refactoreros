@@ -14,13 +14,52 @@
 
   <main class="client-main">
     {% if movies %}
+      {% if promotions %}
+        <section class="promo-showcase" aria-labelledby="promo-showcase-title">
+          <div class="promo-showcase-intro">
+            <p class="promo-showcase-kicker"><i data-lucide="sparkles" aria-hidden="true"></i>Promociones vigentes</p>
+            <h2 id="promo-showcase-title">Ahorrá en tu próxima función</h2>
+            <p>Buscá las películas con la etiqueta de promo.</p>
+          </div>
+          <div class="promo-list">
+            {% for promotion in promotions %}
+              <article class="promo-ticket">
+                <div class="promo-ticket-discount{% if promotion.discount_type == 'fixed' %} is-fixed{% endif %}">
+                  <strong>{% if promotion.discount_type == 'fixed' %}${{ promotion.discount_value|floatformat:"-2g" }}{% else %}{{ promotion.discount_label }}{% endif %}</strong>
+                  <span>OFF</span>
+                </div>
+                <div class="promo-ticket-body">
+                  <h3>
+                    {{ promotion.name }}
+                    {% if promotion.is_available_today %}<span class="promo-ticket-today">¡Válida hoy!</span>{% endif %}
+                  </h3>
+                  <ul class="promo-ticket-conditions">
+                    <li><i data-lucide="calendar-days" aria-hidden="true"></i>{{ promotion.weekdays_label }}</li>
+                    <li><i data-lucide="clock" aria-hidden="true"></i>{{ promotion.schedule_label }}</li>
+                    <li><i data-lucide="armchair" aria-hidden="true"></i>{{ promotion.seat_types_label }}</li>
+                  </ul>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </section>
+        <h2 class="client-section-title">En cartelera</h2>
+      {% endif %}
       <section class="movie-grid" aria-label="Peliculas con funciones publicadas">
         {% for movie in movies %}
           <a class="movie-card" href="{% url 'movie_detail' movie.pk %}">
             <img src="{{ movie.image.url }}" alt="{{ movie.title }}">
+            {% if movie.promotion_quote %}
+              {% with promotion=movie.promotion_quote.promotion %}
+                <span class="movie-card-promo"><i data-lucide="tag" aria-hidden="true"></i>{% if promotion.discount_type == 'fixed' %}${{ promotion.discount_value|floatformat:"-2g" }}{% else %}{{ promotion.discount_label }}{% endif %} OFF</span>
+              {% endwith %}
+            {% endif %}
             <div class="movie-card-body">
               <h2>{{ movie.title }}</h2>
               <p>{{ movie.get_rating_display }}</p>
+              {% if movie.promotion_quote %}
+                <p class="movie-card-promo-name">{{ movie.promotion_quote.promotion.name }}</p>
+              {% endif %}
             </div>
           </a>
         {% endfor %}

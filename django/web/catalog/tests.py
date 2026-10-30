@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
+from django.template.defaultfilters import capfirst, date as date_filter
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from django.utils import timezone
 
@@ -160,6 +161,19 @@ class CatalogFlowTests(TestCase):
         self.assertContains(response, "Publica anonima")
         self.assertContains(response, reverse("seat_selection", args=[screening.pk]))
 
+    def test_detalle_agrupa_funciones_nocturnas_por_dia_local(self):
+        screening = crear_funcion(status=Screening.Status.PUBLISHED, title="Trasnoche")
+        local_day = timezone.localdate() + timedelta(days=3)
+        screening.starts_at = timezone.make_aware(datetime.combine(local_day, time(21, 10)))
+        screening.save(update_fields=["starts_at"])
+
+        response = self.client.get(reverse("movie_detail", args=[screening.movie.pk]))
+
+        expected = capfirst(date_filter(local_day, "l d/m"))
+        next_day = capfirst(date_filter(local_day + timedelta(days=1), "l d/m"))
+        self.assertContains(response, f"<h3>{expected}</h3>", html=True)
+        self.assertNotContains(response, next_day)
+
     def test_chip_de_funcion_indica_promocion_disponible(self):
         screening = crear_funcion(status=Screening.Status.PUBLISHED, title="Con promo")
         Promotion.objects.create(
@@ -202,6 +216,53 @@ class CatalogFlowTests(TestCase):
         self.assertNotContains(selector, "<del>", html=False)
         self.assertIn("no-store", detail.headers["Cache-Control"])
         self.assertIn("no-store", selector.headers["Cache-Control"])
+
+    def test_home_anuncia_promociones_vigentes(self):
+        crear_funcion(status=Screening.Status.PUBLISHED, title="Con promo")
+        Promotion.objects.create(
+            name="Miércoles de cine",
+            discount_type=Promotion.DiscountType.PERCENTAGE,
+            discount_value="30.00",
+        )
+
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, 'class="promo-showcase"')
+        self.assertContains(response, "Miércoles de cine")
+        self.assertContains(response, "¡Válida hoy!")
+        self.assertContains(response, "30% OFF")
+        self.assertContains(response, 'class="movie-card-promo-name"')
+
+    def test_home_no_anuncia_promociones_inactivas(self):
+        crear_funcion(status=Screening.Status.PUBLISHED, title="Sin promo")
+        Promotion.objects.create(
+            name="Promo pausada",
+            is_active=False,
+            discount_type=Promotion.DiscountType.PERCENTAGE,
+            discount_value="30.00",
+        )
+
+        response = self.client.get(reverse("home"))
+
+        self.assertNotContains(response, 'class="promo-showcase"')
+        self.assertNotContains(response, "Promo pausada")
+        self.assertNotContains(response, 'class="movie-card-promo"')
+
+    def test_home_solo_marca_peliculas_alcanzadas_por_la_promocion(self):
+        screening = crear_funcion(status=Screening.Status.PUBLISHED, title="Otro día")
+        other_weekday = (timezone.localtime(screening.starts_at).weekday() + 1) % 7
+        Promotion.objects.create(
+            name="Promo de otro día",
+            discount_type=Promotion.DiscountType.PERCENTAGE,
+            discount_value="20.00",
+            weekdays=[other_weekday],
+        )
+
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, "Promo de otro día")
+        self.assertNotContains(response, 'class="movie-card-promo"')
+        self.assertNotContains(response, "20% OFF")
 
     def test_seleccion_de_butacas_requiere_login_y_preserva_next(self):
         screening = crear_funcion(status=Screening.Status.PUBLISHED, title="Publicada")

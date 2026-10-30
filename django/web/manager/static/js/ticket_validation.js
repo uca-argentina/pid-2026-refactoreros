@@ -12,6 +12,11 @@
   const previewButton = form.querySelector('[data-preview]');
   const codeCharacters = reservationCode ? [...reservationCode.querySelectorAll('[data-code-character]')] : [];
   const codeInput = form.elements.code;
+  const qrPrefix = form.dataset.qrPrefix || 'BC2:';
+  const qrPattern = new RegExp(`^${qrPrefix}[A-Za-z2-9]{6}$`, 'i');
+  const scanPrompt = form.dataset.scanPrompt || 'Apuntá al QR de una entrada.';
+  const scanFoundMessage = form.dataset.scanFound || 'QR leído. Consultando entrada…';
+  const loadingLabel = form.dataset.loadingLabel || 'Buscando entrada…';
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d', { willReadFrequently: true });
   const MAX_SCAN_DIMENSION = 960;
@@ -35,7 +40,7 @@
     previewButton.disabled = true;
     previewButton.classList.add('is-loading');
     previewButton.setAttribute('aria-busy', 'true');
-    previewButton.textContent = 'Buscando entrada…';
+    previewButton.textContent = loadingLabel;
   }
 
   function setStatus(message) {
@@ -281,10 +286,10 @@
   }
 
   function accept(result) {
-    if (!result || !/^BC2:[A-Za-z2-9]{6}$/i.test(result.data)) return false;
+    if (!result || !qrPattern.test(result.data)) return false;
     stopCamera();
-    form.elements.code.value = result.data.slice(4).toUpperCase();
-    setStatus('QR leído. Consultando entrada…');
+    form.elements.code.value = result.data.slice(qrPrefix.length).toUpperCase();
+    setStatus(scanFoundMessage);
     form.requestSubmit(form.querySelector('[data-preview]'));
     return true;
   }
@@ -341,7 +346,7 @@
       start.classList.add('is-camera-open');
       if (cameraButtonLabel) cameraButtonLabel.textContent = 'Cerrar cámara';
       if (cameraCloseMark) cameraCloseMark.hidden = false;
-      setStatus('Apuntá al QR de una entrada.');
+      setStatus(scanPrompt);
       lastScanAt = 0;
       frame = requestAnimationFrame(scan);
     } catch (error) {

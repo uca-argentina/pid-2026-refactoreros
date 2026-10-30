@@ -1,0 +1,79 @@
+{% extends "manager_base.html" %}
+
+{% block content %}
+  <section class="page-heading page-heading-row">
+    <div>
+      <h1>Candy</h1>
+      <p>Los clientes suman candy al comprar sus entradas y lo retiran con un código propio.</p>
+    </div>
+    <a class="primary-link" href="{% url 'manager:candy_products_create' %}">
+      <i data-lucide="plus" aria-hidden="true"></i>
+      <span>Nuevo producto</span>
+    </a>
+  </section>
+
+  {% include "_candy_tabs.html" %}
+  {% include "_list_controls.html" %}
+
+  <section class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Categoría</th>
+          <th>Precio</th>
+          <th>Stock</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for product in object_list %}
+          <tr>
+            <td data-label="Producto">
+              <span class="candy-cell-title">
+                {% if product.image %}
+                  <img class="candy-thumb" src="{{ product.image.url }}" alt="">
+                {% else %}
+                  <span class="candy-thumb" aria-hidden="true"><i data-lucide="{{ product.icon }}"></i></span>
+                {% endif %}
+                <strong class="cell-title">{{ product.name }}</strong>
+              </span>
+            </td>
+            <td data-label="Categoría">{{ product.get_category_display }}</td>
+            <td data-label="Precio">${{ product.price|floatformat:2 }}</td>
+            <td data-label="Stock">
+              {{ product.stock }}
+              {% if product.stock == 0 %}
+                <span class="status-pill status-cancelada">Agotado</span>
+              {% elif product.is_low_stock %}
+                <span class="status-pill status-en_proyeccion">Stock bajo</span>
+              {% endif %}
+            </td>
+            <td data-label="Estado">
+              {% if product.is_active %}
+                <span class="status-pill status-publicada">A la venta</span>
+              {% else %}
+                <span class="status-pill">Pausado</span>
+              {% endif %}
+            </td>
+            <td class="table-actions" data-label="Acciones">
+              <a href="{% url 'manager:candy_products_update' product.pk %}">
+                <i data-lucide="pencil" aria-hidden="true"></i>
+                <span>Editar</span>
+              </a>
+              <a href="{% url 'manager:candy_products_delete' product.pk %}" class="danger-link">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                <span>Eliminar</span>
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">Todavía no hay productos de candy cargados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% include "_pagination.html" %}
+{% endblock %}

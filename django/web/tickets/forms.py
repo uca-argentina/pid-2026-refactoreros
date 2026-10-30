@@ -5,6 +5,19 @@ from django import forms
 
 class TicketPurchaseForm(forms.Form):
     selected_seats = forms.CharField(required=False)
+    candy_items = forms.CharField(required=False)
+
+    def clean_candy_items(self):
+        value = self.cleaned_data.get("candy_items")
+        if not value:
+            return []
+        try:
+            candy_items = json.loads(value)
+        except ValueError:
+            raise forms.ValidationError("La selección de candy no es válida.")
+        if not isinstance(candy_items, list):
+            raise forms.ValidationError("La selección de candy no es válida.")
+        return candy_items
 
     def clean_selected_seats(self):
         value = self.cleaned_data.get("selected_seats")

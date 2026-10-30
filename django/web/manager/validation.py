@@ -26,6 +26,15 @@ def compact_customer_name(customer):
     return customer.get("username", "Cliente")
 
 
+def customer_display_names(user_ids):
+    return {
+        customer["pk"]: compact_customer_name(customer)
+        for customer in get_user_model().objects.filter(pk__in=user_ids).values(
+            "pk", "first_name", "last_name", "username"
+        )
+    }
+
+
 def confirmation_seats(seat_labels):
     grouped = {}
     fallback = []
@@ -73,16 +82,9 @@ class TicketValidationView(StaffAccessMixin, FormView):
             self.request.GET.get("page")
         )
         history = list(history_page)
-        customer_ids = {validation.purchase.user_id for validation in history}
-        customers = {
-            customer["pk"]: customer
-            for customer in get_user_model().objects.filter(pk__in=customer_ids).values(
-                "pk", "first_name", "last_name", "username"
-            )
-        }
+        names = customer_display_names({validation.purchase.user_id for validation in history})
         for validation in history:
-            customer = customers.get(validation.purchase.user_id, {})
-            validation.customer_display_name = compact_customer_name(customer)
+            validation.customer_display_name = names.get(validation.purchase.user_id, "Cliente")
         context["validation_history"] = history
         context["validation_history_page"] = history_page
         return context

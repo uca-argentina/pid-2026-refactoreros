@@ -25,14 +25,14 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-def normalize_purchase_credential(value):
+def normalize_purchase_credential(value, qr_prefix="BC2:", invalid_message="El código de entrada no es válido."):
     value = value.strip()
-    if value.startswith("BC2:"):
-        value = value[4:]
+    if value.startswith(qr_prefix):
+        value = value[len(qr_prefix):]
     if re.fullmatch(r"[A-Za-z2-9]{6}", value):
         return value.upper()
     if not re.fullmatch(r"[A-Za-z0-9_-]{32}", value):
-        raise ValidationError("El código de entrada no es válido.")
+        raise ValidationError(invalid_message)
     return value
 
 
@@ -150,17 +150,24 @@ def undo_ticket_validation(validation_id, operator):
 
 
 def refund_canceled_screening(screening):
+    from domain.candy.models import CandyOrder
+
     refund_ids = []
     for purchase in TicketPurchase.objects.filter(screening=screening):
+        candy_order = CandyOrder.objects.filter(purchase=purchase).first()
+        amount = purchase.total + (candy_order.total if candy_order else 0)
         notice = (
             f"Se canceló la función de {screening.movie.title} del "
             f"{timezone.localtime(screening.starts_at):%d/%m/%Y %H:%M}. "
-            f"Registramos una devolución de ${purchase.total:.2f} "
-            f"por tu compra #{purchase.pk}. No se realizó un movimiento de dinero real."
+            f"Registramos una devolución de ${amount:.2f} "
+            f"por tu compra #{purchase.pk}{' (entradas y candy)' if candy_order else ''}. "
+            "No se realizó un movimiento de dinero real."
         )
         refund, _ = PurchaseRefund.objects.get_or_create(
-            purchase=purchase, defaults={"amount": purchase.total, "notice": notice},
+            purchase=purchase, defaults={"amount": amount, "notice": notice},
         )
+        if candy_order:
+            candy_order.restock()
         if refund.email_sent_at is None:
             refund_ids.append(refund.pk)
     SeatReservation.objects.filter(screening=screening).delete()

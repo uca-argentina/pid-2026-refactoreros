@@ -260,3 +260,87 @@
   .ticket-qr-card > p.ticket-sharing-notice { margin: 16px 6px 0; }
   .ticket-purchase-details { order: 5; }
 }
+
+.ticket-card .ticket-candy-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-color: rgba(251, 191, 36, .45);
+  color: #fde68a;
+  background: rgba(251, 191, 36, .14);
+}
+
+.ticket-candy-tag svg { width: 14px; height: 14px; }
+
+.ticket-candy-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid rgba(251, 191, 36, .55);
+  border-radius: 7px;
+  color: #fde68a;
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.ticket-candy-link:hover { color: #1c1203; background: #fbbf24; }
+.ticket-candy-link svg { width: 16px; height: 16px; }
+
+.ticket-card .ticket-candy-link span,
+.ticket-card .ticket-candy-status {
+  width: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  text-transform: none;
+}
+
+.ticket-card .ticket-candy-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(255, 255, 255, .6);
+  font-size: 12px;
+}
+
+.ticket-candy-status svg { width: 14px; height: 14px; }
+
+.ticket-candy-callout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(251, 191, 36, .4);
+  border-radius: 10px;
+  color: #fff;
+  background: rgba(251, 191, 36, .08);
+  text-align: left;
+  text-decoration: none;
+}
+
+.ticket-candy-callout:hover { border-color: rgba(251, 191, 36, .8); }
+.ticket-candy-callout-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: #fbbf24; background: rgba(251, 191, 36, .16); }
+.ticket-candy-callout-icon svg { width: 20px; height: 20px; }
+.ticket-candy-callout strong { display: block; font-size: 15px; }
+.ticket-candy-callout small { display: block; margin-top: 2px; color: rgba(255, 255, 255, .7); font-size: 13px; }
+.ticket-candy-callout-action { color: #fde68a; font-size: 13px; font-weight: 900; white-space: nowrap; }
+
+.candy-back-link { display: block; width: fit-content; margin-bottom: 14px; color: rgba(255, 255, 255, .6); font-size: 13px; font-weight: 700; text-decoration: none; }
+.candy-back-link:hover { color: #fff; }
+.candy-code strong { color: #fde68a; }
+.candy-notice { border-left-color: #fbbf24; }
+.candy-line-name small { display: block; margin-top: 2px; color: rgba(255, 255, 255, .55); font-size: 12px; font-weight: 600; }
+
+@media (max-width: 580px) {
+  .ticket-card-action { flex-wrap: wrap; gap: 10px; }
+  .ticket-candy-callout { order: 4; margin: 16px 6px 0; }
+  .candy-back-link { margin: 4px 6px 12px; }
+}

@@ -11,6 +11,8 @@ from django.views.decorators.cache import never_cache
 import json
 import re
 
+from domain.candy.models import CandyOrder
+from domain.candy.services import buy_tickets_with_candy, candy_menu
 from domain.cinema.models import CinemaSettings
 from domain.screenings.models import Screening
 from domain.tickets.models import PurchaseRefund, TicketPurchase, SeatReservation
@@ -50,6 +52,7 @@ def seat_selection_view(request, pk):
         {
             "cinema": CinemaSettings.current(),
             "screening": screening,
+            "candy": candy_menu(),
             "purchase_error": purchase_error,
             "manager_role": manager_role(request.user),
         },
@@ -63,14 +66,12 @@ def ticket_purchase_view(request, pk):
     if request.method == "POST":
         form = TicketPurchaseForm(request.POST)
         if form.is_valid():
-            selected_seats = form.cleaned_data["selected_seats"]
             try:
-                purchase = TicketPurchase.buy(
+                purchase = buy_tickets_with_candy(
                     user=request.user,
                     screening=screening,
-                    quantity=len(selected_seats),
-                    selected_seats=selected_seats,
-                    require_reservation=True,
+                    selected_seats=form.cleaned_data["selected_seats"],
+                    candy_items=form.cleaned_data["candy_items"],
                 )
             except ValidationError as error:
                 available = TicketPurchase.available_for(screening)
@@ -80,14 +81,19 @@ def ticket_purchase_view(request, pk):
                 )
             else:
                 ticket_label = "entrada" if purchase.quantity == 1 else "entradas"
-                messages.success(
-                    request,
-                    (
+                if CandyOrder.objects.filter(purchase=purchase).exists():
+                    message = (
+                        f"Pago aprobado. Compraste {purchase.quantity} {ticket_label} y candy "
+                        f"para {screening.movie.title}. Retirá el candy con su código antes o "
+                        "durante la función. ¡Te esperamos!"
+                    )
+                else:
+                    message = (
                         "Pago aprobado. "
                         f"Compraste {purchase.quantity} {ticket_label} "
                         f"para {screening.movie.title}. ¡Te esperamos!"
-                    ),
-                )
+                    )
+                messages.success(request, message)
                 return redirect("my_tickets")
         else:
             request.session["purchase_error"] = purchase_error_message(
@@ -250,11 +256,12 @@ def my_tickets_view(request):
     Screening.finalize_expired()
     purchases = list(
         TicketPurchase.objects.filter(user=request.user)
-        .select_related("screening__movie", "screening__room", "refund")
+        .select_related("screening__movie", "screening__room", "refund", "candy_order")
         .prefetch_related("tickets")
         .order_by("screening__starts_at", "-created_at")
     )
     for purchase in purchases:
+        purchase.candy = getattr(purchase, "candy_order", None)
         purchase.used_count = sum(ticket.used_at is not None for ticket in purchase.tickets.all())
         purchase.remaining_count = purchase.quantity - purchase.used_count
         purchase.is_history = (
@@ -311,7 +318,9 @@ def notifications_view(request):
 @require_GET
 def ticket_detail_view(request, pk):
     purchase = get_object_or_404(
-        TicketPurchase.objects.select_related("screening__movie", "screening__room", "refund").prefetch_related("tickets"),
+        TicketPurchase.objects.select_related(
+            "screening__movie", "screening__room", "refund", "candy_order",
+        ).prefetch_related("tickets"),
         pk=pk, user=request.user,
     )
     screening = purchase.screening
@@ -323,10 +332,31 @@ def ticket_detail_view(request, pk):
         used_count < purchase.quantity and screening.status in (Screening.Status.PUBLISHED, Screening.Status.IN_PROGRESS)
         and screening.ends_at > timezone.now() and not hasattr(purchase, "refund")
     )
+    candy_order = getattr(purchase, "candy_order", None)
     return render(request, "ticket_detail.html", {
         "purchase": purchase, "used_count": used_count, "available": available, "is_expired": is_expired,
         "remaining_count": purchase.quantity - used_count,
         "used_seat_summary": admission_seat_summary(used_tickets),
+        "candy_order": candy_order,
+        "total_paid": purchase.total + (candy_order.total if candy_order else 0),
+        "cinema": CinemaSettings.current(),
+        "manager_role": manager_role(request.user),
+    })
+
+
+@login_required
+@never_cache
+@require_GET
+def candy_detail_view(request, pk):
+    order = get_object_or_404(
+        CandyOrder.objects.select_related(
+            "purchase__screening__movie", "purchase__screening__room", "purchase__refund",
+        ),
+        purchase__pk=pk, purchase__user=request.user,
+    )
+    return render(request, "candy_detail.html", {
+        "order": order,
+        "purchase": order.purchase,
         "cinema": CinemaSettings.current(),
         "manager_role": manager_role(request.user),
     })

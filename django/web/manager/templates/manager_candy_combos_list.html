@@ -1,0 +1,78 @@
+{% extends "manager_base.html" %}
+
+{% block content %}
+  <section class="page-heading page-heading-row">
+    <div>
+      <h1>Candy</h1>
+      <p>Cada combo descuenta stock de sus productos. Su disponibilidad depende de ellos.</p>
+    </div>
+    <a class="primary-link" href="{% url 'manager:candy_combos_create' %}">
+      <i data-lucide="plus" aria-hidden="true"></i>
+      <span>Nuevo combo</span>
+    </a>
+  </section>
+
+  {% include "_candy_tabs.html" %}
+  {% include "_list_controls.html" %}
+
+  <section class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Combo</th>
+          <th>Contenido</th>
+          <th>Precio</th>
+          <th>Disponibles</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for combo in object_list %}
+          <tr>
+            <td data-label="Combo">
+              <span class="candy-cell-title">
+                {% if combo.image %}
+                  <img class="candy-thumb" src="{{ combo.image.url }}" alt="">
+                {% else %}
+                  <span class="candy-thumb" aria-hidden="true"><i data-lucide="package"></i></span>
+                {% endif %}
+                <strong class="cell-title">{{ combo.name }}</strong>
+              </span>
+            </td>
+            <td data-label="Contenido">{{ combo.contents_label|default:"Sin productos" }}</td>
+            <td data-label="Precio">
+              ${{ combo.price|floatformat:2 }}
+              {% if combo.saving %}<small class="muted-cell candy-saving">Suelto: ${{ combo.components_price|floatformat:2 }}</small>{% endif %}
+            </td>
+            <td data-label="Disponibles">
+              {{ combo.available_stock }}
+              {% if combo.is_active and combo.available_stock == 0 %}<span class="status-pill status-cancelada">Sin stock</span>{% endif %}
+            </td>
+            <td data-label="Estado">
+              {% if combo.is_active %}
+                <span class="status-pill status-publicada">A la venta</span>
+              {% else %}
+                <span class="status-pill">Pausado</span>
+              {% endif %}
+            </td>
+            <td class="table-actions" data-label="Acciones">
+              <a href="{% url 'manager:candy_combos_update' combo.pk %}">
+                <i data-lucide="pencil" aria-hidden="true"></i>
+                <span>Editar</span>
+              </a>
+              <a href="{% url 'manager:candy_combos_delete' combo.pk %}" class="danger-link">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                <span>Eliminar</span>
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">Todavía no hay combos armados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% include "_pagination.html" %}
+{% endblock %}

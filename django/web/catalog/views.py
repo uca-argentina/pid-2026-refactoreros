@@ -1,5 +1,6 @@
 from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.cache import never_cache
 
 from domain.cinema.models import CinemaSettings
@@ -133,20 +134,47 @@ def build_seat_map(screening, user=None, price_calculator=None):
     }
 
 
+def best_promotion_quote(screenings, price_calculator):
+    quotes = (
+        price_calculator.quote(
+            base_price=price,
+            seat_type_id=int(type_id),
+            screening_starts_at=screening.starts_at,
+        )
+        for screening in screenings
+        for type_id, price in (screening.prices_by_type or {}).items()
+    )
+    return max(
+        (quote for quote in quotes if quote.promotion),
+        key=lambda quote: quote.discount,
+        default=None,
+    )
+
+
 def home_view(request):
     Screening.finalize_expired()
     published = Screening.published()
-    movies = Movie.objects.filter(
-        screenings__status=Screening.Status.PUBLISHED
-    ).prefetch_related(
-        Prefetch("screenings", queryset=published, to_attr="published_screenings")
-    ).distinct()
+    movies = list(
+        Movie.objects.filter(
+            screenings__status=Screening.Status.PUBLISHED
+        ).prefetch_related(
+            Prefetch("screenings", queryset=published, to_attr="published_screenings")
+        ).distinct()
+    )
+    price_calculator = PromotionPriceCalculator.current()
+    for movie in movies:
+        movie.promotion_quote = best_promotion_quote(movie.published_screenings, price_calculator)
+    promotions = sorted(
+        price_calculator.promotions,
+        key=lambda promotion: not promotion.is_available_today,
+    )
     return render(
         request,
         "home.html",
         {
             "cinema": CinemaSettings.current(),
             "movies": movies,
+            "promotions": promotions if movies else [],
             "manager_role": manager_role(request.user),
         },
     )
@@ -167,6 +195,7 @@ def movie_detail_view(request, pk):
     screening = movie.published_screenings[0]
     price_calculator = PromotionPriceCalculator.current()
     for item in movie.published_screenings:
+        item.local_date = timezone.localdate(item.starts_at)
         item.tickets_available = TicketPurchase.available_for(item)
         item.seat_map = build_seat_map(
             item,

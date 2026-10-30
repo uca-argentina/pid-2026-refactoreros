@@ -31,6 +31,7 @@
                 <span>{{ purchase.screening.starts_at|date:"l d/m H:i"|capfirst }}</span>
                 {% if purchase.screening.status == 'cancelada' %}<span class="ticket-status">Función cancelada</span>{% endif %}
                 {% if purchase.is_history and purchase.screening.status != 'cancelada' %}<span class="ticket-history-status">Función finalizada</span>{% endif %}
+                {% if purchase.candy %}<span class="ticket-candy-tag"><i data-lucide="popcorn" aria-hidden="true"></i>Con candy</span>{% endif %}
               </div>
               <h2>{{ purchase.screening.movie.title }}</h2>
               <p class="ticket-room-line">
@@ -49,6 +50,13 @@
                 <a class="ticket-history-link" href="{% url 'ticket_detail' purchase.pk %}">Ver detalle</a>
               {% else %}
                 <a class="ticket-history-link" href="{% url 'ticket_detail' purchase.pk %}">Ver detalle</a>
+              {% endif %}
+              {% if purchase.candy.pickup_open %}
+                <a class="ticket-candy-link" href="{% url 'candy_detail' purchase.pk %}">
+                  <i data-lucide="popcorn" aria-hidden="true"></i><span>QR CANDY</span>
+                </a>
+              {% elif purchase.candy.delivered_at %}
+                <span class="ticket-candy-status"><i data-lucide="check" aria-hidden="true"></i>Candy retirado</span>
               {% endif %}
             </div>
 

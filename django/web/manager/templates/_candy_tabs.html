@@ -1,0 +1,8 @@
+<nav class="candy-tabs" aria-label="Secciones de candy">
+  <a href="{% url 'manager:candy_products_list' %}"{% if candy_tab == "products" %} class="is-active" aria-current="page"{% endif %}>
+    <i data-lucide="popcorn" aria-hidden="true"></i><span>Productos</span>
+  </a>
+  <a href="{% url 'manager:candy_combos_list' %}"{% if candy_tab == "combos" %} class="is-active" aria-current="page"{% endif %}>
+    <i data-lucide="package" aria-hidden="true"></i><span>Combos</span>
+  </a>
+</nav>
