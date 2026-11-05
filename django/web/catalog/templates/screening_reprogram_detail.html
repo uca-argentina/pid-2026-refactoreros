@@ -1,0 +1,123 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reprogramar entradas | {{ movie.title }} | {{ cinema.name|default:"Butaca Cero" }}</title>
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+  <link rel="icon" href="{% static 'favicon-96x96.png' %}" type="image/png">
+  <link rel="stylesheet" href="{% static 'catalog.css' %}">
+</head>
+<body class="client-page">
+  {% include "_client_header.html" %}
+
+  <main class="client-main">
+    {% if messages %}
+      <div class="client-messages">
+        {% for message in messages %}
+          <p>{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% if purchase_error %}
+      <div class="client-messages">
+        <p>{{ purchase_error }}</p>
+      </div>
+    {% endif %}
+
+    <article class="screening-detail">
+      {% if movie.image %}
+        <img src="{{ movie.image.url }}" alt="{{ movie.title }}">
+      {% endif %}
+      <section class="screening-copy">
+        <p class="screening-kicker">{{ movie.get_genre_display }} - {{ movie.runtime_label }}</p>
+        <h1>Reprogramar entradas: {{ movie.title }}</h1>
+
+        <dl class="screening-facts">
+          <div>
+            <dt>Género</dt>
+            <dd>{{ movie.get_genre_display }}</dd>
+          </div>
+          <div>
+            <dt>Clasificación</dt>
+            <dd>{{ movie.get_rating_display }}</dd>
+          </div>
+          <div>
+            <dt>Duración</dt>
+            <dd>{{ movie.runtime_label }}</dd>
+          </div>
+          <div>
+            <dt>Tus entradas</dt>
+            <dd>{{ purchase.quantity }}</dd>
+          </div>
+        </dl>
+
+        <section class="screening-options" aria-label="Tu compra actual">
+          <h2>Tu compra actual</h2>
+          <dl class="screening-facts">
+            <div>
+              <dt>Función</dt>
+              <dd>{{ current_screening.starts_at|date:"l d/m H:i"|capfirst }}</dd>
+            </div>
+            <div>
+              <dt>Sala</dt>
+              <dd>{{ current_screening.room.name }}</dd>
+            </div>
+            <div>
+              <dt>Butacas</dt>
+              <dd>{{ purchase.seat_labels|default:"Sin asignar" }}</dd>
+            </div>
+            <div>
+              <dt>Total pagado</dt>
+              <dd>${{ purchase.total }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="screening-options" aria-label="Funciones disponibles">
+          <h2>Elegí tu nueva función</h2>
+          {% if screenings %}
+            <p>Pasaremos tus {{ purchase.quantity }} entrada{{ purchase.quantity|pluralize }} a la función que elijas. En el siguiente paso elegís las butacas.</p>
+            {% regroup screenings by starts_at|date:"Y-m-d" as screenings_by_day %}
+            <div class="screening-day-list">
+              {% for day in screenings_by_day %}
+                <section class="screening-day-group">
+                  <h3>{{ day.list.0.starts_at|date:"l d/m"|capfirst }}</h3>
+                  <div class="screening-time-chips">
+                    {% for item in day.list %}
+                      {% if item.tickets_available >= purchase.quantity %}
+                        <a class="screening-time-chip" href="{% url 'seat_reprogram_selection' purchase.pk item.pk %}" title="{{ item.room.name }} - desde ${{ item.current_price_from|default:item.price_from }}{% if item.has_promotion %} - Promoción disponible: {{ item.promotion_summary }}{% endif %}">
+                          <span>{{ item.starts_at|date:"H:i" }}</span>
+                          <small>
+                            {{ item.room.name }} · ${{ item.current_price_from|default:item.price_from }}{% if item.has_promotion %} · <em class="screening-promotion-badge" aria-label="Promoción disponible">Promo</em>{% endif %}
+                          </small>
+                        </a>
+                      {% else %}
+                        <span class="screening-time-chip is-sold-out" aria-disabled="true" title="{% if item.tickets_available > 0 %}No hay lugar para {{ purchase.quantity }} entrada{{ purchase.quantity|pluralize }}{% else %}Función agotada{% endif %}">
+                          <span>{{ item.starts_at|date:"H:i" }}</span>
+                          <small>{% if item.tickets_available > 0 %}Sin lugar para {{ purchase.quantity }}{% else %}Agotada{% endif %}</small>
+                        </span>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                </section>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p>No hay otras funciones disponibles para esta película. Volvé a mirar más tarde.</p>
+          {% endif %}
+        </section>
+
+        <p>{{ movie.synopsis }}</p>
+      </section>
+    </article>
+  </main>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>

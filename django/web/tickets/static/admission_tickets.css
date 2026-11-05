@@ -344,3 +344,7 @@
   .ticket-candy-callout { order: 4; margin: 16px 6px 0; }
   .candy-back-link { margin: 4px 6px 12px; }
 }
+
+
+.ticket-reprogram-screening { position: relative; z-index: 1; display: inline-flex; align-items: center; min-height: 38px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, .35); border-radius: 6px; color: rgba(255, 255, 255, .9); font-size: 13px; font-weight: 800; text-decoration: none; }
+.ticket-reprogram-screening:hover { border-color: rgba(255, 255, 255, .8); color: #fff; }
