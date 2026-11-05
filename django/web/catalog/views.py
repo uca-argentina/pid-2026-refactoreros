@@ -225,11 +225,64 @@ def movie_detail_view(request, pk):
         },
     )
 
+@never_cache
+def movie_screening_reprogram(request,purchase_pk):
+    Screening.finalize_expired()
+
+    purchase = get_object_or_404(
+        request.user.ticket_purchases.select_related("screening__movie"),
+        pk=purchase_pk,
+    )
+    current = purchase.screening
+    movie = current.movie
+    current_screening = purchase.screening
+    movie = current_screening.movie
+
+    alternatives = list(
+        Screening.published()
+        .filter(movie=movie)
+        .exclude(pk=current_screening.pk)
+        .order_by("starts_at")
+    )
+    price_calculator = PromotionPriceCalculator.current()
+    add_details_to_screenings(alternatives,request.user,price_calculator)
+
+    if current_screening.starts_at <= timezone.now():
+        return redirect("home")
+
+    return render(request, "screening_reprogram_detail.html", {
+        "cinema": CinemaSettings.current(),
+        "movie": movie,
+        "purchase": purchase,
+        "current_screening": current_screening,
+        "screenings": alternatives,
+        "manager_role": manager_role(request.user),
+    })
 
 def screening_detail_view(request, pk):
     Screening.finalize_expired()
     screening = get_object_or_404(Screening.published(), pk=pk)
     return redirect("seat_selection", pk=screening.pk)
+
+def add_details_to_screenings(screenings,user,price_calculator):
+    for item in screenings:
+        item.local_date = timezone.localdate(item.starts_at)
+        item.tickets_available = TicketPurchase.available_for(item)
+        item.seat_map = build_seat_map(
+            item,
+            user=user,
+            price_calculator=price_calculator,
+        )
+        item.current_price_from = item.seat_map["price_from"] if item.seat_map else item.price_from
+        item.promotion_names = sorted(
+            {
+                tier["promotion"]
+                for tier in (item.seat_map or {}).get("legend", [])
+                if tier["promotion"]
+            }
+        )
+        item.has_promotion = bool(item.promotion_names)
+        item.promotion_summary = ", ".join(item.promotion_names)
 
 
 def _error_page(request, status, title, description, eyebrow):

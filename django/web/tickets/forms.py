@@ -34,3 +34,8 @@ class TicketPurchaseForm(CandyPurchaseForm):
         if not isinstance(selected_seats, list) or not selected_seats:
             raise forms.ValidationError("La seleccion de asientos no es valida.")
         return selected_seats
+
+class TicketReprogramForm(TicketPurchaseForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop("candy_items", None)

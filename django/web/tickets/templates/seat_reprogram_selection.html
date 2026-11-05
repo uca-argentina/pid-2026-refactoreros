@@ -1,0 +1,187 @@
+{% load static l10n %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reprogramar butacas | {{ screening.movie.title }} | {{ cinema.name|default:"Butaca Cero" }}</title>
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+  <link rel="icon" href="{% static 'favicon-96x96.png' %}" type="image/png">
+  <link rel="stylesheet" href="{% static 'catalog.css' %}">
+  <script src="{% static 'catalog.js' %}" defer></script>
+</head>
+<body class="client-page">
+  {% include "_client_header.html" %}
+
+  <main class="client-main seat-selection-main">
+    <section class="seat-selection-header">
+      <a class="back-to-functions" href="{% url 'screening_reprogram' purchase.pk %}"><span aria-hidden="true">&larr;</span> Volver a elegir función</a>
+      <h1>Reprogramar: {{ screening.movie.title }}</h1>
+      <p>
+        {{ screening.starts_at|date:"l d/m H:i"|capfirst }}
+        |
+        {{ screening.room.name }}
+        |
+        desde ${{ screening.current_price_from|default:screening.price_from }}
+      </p>
+      <p>
+        Elegí {{ purchase.quantity }} butaca{{ purchase.quantity|pluralize }}
+        para pasar tus entradas desde la función del
+        {{ current_screening.starts_at|date:"l d/m H:i" }} ({{ current_screening.room.name }}).
+      </p>
+    </section>
+
+    <form class="purchase-form seat-selection-form" method="post" action="{% url 'screening_reprogram_confirm' purchase.pk screening.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="selected_seats" value="">
+
+      {% if screening.seat_map %}
+        <div class="seat-reference-line" aria-label="Referencias de asientos">
+          {% for tier in screening.seat_map.legend %}
+            <span>
+              {% if tier.icon_url %}
+                <img class="seat-reference-icon" src="{{ tier.icon_url }}" alt="">
+              {% else %}
+                <i style="--seat-color: {{ tier.color }};"></i>
+              {% endif %}
+              {{ tier.type }}
+              {% if tier.promotion %}
+                <del>${{ tier.base_price }}</del> <strong>${{ tier.price }}</strong> <small>{{ tier.promotion }}</small>
+              {% else %}
+                ${{ tier.price }}
+              {% endif %}
+            </span>
+            {% if not forloop.last %}<b>|</b>{% endif %}
+          {% endfor %}
+          <b>|</b>
+          <span><i class="legend-selected"></i>Seleccionado</span>
+          <b>|</b>
+          <span><i class="legend-unavailable"></i>No disponible</span>
+        </div>
+      {% endif %}
+
+      <div class="seat-selection-layout">
+      <div class="seat-selection-content">
+      {% if screening.seat_map %}
+        <section class="client-seat-map" data-screening-id="{{ screening.pk }}" data-available="{{ screening.tickets_available|unlocalize }}" data-required-quantity="{{ purchase.quantity|unlocalize }}" data-refresh-interval-seconds="{{ cinema.seat_refresh_seconds|unlocalize }}" data-reservation-url="{% url 'seat_reservation' screening.pk %}" data-reservation-batch-url="{% url 'seat_reservation_batch' screening.pk %}" data-reservation-status-url="{% url 'seat_reservation_status' screening.pk %}" data-reservation-batch-delay-ms="1000" aria-label="Seleccionar asientos">
+          <div class="client-seat-map-viewport" data-seat-map-viewport>
+            <div class="client-seat-stage">
+              <div class="client-screen-marker" aria-hidden="true">
+                <span>Pantalla</span>
+              </div>
+              <div class="client-seat-grid">
+              <div class="client-seat-row client-seat-column-row" aria-hidden="true">
+                <span class="client-seat-row-label"></span>
+                <div class="client-seat-cells">
+                  {% for column in screening.seat_map.columns %}
+                    <span class="client-seat-column-label{% if column.is_aisle %} is-aisle{% endif %}">{{ column.label }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+              {% for row in screening.seat_map.rows %}
+                <div class="client-seat-row{% if row.is_aisle %} is-aisle-row{% endif %}">
+                  <span class="client-seat-row-label">{{ row.label }}</span>
+                  <div class="client-seat-cells">
+                    {% for cell in row.cells %}
+                      {% if cell.is_seat %}
+                        <button type="button" class="client-seat{% if cell.icon_url %} has-custom-icon{% endif %}{% if cell.is_unavailable %} is-unavailable{% endif %}" style="--seat-color: {{ cell.color }};" data-seat-label="{{ cell.label }}" data-seat-type-id="{{ cell.type_id }}" data-seat-price="{{ cell.price|unlocalize }}" data-seat-base-price="{{ cell.base_price|unlocalize }}" data-seat-promotion="{{ cell.promotion }}" title="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.promotion %} · {{ cell.promotion }} aplicada, antes ${{ cell.base_price }}{% endif %}{% if cell.is_unavailable %} - No disponible{% endif %}" aria-label="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.promotion %}, {{ cell.promotion }} aplicada, antes ${{ cell.base_price }}{% endif %}{% if cell.is_unavailable %} - No disponible{% endif %}"{% if cell.is_unavailable %} disabled aria-disabled="true"{% endif %}>
+                          {% if cell.icon_url %}
+                            <img class="client-seat-icon" src="{{ cell.icon_url }}" alt="">
+                          {% else %}
+                            {{ cell.label }}
+                          {% endif %}
+                        </button>
+                      {% else %}
+                        <span class="client-seat aisle" aria-hidden="true"></span>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+              </div>
+            </div>
+          </div>
+          <button type="button" class="seat-map-pan-hint seat-map-pan-hint-left" data-seat-map-pan="left" aria-label="Ver butacas hacia la izquierda" disabled><span aria-hidden="true">&#8249;</span></button>
+          <button type="button" class="seat-map-pan-hint seat-map-pan-hint-right" data-seat-map-pan="right" aria-label="Ver butacas hacia la derecha" disabled><span aria-hidden="true">&#8250;</span></button>
+        </section>
+      {% endif %}
+      </div>
+
+        <aside class="purchase-cart" aria-label="Detalle de reprogramación">
+          <h2>Tu reprogramación</h2>
+          <dl>
+            <div>
+              <dt>Función actual</dt>
+              <dd>{{ current_screening.starts_at|date:"d/m H:i" }} · {{ current_screening.room.name }}</dd>
+            </div>
+            <div>
+              <dt>Butacas actuales</dt>
+              <dd>{{ purchase.seat_labels|default:"Sin asignar" }}</dd>
+            </div>
+            <div>
+              <dt>Nueva función</dt>
+              <dd>{{ screening.starts_at|date:"d/m H:i" }}</dd>
+            </div>
+            <div>
+              <dt>Nueva sala</dt>
+              <dd>{{ screening.room.name }}</dd>
+            </div>
+            <div>
+              <dt>Entradas a pasar</dt>
+              <dd>{{ purchase.quantity }}</dd>
+            </div>
+            <div>
+              <dt>Nuevas butacas</dt>
+              <dd class="cart-seat-list">
+                <ul class="cart-seat-lines" data-cart-seat-lines>
+                  <li>Sin seleccionar</li>
+                </ul>
+              </dd>
+            </div>
+            <div class="cart-total-row">
+              <dt>Nuevo total</dt>
+              <dd class="cart-total-amount">
+                <del data-cart-base-total hidden>$0,00</del>
+                <span data-cart-total>$0,00</span>
+              </dd>
+            </div>
+            <div>
+              <dt>Total pagado</dt>
+              <dd>${{ purchase.total }}</dd>
+            </div>
+          </dl>
+          <p class="purchase-savings" data-purchase-savings hidden>Ahorrás <strong data-purchase-savings-amount>$0,00</strong></p>
+          <p class="purchase-promotions" data-purchase-promotions hidden>Promociones aplicadas: <strong data-purchase-promotions-list></strong></p>
+          <p class="purchase-summary" data-purchase-summary></p>
+          <p class="reservation-summary" data-reservation-summary hidden>
+            <i data-lucide="clock-3" aria-hidden="true"></i>
+            <span data-reservation-summary-text></span>
+          </p>
+          <div class="purchase-action">
+            <button
+              type="submit"
+              data-singular-label="Confirmar reprogramación"
+              data-plural-label="Confirmar reprogramación"
+              data-select-seat-label="Seleccioná {{ purchase.quantity }} butaca{{ purchase.quantity|pluralize }}"
+              data-sold-out-label="No hay lugar suficiente en esta función"
+              data-required-quantity="{{ purchase.quantity|unlocalize }}"
+              {% if screening.tickets_available < purchase.quantity or screening.seat_map %}disabled{% endif %}
+            >
+              {% if screening.tickets_available >= purchase.quantity %}Seleccioná {{ purchase.quantity }} butaca{{ purchase.quantity|pluralize }}{% else %}No hay lugar suficiente en esta función{% endif %}
+            </button>
+            {% if purchase_error and screening.tickets_available >= purchase.quantity %}
+              <p class="purchase-error">{{ purchase_error }}</p>
+            {% endif %}
+          </div>
+        </aside>
+      </div>
+    </form>
+  </main>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>

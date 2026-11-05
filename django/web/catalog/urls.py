@@ -8,4 +8,5 @@ urlpatterns = [
     path("peliculas/<int:pk>/", views.movie_detail_view, name="movie_detail"),
     path("funciones/<int:pk>/", views.screening_detail_view, name="screening_detail"),
     path("funcion/<int:pk>/", views.screening_detail_view, name="screening_page"),
+    path("reprogramacion/<int:purchase_pk>/", views.movie_screening_reprogram, name="screening_reprogram"),
 ]

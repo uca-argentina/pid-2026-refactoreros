@@ -72,6 +72,10 @@
           {% if purchase.promotions_snapshot %}<div class="ticket-promotions"><dt>Promociones aplicadas</dt><dd><ul>{% for promotion in purchase.promotions_snapshot %}<li>{{ promotion }}</li>{% endfor %}</ul></dd></div>{% endif %}
         </dl>
       </section>
+      {% if available and reprogram_opition_avialable%}
+        <p>¿Querés reprogramar para otra función?</p>
+        <a class="ticket-reprogram-screening" href="{% url 'screening_reprogram' purchase.pk %}"><span>Cambiar función</span></a>
+      {% endif %}
     </article>
   </main>
   <script src="https://unpkg.com/lucide@latest"></script>

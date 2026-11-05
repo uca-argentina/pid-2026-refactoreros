@@ -175,6 +175,32 @@ class UnifiedCandyOrdersTests(CandyFixture):
         self.assertContains(old_detail, self.attached.qr_payload)
         self.assertEqual(old_detail.context["client_nav_section"], "candy")
 
+    def test_reprogramming_tickets_preserves_attached_candy_and_its_qr(self):
+        self.screening.starts_at = timezone.now() + timedelta(hours=3)
+        self.screening.save(update_fields=["starts_at"])
+        new_screening = Screening.objects.create(
+            movie=self.screening.movie, room=self.screening.room,
+            starts_at=timezone.now() + timedelta(hours=5),
+            status=Screening.Status.PUBLISHED, ticket_price=Decimal("1000"),
+        )
+        self.assertEqual(self.client.get(reverse("screening_reprogram", args=[self.purchase.pk])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("seat_reprogram_selection", args=[self.purchase.pk, new_screening.pk])).status_code, 200)
+        SeatReservation.reserve(self.customer, new_screening, "1A")
+        original_qr = self.attached.qr_payload
+        self.popcorn.refresh_from_db()
+        original_stock = self.popcorn.stock
+        response = self.client.post(reverse("screening_reprogram_confirm", args=[self.purchase.pk, new_screening.pk]),
+            {"selected_seats": json.dumps([{"label": "1A"}])})
+        self.assertRedirects(response, reverse("my_tickets"))
+        self.purchase.refresh_from_db()
+        self.assertEqual(self.purchase.screening_id, new_screening.pk)
+        self.attached.refresh_from_db()
+        self.assertEqual(self.attached.qr_payload, original_qr)
+        self.assertEqual(self.attached.purchase_id, self.purchase.pk)
+        self.popcorn.refresh_from_db()
+        self.assertEqual(self.popcorn.stock, original_stock)
+        self.assertContains(self.client.get(reverse("candy_order_detail", args=[self.attached.pk])), original_qr)
+
     def test_ready_orders_precede_delivered_and_invalid_orders_have_no_qr(self):
         deliver_candy_order(self.standalone.qr_payload, self.operator)
         self.screening.starts_at = timezone.now() - timedelta(days=1)
