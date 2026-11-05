@@ -12,6 +12,11 @@
   const previewButton = form.querySelector('[data-preview]');
   const codeCharacters = reservationCode ? [...reservationCode.querySelectorAll('[data-code-character]')] : [];
   const codeInput = form.elements.code;
+  const qrPrefix = form.dataset.qrPrefix || 'BC2:';
+  const qrPattern = new RegExp(`^${qrPrefix}[A-Za-z2-9]{6}$`, 'i');
+  const scanPrompt = form.dataset.scanPrompt || 'Apuntá al QR de una entrada.';
+  const scanFoundMessage = form.dataset.scanFound || 'QR leído. Consultando entrada…';
+  const loadingLabel = form.dataset.loadingLabel || 'Buscando entrada…';
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d', { willReadFrequently: true });
   const MAX_SCAN_DIMENSION = 960;
@@ -35,7 +40,7 @@
     previewButton.disabled = true;
     previewButton.classList.add('is-loading');
     previewButton.setAttribute('aria-busy', 'true');
-    previewButton.textContent = 'Buscando entrada…';
+    previewButton.textContent = loadingLabel;
   }
 
   function setStatus(message) {
@@ -281,10 +286,24 @@
   }
 
   function accept(result) {
-    if (!result || !/^BC2:[A-Za-z2-9]{6}$/i.test(result.data)) return false;
+    if (result && /^(BC2:|BCC:)[A-Za-z2-9]{6}$/i.test(result.data) && !qrPattern.test(result.data)) {
+      stopCamera();
+      const notice = document.querySelector('[data-qr-mismatch]');
+      const link = document.querySelector('[data-qr-switch]');
+      const candy = result.data.toUpperCase().startsWith('BCC:');
+      document.querySelector('[data-qr-mismatch-message]').textContent = candy
+        ? 'Este QR es de Candy. Confirmá con el cliente si quiere retirar su pedido y cambiá a Entregar candy.'
+        : 'Este QR es de una entrada. Confirmá con el cliente si quiere ingresar a la sala y cambiá a Validar entradas.';
+      link.href = `${candy ? link.dataset.candyUrl : link.dataset.ticketUrl}?code=${encodeURIComponent(result.data)}`;
+      link.textContent = candy ? 'Ir a Entregar candy' : 'Ir a Validar entradas';
+      notice.hidden = false;
+      document.querySelector('[data-qr-stay]').onclick = () => { notice.hidden = true; };
+      return true;
+    }
+    if (!result || !qrPattern.test(result.data)) return false;
     stopCamera();
-    form.elements.code.value = result.data.slice(4).toUpperCase();
-    setStatus('QR leído. Consultando entrada…');
+    form.elements.code.value = result.data.slice(qrPrefix.length).toUpperCase();
+    setStatus(scanFoundMessage);
     form.requestSubmit(form.querySelector('[data-preview]'));
     return true;
   }
@@ -341,7 +360,7 @@
       start.classList.add('is-camera-open');
       if (cameraButtonLabel) cameraButtonLabel.textContent = 'Cerrar cámara';
       if (cameraCloseMark) cameraCloseMark.hidden = false;
-      setStatus('Apuntá al QR de una entrada.');
+      setStatus(scanPrompt);
       lastScanAt = 0;
       frame = requestAnimationFrame(scan);
     } catch (error) {

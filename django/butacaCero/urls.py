@@ -13,6 +13,7 @@ def health(_request):
 
 
 urlpatterns = [
+    path('juegos/', include('domain.games.urls')),
     path('', include('web.catalog.urls')),
     path('', include('web.tickets.urls')),
     path('', include('web.auth.urls')),

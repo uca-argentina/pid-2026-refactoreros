@@ -1,0 +1,34 @@
+    <section class="validation-scanner" aria-labelledby="scanner-title">
+      <h2 id="scanner-title" class="visually-hidden">Escanear código QR</h2>
+      <div class="form-actions">
+        <button type="button" data-start-camera>
+          <i data-lucide="camera" data-camera-icon aria-hidden="true"></i><span data-camera-close-mark hidden aria-hidden="true">×</span><span data-camera-button-label>Escanear código</span>
+        </button>
+        <details class="camera-picker" data-camera-picker hidden>
+          <summary aria-label="Elegir cámara" title="Elegir cámara"><i data-lucide="settings-2" aria-hidden="true"></i></summary>
+          <div class="camera-picker-menu">
+            <label for="camera-device">Cámara</label>
+            <select id="camera-device" data-camera-device></select>
+          </div>
+        </details>
+      </div>
+      <video data-camera playsinline muted hidden></video>
+      <p class="visually-hidden" data-scanner-status role="status" aria-live="polite"></p>
+      <div data-qr-mismatch hidden><p data-qr-mismatch-message></p><a class="button" data-qr-switch data-ticket-url="{% url 'manager:validar_entradas' %}" data-candy-url="{% url 'manager:entregar_candy' %}">Cambiar de modo</a><button type="button" data-qr-stay>Seguir en este modo</button></div>
+    </section>
+
+    <section class="validation-manual" aria-labelledby="manual-title">
+      <h2 id="manual-title">{{ manual_title }}</h2>
+      <form class="manager-form validation-code-form" method="post" data-validation-form data-qr-prefix="{{ qr_prefix }}" data-scan-prompt="{{ scan_prompt }}" data-scan-found="{{ scan_found }}" data-loading-label="{{ loading_label }}">
+        {% csrf_token %}
+        <div role="alert">{{ form.non_field_errors }}</div>
+        <div class="reservation-code" data-reservation-code aria-label="{{ form.code.label }}">
+          {% for position in "123456" %}
+            <input type="text" inputmode="text" autocomplete="{% if forloop.first %}one-time-code{% else %}off{% endif %}" autocapitalize="characters" spellcheck="false" aria-label="Carácter {{ forloop.counter }} del {{ code_name }}" data-code-character>
+          {% endfor %}
+        </div>
+        <span class="visually-hidden">{{ form.code.as_hidden }}</span>{{ form.code.errors }}
+        <input type="hidden" name="action" value="preview">
+        <div class="form-actions"><button type="submit" data-preview>Consultar</button></div>
+      </form>
+    </section>

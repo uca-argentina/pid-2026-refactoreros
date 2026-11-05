@@ -1,0 +1,90 @@
+{% extends "manager_base.html" %}
+{% load static %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'ticket_validation.css' %}">{% endblock %}
+{% block content %}
+  <section class="page-heading">
+    <h1>Entregar candy</h1>
+  </section>
+  <div class="validation-layout">
+    {% include "_code_lookup.html" with manual_title="Buscar por código de retiro" code_name="código de retiro" qr_prefix="BCC:" scan_prompt="Apuntá al QR de retiro de candy." scan_found="QR leído. Consultando retiro…" loading_label="Buscando retiro…" %}
+
+    {% if order %}
+      <section class="validation-result" aria-labelledby="pickup-result-title" data-found-entry>
+        <h2 id="pickup-result-title">Retiro encontrado</h2>
+        <h3>{% if order.is_standalone_order %}Pedido de Candy #{{ order.pk }}{% elif order.is_reward_order %}Premios de Juegos{% else %}{{ order.purchase.screening.movie.title }}{% endif %}</h3>
+        {% if order.purchase_id %}<p>{{ order.purchase.screening.room.name }} · {{ order.purchase.screening.starts_at|date:"d/m/Y H:i" }}</p>{% endif %}
+        <p>Cliente: <strong>{{ order.customer_display_name }}</strong></p>
+        <ul class="candy-pickup-items" aria-label="Productos a entregar">
+          {% for line in order.lines %}
+            <li>
+              <strong>{{ line.quantity }} ×</strong>
+              <span>{{ line.name }}{% if line.is_combo %}<small>{{ line.contents }}</small>{% endif %}</span>
+            </li>
+          {% endfor %}
+        </ul>
+        <form method="post" class="admission-selection">
+          {% csrf_token %}
+          <input type="hidden" name="code" value="{{ order.pickup_code }}">
+          <input type="hidden" name="action" value="deliver">
+          <div class="form-actions"><button type="submit">Entregar candy · {{ order.item_count }} producto{{ order.item_count|pluralize }}</button></div>
+        </form>
+      </section>
+    {% endif %}
+  </div>
+  <details class="validation-help">
+    <summary>Ayuda</summary>
+    <p>Activá la cámara y apuntá al QR de candy del cliente, o ingresá su código de retiro. Revisá los productos, entregalos y confirmá. Cada retiro se entrega una sola vez.</p>
+  </details>
+  {% if pickup_history %}
+    <section class="validation-history" aria-labelledby="pickup-history-title">
+      <h2 id="pickup-history-title">Tus entregas recientes</h2>
+      <p class="validation-history-intro">Mostramos las entregas de las últimas 24 horas.</p>
+      <div class="validation-history-list">
+        {% for pickup in pickup_history %}
+          <article class="validation-history-item{% if pickup.reverted_at %} is-reverted{% endif %}">
+            <div>
+              <strong>{% if pickup.order.is_standalone_order %}Pedido de Candy #{{ pickup.order.pk }}{% elif pickup.order.is_reward_order %}Premios de Juegos{% else %}{{ pickup.order.purchase.screening.movie.title }}{% endif %}</strong>
+              <span class="validation-history-customer">{{ pickup.customer_display_name }}</span>
+              <p>{{ pickup.order.summary }} · {{ pickup.created_at|date:"H:i:s" }}</p>
+            </div>
+            {% if pickup.reverted_at %}
+              <span class="validation-history-status">Deshecha</span>
+            {% elif pickup.can_undo %}
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="pickup_id" value="{{ pickup.pk }}">
+                <input type="hidden" name="action" value="undo">
+                <button type="submit" class="undo-validation" data-undo-validation data-undo-window-seconds="{{ cinema.admission_undo_seconds }}" data-undo-deadline="{{ pickup.created_at|date:'U'|add:cinema.admission_undo_seconds }}">
+                  <span>Deshacer</span><span data-undo-countdown></span>
+                </button>
+              </form>
+            {% else %}
+              <span class="validation-history-status">Entregado</span>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+      {% if pickup_history_page.has_other_pages %}
+        <nav class="pagination" aria-label="Paginación del historial de entregas">
+          {% if pickup_history_page.has_previous %}
+            <a href="?page={{ pickup_history_page.previous_page_number }}">
+              <i data-lucide="chevron-left" aria-hidden="true"></i>
+              <span>Anterior</span>
+            </a>
+          {% endif %}
+          <span>Página {{ pickup_history_page.number }} de {{ pickup_history_page.paginator.num_pages }}</span>
+          {% if pickup_history_page.has_next %}
+            <a href="?page={{ pickup_history_page.next_page_number }}">
+              <span>Siguiente</span>
+              <i data-lucide="chevron-right" aria-hidden="true"></i>
+            </a>
+          {% endif %}
+        </nav>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}
+{% block scripts %}
+  <script src="{% static 'vendor/jsQR-1.4.0.js' %}" defer></script>
+  <script src="{% static 'js/ticket_validation.js' %}" defer></script>
+{% endblock %}

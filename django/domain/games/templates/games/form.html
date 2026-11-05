@@ -1,0 +1,6 @@
+{% extends "games/admin_base.html" %}
+{% block games_content %}
+<a class="ga-back" href="{% url 'games:dashboard' %}">← Volver a Juegos</a><section class="page-heading"><h1>{{ form_title }}</h1><p>Configurá la experiencia sin alterar partidas que ya comenzaron.</p></section>
+<form method="post" class="manager-form ga-editor">{% csrf_token %}{{ form.non_field_errors }}
+{% for field in form %}<label><span>{{ field.label }}</span>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</label>{% endfor %}
+<div class="ga-actions"><button class="ga-button ga-primary" type="submit"><i data-lucide="save" aria-hidden="true"></i>{{ submit_label }}</button><a class="ga-button" href="{% url 'games:dashboard' %}">Cancelar</a></div></form>{% endblock %}

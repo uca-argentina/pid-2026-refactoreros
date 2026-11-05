@@ -84,3 +84,11 @@
 @media (prefers-reduced-motion: reduce) {
   .admission-seat-option input:not(:checked) + span::after { animation: none; opacity: .9; }
 }
+
+.candy-pickup-items { display: grid; gap: 8px; margin: 4px 0 0; padding: 0; list-style: none; }
+.candy-pickup-items li { display: flex; align-items: baseline; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 16px; }
+.candy-pickup-items li > strong { min-width: 34px; color: var(--brand); font-size: 18px; }
+.candy-pickup-items small { display: block; margin-top: 3px; color: var(--muted); font-size: 13px; }
+[data-qr-mismatch]:not([hidden]) { margin-top: 16px; padding: 18px; border: 1px solid #d5a34f; border-radius: 12px; background: rgba(213, 163, 79, .09); }
+[data-qr-mismatch] p { margin-top: 0; line-height: 1.5; }
+[data-qr-switch], [data-qr-stay] { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin: 4px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; }

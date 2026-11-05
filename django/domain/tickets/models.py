@@ -447,7 +447,17 @@ class AdmissionTicket(models.Model):
         return f"Compra #{self.purchase_id} · Entrada {self.number}"
 
 
-class AdmissionValidation(models.Model):
+class UndoWindowMixin:
+
+    @property
+    def can_undo(self):
+        return (
+            self.reverted_at is None
+            and self.created_at >= timezone.now() - timedelta(seconds=CinemaSettings.current().admission_undo_seconds)
+        )
+
+
+class AdmissionValidation(UndoWindowMixin, models.Model):
 
     purchase = models.ForeignKey(TicketPurchase, on_delete=models.CASCADE, related_name="admission_validations")
     operator = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL,
@@ -463,13 +473,6 @@ class AdmissionValidation(models.Model):
         ]
         verbose_name = "Validación de ingreso"
         verbose_name_plural = "Validaciones de ingreso"
-
-    @property
-    def can_undo(self):
-        return (
-            self.reverted_at is None
-            and self.created_at >= timezone.now() - timedelta(seconds=CinemaSettings.current().admission_undo_seconds)
-        )
 
 
 class PurchaseRefund(models.Model):

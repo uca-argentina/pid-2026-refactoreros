@@ -1,6 +1,7 @@
 import shutil
 import tempfile
 import json
+import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
 from unittest.mock import patch
@@ -144,6 +145,8 @@ class ManagerAccessTests(TestCase):
                 "seat_reservation_minutes": 7,
                 "seat_refresh_seconds": 12,
                 "admission_undo_seconds": 45,
+                "candy_max_item_quantity": 10,
+                "ticket_reprogram_minutes": 120,
             },
             follow=True,
         )
@@ -154,12 +157,39 @@ class ManagerAccessTests(TestCase):
         self.assertEqual(cinema_settings.seat_refresh_seconds, 12)
         self.assertEqual(cinema_settings.admission_undo_seconds, 45)
 
+    def test_manager_configures_candy_limit_and_rejects_invalid_values(self):
+        url = reverse("manager:configuracion")
+        payload = {"seat_reservation_minutes": 5, "seat_refresh_seconds": 5, "admission_undo_seconds": 30, "candy_max_item_quantity": 3, "ticket_reprogram_minutes": 120}
+        self.client.force_login(self.gerente)
+        self.assertRedirects(self.client.post(url, payload), url)
+        self.assertEqual(CinemaSettings.current().candy_max_item_quantity, 3)
+        for invalid in (0, -1, "1.5", ""):
+            self.assertEqual(self.client.post(url, {**payload, "candy_max_item_quantity": invalid}).status_code, 200)
+            self.assertEqual(CinemaSettings.current().candy_max_item_quantity, 3)
+        self.client.force_login(self.acomodador)
+        self.assertEqual(self.client.post(url, payload).status_code, 403)
+        self.client.force_login(self.cliente)
+        self.assertEqual(self.client.post(url, payload).status_code, 403)
+
     def test_acomodador_no_puede_configurar_reserva_y_recarga_de_butacas(self):
         self.client.force_login(self.acomodador)
 
         response = self.client.get(reverse("manager:configuracion"))
 
         self.assertEqual(response.status_code, 403)
+
+    def test_manager_configures_reprogramming_minutes(self):
+        self.client.force_login(self.gerente)
+        url = reverse("manager:configuracion")
+        payload = {"seat_reservation_minutes": 5, "seat_refresh_seconds": 5, "admission_undo_seconds": 30, "candy_max_item_quantity": 10, "ticket_reprogram_minutes": 45}
+        for minutes in (45, 0, 120):
+            self.assertRedirects(self.client.post(url, {**payload, "ticket_reprogram_minutes": minutes}), url)
+            self.assertEqual(CinemaSettings.current().ticket_reprogram_minutes, minutes)
+        for invalid in (-1, "1.5", ""):
+            self.assertEqual(self.client.post(url, {**payload, "ticket_reprogram_minutes": invalid}).status_code, 200)
+            self.assertEqual(CinemaSettings.current().ticket_reprogram_minutes, 120)
+        self.client.force_login(self.cliente)
+        self.assertEqual(self.client.post(url, payload).status_code, 403)
 
 
 class ManagerUsuariosTests(TestCase):
@@ -1223,6 +1253,66 @@ class ManagerPromotionsTests(TestCase):
 
 
 class ManagerDashboardTests(TestCase):
+    def test_standalone_candy_counts_by_payment_date_without_adding_tickets(self):
+        from domain.candy.models import CandyOrder
+        order = CandyOrder.objects.create(customer=self.cliente, checkout_key=uuid.uuid4(), total=200,
+            items=[{"kind": "product", "id": 1, "name": "Pochoclos", "quantity": 1, "subtotal": "200"}])
+        CandyOrder.objects.filter(pk=order.pk).update(created_at=self.now - timedelta(days=1))
+        dashboard = build_dashboard("7", now=self.now, view="candy")
+        self.assertEqual(dashboard["candy"]["revenue"], 200)
+        self.assertEqual(dashboard["candy"]["orders"], 1)
+        self.assertEqual(dashboard["summary"]["sold"], 0)
+        self.assertEqual(sum(column["revenue"] for column in dashboard["revenue"]["columns"]), 200)
+        self.assertEqual(sum(column["screenings"] for column in dashboard["revenue"]["columns"]), 0)
+        self.assertEqual(build_dashboard("7", now=self.now)["summary"]["revenue"], 200)
+        self.assertEqual(build_dashboard("7", now=self.now, view="candy", movie_id=self.movie.pk)["candy"]["revenue"], 0)
+        self.assertEqual(build_dashboard("7", now=self.now - timedelta(days=2), view="candy")["candy"]["revenue"], 0)
+
+    def test_candy_view_uses_paid_snapshots_ranks_revenue_and_preserves_filters(self):
+        from domain.candy.models import CandyOrder
+        first = self.crear_funcion(-1)
+        second = self.crear_funcion(-2)
+        purchase = self.vender(first, 1, "1000")
+        CandyOrder.objects.create(purchase=purchase, total=650, items=[
+            {"kind": "product", "id": 999, "name": "Pochoclos histórico", "quantity": 2, "subtotal": "200"},
+            {"kind": "combo", "id": 999, "name": "Combo histórico", "quantity": 1, "subtotal": "450"},
+        ])
+        CandyOrder.objects.create(purchase=self.vender(second, 1, "1000"), total=100, delivered_at=self.now,
+            items=[{"kind": "product", "id": 999, "name": "Pochoclos histórico", "quantity": 1, "subtotal": "100"}])
+        CandyOrder.objects.create(reward_user=self.cliente, reward_key=uuid.uuid4(), total=0)
+        dashboard = build_dashboard("7", now=self.now, view="candy", room_id=self.room.pk)
+        candy = dashboard["candy"]
+        self.assertEqual((candy["revenue"], candy["orders"], candy["units"], candy["pending"]), (750, 2, 4, 1))
+        self.assertEqual(candy["average_order"], Decimal("375"))
+        self.assertEqual([item["revenue"] for item in candy["items"]], [450, 300])
+        self.assertEqual(sum(column["revenue"] for column in dashboard["revenue"]["columns"]), 750)
+        self.assertEqual(sum(column["sold"] for column in dashboard["revenue"]["columns"]), 2)
+        self.assertIn("view=candy", dashboard["periods"][0]["url"])
+        self.assertIn("room=", dashboard["views"][0]["url"])
+        filtered = build_dashboard("7", now=self.now, view="candy", revenue_date=timezone.localdate(first.starts_at).isoformat())
+        self.assertEqual(filtered["candy"]["revenue"], 650)
+        CandyOrder.objects.filter(purchase=purchase).update(restocked_at=self.now)
+        self.assertEqual(build_dashboard("7", now=self.now, view="candy")["candy"]["revenue"], 100)
+        self.client.force_login(self.gerente)
+        response = self.client.get(reverse("manager:dashboard"), {"view": "candy", "period": "todo"})
+        self.assertContains(response, "Recaudación de Candy")
+        self.assertContains(response, "Productos y combos con mayor recaudación")
+        self.assertNotContains(response, "Películas más vistas")
+
+    def test_revenue_includes_candy_without_counting_rewards_or_restocked_orders(self):
+        from domain.candy.models import CandyOrder
+        screening = self.crear_funcion(-1)
+        purchase = self.vender(screening, 1, "1000")
+        CandyOrder.objects.create(purchase=purchase, total=250)
+        CandyOrder.objects.create(reward_user=self.cliente, reward_key=uuid.uuid4(), total=0)
+        dashboard = build_dashboard("7", now=self.now)
+        self.assertEqual(dashboard["summary"]["revenue"], Decimal("1250"))
+        self.assertEqual(dashboard["summary"]["candy_revenue"], Decimal("250"))
+        self.assertEqual(dashboard["summary"]["average_ticket"], Decimal("1000"))
+        self.assertEqual(sum(row["candy_revenue"] for row in dashboard["revenue"]["columns"]), Decimal("250"))
+        CandyOrder.objects.filter(purchase=purchase).update(restocked_at=self.now)
+        self.assertEqual(build_dashboard("7", now=self.now)["summary"]["revenue"], Decimal("1000"))
+
     def setUp(self):
         self.gerente = get_user_model().objects.create_user(
             username="gerente@mail.com",

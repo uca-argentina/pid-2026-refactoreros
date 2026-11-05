@@ -1,0 +1,18 @@
+.candy-store-heading { padding:24px 0 30px; }
+.candy-store-heading > span { color:#f4c65a; font-size:12px; font-weight:900; letter-spacing:.2em; }
+.candy-store-heading h1 { max-width:700px; margin:12px 0; color:#fff5df; font-size:clamp(30px,4vw,48px); line-height:1.12; }
+.candy-store-heading p,.candy-store-note { color:#aaa9b4; line-height:1.6; }
+.candy-store-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(260px,330px); gap:28px; align-items:start; }
+.candy-store-layout .candy-picker { margin:0; min-width:0; }
+.candy-store-cart { position:sticky; top:24px; }
+.candy-store-cart > button { width:100%; min-height:48px; border:1px solid #e6bf69; border-radius:10px; margin-top:18px; background:linear-gradient(135deg,#f5c65d,#dc9e33); color:#211602; font:inherit; font-weight:800; cursor:pointer; }
+.candy-store-cart > button:disabled { background:#37373d; border-color:#53535e; color:#9c9ca8; cursor:default; }
+.candy-store-note { font-size:12px; }
+.candy-payment-notice { padding:16px; border:1px solid #f0c45a50; border-radius:12px; background:#f0c45a0d; }
+.candy-store-heading .prizes-play-chip { display:inline-flex; align-items:center; gap:8px; margin-top:8px; text-decoration:none; }
+.candy-store-heading .prizes-play-chip svg { width:18px; height:18px; }
+#mis-retiros { scroll-margin-top:160px; }
+.candy-store-main .game-inventory > h2 { color:#fff5df; }
+.candy-store-main .game-inventory > p { color:#aaa9b4; line-height:1.5; }
+.candy-store-cart [data-candy-cart-total] { font-size:24px; font-weight:900; }
+@media(max-width:860px) { .candy-store-layout { grid-template-columns:minmax(0,1fr); } .candy-store-cart { position:static; } }

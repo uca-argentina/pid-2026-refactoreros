@@ -1845,6 +1845,7 @@ th {
   .manager-nav .nav-rooms,
   .manager-nav .nav-seat-types,
   .manager-nav .nav-promotions,
+  .manager-nav .nav-candy,
   .manager-nav .nav-movies,
   .manager-nav .nav-screenings { display: none !important; }
 
@@ -2154,4 +2155,122 @@ th {
   .topbar-user {
     flex: 0 1 240px;
   }
+}
+
+.candy-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.candy-tabs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.candy-tabs a:hover {
+  color: var(--ink);
+}
+
+.candy-tabs a.is-active {
+  border-bottom-color: var(--brand);
+  color: var(--ink);
+}
+
+.candy-tabs svg {
+  width: 16px;
+  height: 16px;
+}
+
+.candy-cell-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.candy-thumb {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 14%, transparent);
+  object-fit: cover;
+}
+
+.candy-thumb svg {
+  width: 18px;
+  height: 18px;
+}
+
+.candy-saving {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.candy-combo-products {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.candy-combo-products legend {
+  padding: 0;
+  font-weight: 600;
+}
+
+.candy-combo-products > p {
+  margin: -3px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.candy-combo-product-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: 8px;
+}
+
+.manager-form .candy-combo-product {
+  grid-template-columns: minmax(0, 1fr) 82px;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.candy-combo-product strong {
+  display: block;
+  font-size: 14px;
+}
+
+.candy-combo-product small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.candy-combo-product .errorlist {
+  grid-column: 1 / -1;
+}
+
+.candy-combo-product.is-inactive {
+  opacity: .7;
 }

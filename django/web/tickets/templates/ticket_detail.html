@@ -50,16 +50,33 @@
         <p>Las entradas de esta compra ya fueron utilizadas o no están habilitadas para ingresar.</p>
       {% endif %}
 
+      {% if candy_order %}
+        <a class="ticket-candy-callout" href="{% url 'candy_detail' purchase.pk %}">
+          <span class="ticket-candy-callout-icon" aria-hidden="true"><i data-lucide="popcorn"></i></span>
+          <span>
+            <strong>Tu candy</strong>
+            <small>{{ candy_order.summary }}</small>
+          </span>
+          <span class="ticket-candy-callout-action">{% if candy_order.pickup_open %}Ver QR de retiro{% elif candy_order.delivered_at %}Retirado{% else %}Ver detalle{% endif %}</span>
+        </a>
+      {% endif %}
+
       <section class="ticket-purchase-details" aria-label="Detalle de la compra">
         <h2>Detalle de la compra</h2>
         <dl>
           <div class="ticket-seat-pricing"><dt>Butacas · {{ purchase.quantity }} en total</dt><dd>{% if purchase.seat_pricing_snapshot %}<ul>{% for seat in purchase.seat_pricing_snapshot %}<li><span>{{ seat.label }}</span><span>{% if seat.saving %}<del>$ {{ seat.base_price|floatformat:2 }}</del>{% endif %}<strong>$ {{ seat.price|floatformat:2 }}</strong></span></li>{% endfor %}</ul>{% else %}{{ purchase.seat_labels|default:"Sin asignar" }}{% endif %}</dd></div>
-          <div><dt>Total pagado</dt><dd>$ {{ purchase.total|floatformat:2 }}</dd></div>
+          {% if candy_order %}<div><dt>Candy</dt><dd>$ {{ candy_order.total|floatformat:2 }}</dd></div>{% endif %}
+          <div><dt>Total pagado</dt><dd>$ {{ total_paid|floatformat:2 }}</dd></div>
           {% if purchase.savings_snapshot %}<div><dt>Ahorro total</dt><dd class="ticket-savings">$ {{ purchase.savings_snapshot|floatformat:2 }}</dd></div>{% endif %}
           <div><dt>Fecha de pago</dt><dd>{{ purchase.created_at|date:"d/m/Y H:i" }}</dd></div>
           {% if purchase.promotions_snapshot %}<div class="ticket-promotions"><dt>Promociones aplicadas</dt><dd><ul>{% for promotion in purchase.promotions_snapshot %}<li>{{ promotion }}</li>{% endfor %}</ul></dd></div>{% endif %}
         </dl>
       </section>
+      {% if available and reprogram_opition_avialable%}
+        <p>¿Querés reprogramar para otra función?</p>
+        <p>Disponible hasta {{ reprogram_deadline|date:"d/m/Y H:i" }}.</p>
+        <a class="ticket-reprogram-screening" href="{% url 'screening_reprogram' purchase.pk %}"><span>Cambiar función</span></a>
+      {% endif %}
     </article>
   </main>
   <script src="https://unpkg.com/lucide@latest"></script>
