@@ -146,6 +146,7 @@ class ManagerAccessTests(TestCase):
                 "seat_refresh_seconds": 12,
                 "admission_undo_seconds": 45,
                 "candy_max_item_quantity": 10,
+                "ticket_reprogram_minutes": 120,
             },
             follow=True,
         )
@@ -158,7 +159,7 @@ class ManagerAccessTests(TestCase):
 
     def test_manager_configures_candy_limit_and_rejects_invalid_values(self):
         url = reverse("manager:configuracion")
-        payload = {"seat_reservation_minutes": 5, "seat_refresh_seconds": 5, "admission_undo_seconds": 30, "candy_max_item_quantity": 3}
+        payload = {"seat_reservation_minutes": 5, "seat_refresh_seconds": 5, "admission_undo_seconds": 30, "candy_max_item_quantity": 3, "ticket_reprogram_minutes": 120}
         self.client.force_login(self.gerente)
         self.assertRedirects(self.client.post(url, payload), url)
         self.assertEqual(CinemaSettings.current().candy_max_item_quantity, 3)
@@ -176,6 +177,19 @@ class ManagerAccessTests(TestCase):
         response = self.client.get(reverse("manager:configuracion"))
 
         self.assertEqual(response.status_code, 403)
+
+    def test_manager_configures_reprogramming_minutes(self):
+        self.client.force_login(self.gerente)
+        url = reverse("manager:configuracion")
+        payload = {"seat_reservation_minutes": 5, "seat_refresh_seconds": 5, "admission_undo_seconds": 30, "candy_max_item_quantity": 10, "ticket_reprogram_minutes": 45}
+        for minutes in (45, 0, 120):
+            self.assertRedirects(self.client.post(url, {**payload, "ticket_reprogram_minutes": minutes}), url)
+            self.assertEqual(CinemaSettings.current().ticket_reprogram_minutes, minutes)
+        for invalid in (-1, "1.5", ""):
+            self.assertEqual(self.client.post(url, {**payload, "ticket_reprogram_minutes": invalid}).status_code, 200)
+            self.assertEqual(CinemaSettings.current().ticket_reprogram_minutes, 120)
+        self.client.force_login(self.cliente)
+        self.assertEqual(self.client.post(url, payload).status_code, 403)
 
 
 class ManagerUsuariosTests(TestCase):

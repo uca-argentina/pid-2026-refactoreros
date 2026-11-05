@@ -11,6 +11,7 @@ class CinemaSettings(models.Model):
     seat_refresh_seconds = models.PositiveIntegerField(default=5, db_column="recarga_asientos_segundos")
     admission_undo_seconds = models.PositiveIntegerField(default=30, db_column="deshacer_validacion_segundos")
     candy_max_item_quantity = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1)])
+    ticket_reprogram_minutes = models.PositiveIntegerField(default=120)
     updated_at = models.DateTimeField(auto_now=True, db_column="actualizado_en")
 
     class Meta:

@@ -19,6 +19,11 @@ MAX_MOVIE_IMAGE_SIZE_BYTES = MAX_MOVIE_IMAGE_SIZE_MB * 1024 * 1024
 
 
 class CinemaSettingsForm(forms.ModelForm):
+    ticket_reprogram_minutes = forms.IntegerField(
+        min_value=0,
+        label="Anticipación mínima para cambiar de función (minutos)",
+        help_text="120 equivale a 2 horas antes del inicio. Con 0 se permite cambiar hasta que comienza la función.",
+    )
     candy_max_item_quantity = forms.IntegerField(
         min_value=1,
         label="Máximo de unidades por producto o combo de Candy en cada pedido",
@@ -43,7 +48,7 @@ class CinemaSettingsForm(forms.ModelForm):
 
     class Meta:
         model = CinemaSettings
-        fields = ("seat_reservation_minutes", "seat_refresh_seconds", "admission_undo_seconds", "candy_max_item_quantity")
+        fields = ("seat_reservation_minutes", "seat_refresh_seconds", "admission_undo_seconds", "candy_max_item_quantity", "ticket_reprogram_minutes")
 
 
 class UserManagementForm(forms.ModelForm):

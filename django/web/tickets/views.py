@@ -14,7 +14,7 @@ import uuid
 
 from domain.candy.models import CandyOrder
 from domain.candy.services import buy_candy_only, buy_tickets_with_candy, candy_menu
-from domain.tickets.services import reprogram_purchase
+from domain.tickets.services import check_reprogramming_window, reprogram_purchase, reprogramming_deadline, reprogramming_window_is_open
 from domain.cinema.models import CinemaSettings
 from domain.screenings.models import Screening
 from domain.tickets.models import PurchaseRefund, TicketPurchase, SeatReservation
@@ -114,8 +114,11 @@ def seat_reprogram_selection_view(request, purchase_pk, screening_pk):
     )
     current_screening = purchase.screening
 
-    if current_screening.starts_at <= timezone.now():
-        return redirect("home")
+    try:
+        check_reprogramming_window(current_screening)
+    except ValidationError as error:
+        messages.error(request, error.messages[0])
+        return redirect("my_tickets")
 
     screening = get_object_or_404(
         Screening.published().exclude(pk=current_screening.pk),
@@ -464,7 +467,8 @@ def ticket_detail_view(request, pk):
         used_count < purchase.quantity and screening.status in (Screening.Status.PUBLISHED, Screening.Status.IN_PROGRESS)
         and screening.ends_at > timezone.now() and not hasattr(purchase, "refund")
     )
-    reprogram_opition_avialable = screening.starts_at >= timezone.now() + timedelta(hours=2)
+    cinema = CinemaSettings.current()
+    reprogram_opition_avialable = reprogramming_window_is_open(screening, cinema=cinema)
     candy_order = getattr(purchase, "candy_order", None)
     return render(request, "ticket_detail.html", {
         "purchase": purchase, "used_count": used_count, "available": available, "is_expired": is_expired,
@@ -472,9 +476,10 @@ def ticket_detail_view(request, pk):
         "used_seat_summary": admission_seat_summary(used_tickets),
         "candy_order": candy_order,
         "total_paid": purchase.total + (candy_order.total if candy_order else 0),
-        "cinema": CinemaSettings.current(),
+        "cinema": cinema,
         "manager_role": manager_role(request.user),
-        "reprogram_opition_avialable": reprogram_opition_avialable
+        "reprogram_opition_avialable": reprogram_opition_avialable,
+        "reprogram_deadline": reprogramming_deadline(screening, cinema=cinema),
     })
 
 

@@ -243,9 +243,25 @@ def send_refund_notifications(refund_ids=None):
     return sent
 
 
+def reprogramming_deadline(screening, *, cinema=None):
+    cinema = cinema if cinema is not None else CinemaSettings.current()
+    return screening.starts_at - timedelta(minutes=cinema.ticket_reprogram_minutes)
+
+
+def reprogramming_window_is_open(screening, *, cinema=None, now=None):
+    now = now if now is not None else timezone.now()
+    return screening.status == Screening.Status.PUBLISHED and now < reprogramming_deadline(screening, cinema=cinema)
+
+
+def check_reprogramming_window(screening):
+    cinema = CinemaSettings.current()
+    if not reprogramming_window_is_open(screening, cinema=cinema):
+        minutes = cinema.ticket_reprogram_minutes
+        raise ValidationError(f"La reprogramación solo está permitida hasta {minutes} {'minuto' if minutes == 1 else 'minutos'} antes del inicio de la función.")
+
+
 @transaction.atomic
 def reprogram_purchase(*, user, purchase_pk, new_screening_pk, selected_seats):
-    time_limit_before_reprogram = 2 #hours
     old_screening_id = (
         TicketPurchase.objects.filter(pk=purchase_pk, user=user)
         .values_list("screening_id", flat=True)
@@ -272,8 +288,7 @@ def reprogram_purchase(*, user, purchase_pk, new_screening_pk, selected_seats):
     now = timezone.now()
     if hasattr(purchase, "refund"):
         raise ValidationError("Esta compra fue reembolsada y no se puede reprogramar.")
-    if old_screening.status != Screening.Status.PUBLISHED or old_screening.starts_at <= now + timedelta(hours=time_limit_before_reprogram):
-        raise ValidationError(f"La reprogramación solo está permitida hasta {time_limit_before_reprogram} horas antes de la función.")
+    check_reprogramming_window(old_screening)
     if AdmissionTicket.objects.filter(purchase=purchase, used_at__isnull=False).exists():
         raise ValidationError("Ya usaste entradas de esta compra, no se puede reprogramar.")
     if new_screening.pk == old_screening.pk or new_screening.movie_id != old_screening.movie_id:

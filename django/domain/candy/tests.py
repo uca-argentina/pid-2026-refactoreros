@@ -201,6 +201,52 @@ class UnifiedCandyOrdersTests(CandyFixture):
         self.assertEqual(self.popcorn.stock, original_stock)
         self.assertContains(self.client.get(reverse("candy_order_detail", args=[self.attached.pk])), original_qr)
 
+    def test_configured_reprogramming_window_applies_to_ui_direct_urls_and_confirmation(self):
+        config = CinemaSettings.objects.create(ticket_reprogram_minutes=120)
+        self.screening.starts_at = timezone.now() + timedelta(minutes=60)
+        self.screening.save(update_fields=["starts_at"])
+        target = Screening.objects.create(movie=self.screening.movie, room=self.screening.room,
+            starts_at=timezone.now() + timedelta(hours=4), status=Screening.Status.PUBLISHED, ticket_price=Decimal("1000"))
+        options_url = reverse("screening_reprogram", args=[self.purchase.pk])
+        seats_url = reverse("seat_reprogram_selection", args=[self.purchase.pk, target.pk])
+        confirm_url = reverse("screening_reprogram_confirm", args=[self.purchase.pk, target.pk])
+        payload = {"selected_seats": json.dumps([{"label": "1A"}])}
+        detail_url = reverse("ticket_detail", args=[self.purchase.pk])
+        self.assertFalse(self.client.get(detail_url).context["reprogram_opition_avialable"])
+        for url in (options_url, seats_url):
+            self.assertRedirects(self.client.get(url), reverse("my_tickets"))
+        self.client.post(confirm_url, payload)
+        self.purchase.refresh_from_db()
+        self.assertEqual(self.purchase.screening_id, self.screening.pk)
+        config.ticket_reprogram_minutes = 30
+        config.save(update_fields=["ticket_reprogram_minutes"])
+        self.assertTrue(self.client.get(detail_url).context["reprogram_opition_avialable"])
+        self.assertEqual(self.client.get(options_url).status_code, 200)
+        self.assertEqual(self.client.get(seats_url).status_code, 200)
+        SeatReservation.reserve(self.customer, target, "1A")
+        self.assertRedirects(self.client.post(confirm_url, payload), reverse("my_tickets"))
+        self.purchase.refresh_from_db()
+        self.assertEqual(self.purchase.screening_id, target.pk)
+
+    def test_reprogramming_deadline_default_exact_boundary_and_zero(self):
+        from domain.tickets.services import reprogramming_window_is_open
+        now = timezone.now()
+        config = CinemaSettings()
+        self.assertEqual(config.ticket_reprogram_minutes, 120)
+        self.screening.starts_at = now + timedelta(minutes=60)
+        self.assertFalse(reprogramming_window_is_open(self.screening, cinema=config, now=now))
+        config.ticket_reprogram_minutes = 30
+        self.assertTrue(reprogramming_window_is_open(self.screening, cinema=config, now=now))
+        self.screening.starts_at = now + timedelta(minutes=30)
+        self.assertFalse(reprogramming_window_is_open(self.screening, cinema=config, now=now))
+        self.screening.starts_at += timedelta(microseconds=1)
+        self.assertTrue(reprogramming_window_is_open(self.screening, cinema=config, now=now))
+        config.ticket_reprogram_minutes = 0
+        self.screening.starts_at = now + timedelta(seconds=1)
+        self.assertTrue(reprogramming_window_is_open(self.screening, cinema=config, now=now))
+        self.screening.starts_at = now
+        self.assertFalse(reprogramming_window_is_open(self.screening, cinema=config, now=now))
+
     def test_ready_orders_precede_delivered_and_invalid_orders_have_no_qr(self):
         deliver_candy_order(self.standalone.qr_payload, self.operator)
         self.screening.starts_at = timezone.now() - timedelta(days=1)

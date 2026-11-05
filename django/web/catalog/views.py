@@ -2,6 +2,9 @@ from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 
 from domain.cinema.models import CinemaSettings
 from domain.movies.models import Movie
@@ -9,6 +12,7 @@ from domain.promotions.pricing import PromotionPriceCalculator
 from domain.screenings.models import Screening
 from domain.seat_types.models import SeatType
 from domain.tickets.models import TicketPurchase
+from domain.tickets.services import check_reprogramming_window
 from web.manager.views import manager_role
 
 
@@ -225,6 +229,7 @@ def movie_detail_view(request, pk):
         },
     )
 
+@login_required
 @never_cache
 def movie_screening_reprogram(request,purchase_pk):
     Screening.finalize_expired()
@@ -237,6 +242,11 @@ def movie_screening_reprogram(request,purchase_pk):
     movie = current.movie
     current_screening = purchase.screening
     movie = current_screening.movie
+    try:
+        check_reprogramming_window(current_screening)
+    except ValidationError as error:
+        messages.error(request, error.messages[0])
+        return redirect("my_tickets")
 
     alternatives = list(
         Screening.published()
@@ -246,9 +256,6 @@ def movie_screening_reprogram(request,purchase_pk):
     )
     price_calculator = PromotionPriceCalculator.current()
     add_details_to_screenings(alternatives,request.user,price_calculator)
-
-    if current_screening.starts_at <= timezone.now():
-        return redirect("home")
 
     return render(request, "screening_reprogram_detail.html", {
         "cinema": CinemaSettings.current(),
