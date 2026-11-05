@@ -1377,3 +1377,9 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+.dashboard-view-switch { display:inline-flex; margin-bottom:22px; gap:6px; padding:5px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+.dashboard-view-switch .period-option { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 20px; }
+.dashboard-view-switch svg { width:19px; height:19px; }
+.candy-ranking-item { padding:14px 0; border-bottom:1px solid var(--border); }
+.candy-ranking-item .bar-item-head { flex-wrap:wrap; }
+@media(max-width:600px) { .dashboard-view-switch { display:flex; } .dashboard-view-switch a { flex:1; } }

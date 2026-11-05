@@ -1,15 +1,20 @@
 import json
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
+from django.db import close_old_connections, connection
 from django.urls import reverse
 from django.utils import timezone
 
 from domain.movies.models import Movie
+from domain.cinema.models import CinemaSettings
 from domain.rooms.models import Room
 from domain.screenings.models import Screening
 from domain.seat_types.models import SeatType
@@ -19,6 +24,7 @@ from domain.users.models import Customer, Manager, Operator, Usher
 
 from .models import CandyCombo, CandyComboItem, CandyOrder, CandyPickup, CandyProduct, reservation_code_for_token
 from .services import (
+    buy_candy_only,
     buy_tickets_with_candy,
     deliver_candy_order,
     inspect_candy_order,
@@ -65,7 +71,231 @@ class CandyFixture(TestCase):
         return CandyOrder.create_for(purchase or self.purchase, items)
 
 
+class StandaloneCandyTests(CandyFixture):
+    def selection(self, quantity=1):
+        return [{"kind": "product", "id": self.popcorn.pk, "quantity": quantity, "unit_price": "0", "subtotal": "0"}]
+
+    def test_server_prices_stock_origin_and_idempotency(self):
+        checkout_key = uuid.uuid4()
+        order = buy_candy_only(self.customer, self.selection(2), checkout_key)
+        self.assertEqual(order.total, Decimal("3000"))
+        self.assertEqual(order.customer, self.customer)
+        self.assertIsNone(order.purchase_id)
+        self.assertFalse(order.is_reward_order)
+        self.assertTrue(order.pickup_open)
+        self.assertEqual(buy_candy_only(self.customer, self.selection(2), checkout_key).pk, order.pk)
+        self.popcorn.refresh_from_db()
+        self.assertEqual(self.popcorn.stock, 3)
+        with self.assertRaises(ValidationError):
+            buy_candy_only(self.customer, self.selection(1), checkout_key)
+        with self.assertRaises(ValidationError):
+            buy_candy_only(self.customer, self.selection(4), uuid.uuid4())
+        self.assertEqual(CandyOrder.objects.count(), 1)
+        self.assertEqual(TicketPurchase.objects.count(), 1)
+
+    def test_combo_stock_delivery_and_undo_use_existing_flow(self):
+        order = buy_candy_only(self.customer, [{"kind": "combo", "id": self.combo.pk, "quantity": 1}], uuid.uuid4())
+        self.assertEqual(order.total, Decimal("2600"))
+        self.assertEqual(inspect_candy_order(order.qr_payload, self.operator).pk, order.pk)
+        delivered, pickup = deliver_candy_order(order.qr_payload, self.operator)
+        self.assertEqual(delivered.user_id, self.customer.pk)
+        with self.assertRaises(ValidationError):
+            deliver_candy_order(order.qr_payload, self.operator)
+        self.client.force_login(self.operator)
+        self.assertContains(self.client.get(reverse("manager:entregar_candy")), f"Pedido de Candy #{order.pk}")
+        undo_candy_pickup(pickup.pk, self.operator)
+        order.refresh_from_db()
+        self.assertTrue(order.pickup_open)
+        self.popcorn.refresh_from_db()
+        self.soda.refresh_from_db()
+        self.assertEqual((self.popcorn.stock, self.soda.stock), (4, 8))
+
+    def test_automatic_checkout_validation_privacy_csrf_and_qr(self):
+        self.assertEqual(self.client.get(reverse("candy_store")).status_code, 302)
+        self.client.force_login(self.customer)
+        payload = {"checkout_key": str(uuid.uuid4()), "candy_items": "[]"}
+        self.assertRedirects(self.client.post(reverse("candy_purchase"), payload), reverse("candy_store"))
+        self.assertFalse(CandyOrder.objects.exists())
+        self.popcorn.refresh_from_db()
+        self.assertEqual(self.popcorn.stock, 5)
+        payload["candy_items"] = json.dumps(self.selection())
+        store = self.client.get(reverse("candy_store"))
+        self.assertNotContains(store, "simulado")
+        self.assertNotContains(store, 'name="payment_result"')
+        for _ in range(2):
+            response = self.client.post(reverse("candy_purchase"), payload)
+            self.assertEqual(response.status_code, 302)
+        order = CandyOrder.objects.get()
+        self.assertRedirects(response, reverse("candy_order_detail", args=[order.pk]))
+        self.assertContains(self.client.get(response.url), order.qr_payload)
+        self.assertContains(self.client.get(response.url), "Pago aprobado")
+        self.assertNotContains(self.client.get(response.url), "simulado")
+        self.assertContains(self.client.get(reverse("candy_store")), "Mis pedidos de retiro")
+        self.assertEqual(self.client.get(reverse("candy_purchase")).status_code, 405)
+        from django.test import Client
+        strict = Client(enforce_csrf_checks=True)
+        strict.force_login(self.customer)
+        self.assertEqual(strict.post(reverse("candy_purchase"), payload).status_code, 403)
+        self.client.force_login(self.manager)
+        self.assertEqual(self.client.get(response.url).status_code, 404)
+        self.assertNotContains(self.client.get(reverse("candy_store")), reverse("candy_order_detail", args=[order.pk]))
+
+    def test_empty_invalid_and_insufficient_combo_do_not_create_orders(self):
+        for items in ([], "bad", self.selection(11), [{"kind": "combo", "id": self.combo.pk, "quantity": 6}]):
+            with self.subTest(items=items), self.assertRaises(ValidationError):
+                buy_candy_only(self.customer, items, uuid.uuid4())
+        self.assertFalse(CandyOrder.objects.exists())
+        self.popcorn.refresh_from_db()
+        self.assertEqual(self.popcorn.stock, 5)
+
+
+class UnifiedCandyOrdersTests(CandyFixture):
+    def setUp(self):
+        super().setUp()
+        self.attached = self.order_for([{"kind": "product", "id": self.popcorn.pk, "quantity": 1}])
+        self.standalone = buy_candy_only(self.customer, [{"kind": "product", "id": self.popcorn.pk, "quantity": 1}], uuid.uuid4())
+        self.reward = CandyOrder.objects.create(reward_user=self.customer, reward_key=uuid.uuid4(), total=0, items=self.attached.items)
+        self.foreign = buy_candy_only(self.manager, [{"kind": "product", "id": self.popcorn.pk, "quantity": 1}], uuid.uuid4())
+        self.client.force_login(self.customer)
+
+    def test_all_sources_share_one_private_list_and_detail(self):
+        response = self.client.get(reverse("candy_store"))
+        self.assertEqual({order.pk for order in response.context["orders"]}, {self.attached.pk, self.standalone.pk, self.reward.pk})
+        self.assertContains(response, 'data-candy-order=', count=3)
+        self.assertContains(response, "Premio de ruleta")
+        self.assertContains(response, "Con tus entradas")
+        for order in (self.attached, self.standalone, self.reward):
+            detail = self.client.get(reverse("candy_order_detail", args=[order.pk]))
+            self.assertContains(detail, order.qr_payload)
+            self.assertContains(detail, reverse("candy_store") + "#mis-retiros")
+            self.assertEqual(detail.context["client_nav_section"], "candy")
+        self.assertEqual(self.client.get(reverse("candy_order_detail", args=[self.foreign.pk])).status_code, 404)
+        self.assertNotContains(response, reverse("candy_order_detail", args=[self.foreign.pk]))
+        old_detail = self.client.get(reverse("candy_detail", args=[self.purchase.pk]))
+        self.assertContains(old_detail, self.attached.qr_payload)
+        self.assertEqual(old_detail.context["client_nav_section"], "candy")
+
+    def test_reprogramming_tickets_preserves_attached_candy_and_its_qr(self):
+        self.screening.starts_at = timezone.now() + timedelta(hours=3)
+        self.screening.save(update_fields=["starts_at"])
+        new_screening = Screening.objects.create(
+            movie=self.screening.movie, room=self.screening.room,
+            starts_at=timezone.now() + timedelta(hours=5),
+            status=Screening.Status.PUBLISHED, ticket_price=Decimal("1000"),
+        )
+        self.assertEqual(self.client.get(reverse("screening_reprogram", args=[self.purchase.pk])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("seat_reprogram_selection", args=[self.purchase.pk, new_screening.pk])).status_code, 200)
+        SeatReservation.reserve(self.customer, new_screening, "1A")
+        original_qr = self.attached.qr_payload
+        self.popcorn.refresh_from_db()
+        original_stock = self.popcorn.stock
+        response = self.client.post(reverse("screening_reprogram_confirm", args=[self.purchase.pk, new_screening.pk]),
+            {"selected_seats": json.dumps([{"label": "1A"}])})
+        self.assertRedirects(response, reverse("my_tickets"))
+        self.purchase.refresh_from_db()
+        self.assertEqual(self.purchase.screening_id, new_screening.pk)
+        self.attached.refresh_from_db()
+        self.assertEqual(self.attached.qr_payload, original_qr)
+        self.assertEqual(self.attached.purchase_id, self.purchase.pk)
+        self.popcorn.refresh_from_db()
+        self.assertEqual(self.popcorn.stock, original_stock)
+        self.assertContains(self.client.get(reverse("candy_order_detail", args=[self.attached.pk])), original_qr)
+
+    def test_ready_orders_precede_delivered_and_invalid_orders_have_no_qr(self):
+        deliver_candy_order(self.standalone.qr_payload, self.operator)
+        self.screening.starts_at = timezone.now() - timedelta(days=1)
+        self.screening.save(update_fields=["starts_at"])
+        response = self.client.get(reverse("candy_store"))
+        self.assertEqual(response.context["orders"][0].pk, self.reward.pk)
+        self.assertContains(response, 'class="ticket-qr-link is-imminent-ticket"', count=1)
+        self.assertContains(response, "Vencido")
+        self.assertContains(response, "Retirado")
+        expired = self.client.get(reverse("candy_order_detail", args=[self.attached.pk]))
+        self.assertNotContains(expired, 'data-qr-payload=')
+        self.screening.status = Screening.Status.CANCELED
+        self.screening.save(update_fields=["status"])
+        response = self.client.get(reverse("candy_store"))
+        self.assertContains(response, "Devuelto")
+        self.assertContains(response, 'class="ticket-qr-link is-imminent-ticket"', count=1)
+
+
+class StandaloneCandyConcurrencyTests(TransactionTestCase):
+    def setUp(self):
+        self.users = [get_user_model().objects.create_user(username=f"candy-concurrent-{i}") for i in range(2)]
+        self.product = CandyProduct.objects.create(name="Último pochoclo", price=100, stock=1)
+
+    def concurrent_orders(self, user_ids):
+        if connection.vendor != "postgresql":
+            self.skipTest("La verificación de bloqueos requiere PostgreSQL.")
+        barrier = Barrier(2)
+        checkout_key = uuid.uuid4()
+        def buy(user_id):
+            close_old_connections()
+            try:
+                user = get_user_model().objects.get(pk=user_id)
+                barrier.wait(timeout=10)
+                return buy_candy_only(user, [{"kind": "product", "id": self.product.pk, "quantity": 1}], checkout_key).pk
+            except ValidationError:
+                return None
+            finally:
+                close_old_connections()
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            return list(pool.map(buy, user_ids))
+
+    def test_parallel_customers_cannot_oversell_stock(self):
+        results = self.concurrent_orders([user.pk for user in self.users])
+        self.assertEqual(sum(result is not None for result in results), 1)
+        self.assertEqual(CandyOrder.objects.count(), 1)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 0)
+
+    def test_parallel_retries_create_one_order_and_spend_stock_once(self):
+        results = self.concurrent_orders([self.users[0].pk] * 2)
+        self.assertIsNotNone(results[0])
+        self.assertEqual(results[0], results[1])
+        self.assertEqual(CandyOrder.objects.count(), 1)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 0)
+
+
 class CandyStockTests(CandyFixture):
+    def test_configured_limit_applies_to_products_combos_and_aggregated_selection(self):
+        from .services import candy_menu
+        config = CinemaSettings.objects.create(candy_max_item_quantity=2)
+        self.assertEqual(self.popcorn.max_quantity, 2)
+        self.assertEqual(self.combo.max_quantity, 2)
+        menu = candy_menu()
+        with self.assertNumQueries(0):
+            self.assertTrue(all(item.max_quantity <= 2 for item in menu["products"] + menu["combos"]))
+        for selection in (
+            [{"kind": "product", "id": self.popcorn.pk, "quantity": 3}],
+            [{"kind": "combo", "id": self.combo.pk, "quantity": 3}],
+            [{"kind": "product", "id": self.popcorn.pk, "quantity": 2}, {"kind": "product", "id": self.popcorn.pk, "quantity": 1}],
+        ):
+            with self.assertRaisesMessage(ValidationError, "hasta 2 unidades"):
+                self.order_for(selection)
+        config.candy_max_item_quantity = 20
+        config.save(update_fields=["candy_max_item_quantity"])
+        self.assertEqual(self.popcorn.max_quantity, 5)
+        self.assertEqual(self.combo.max_quantity, 5)
+        CandyProduct.objects.filter(pk=self.popcorn.pk).update(stock=30)
+        order = self.order_for([{"kind": "product", "id": self.popcorn.pk, "quantity": 11}])
+        self.assertEqual(order.item_count, 11)
+
+    def test_lowering_limit_preserves_idempotent_orders_but_blocks_new_purchases(self):
+        config = CinemaSettings.objects.create(candy_max_item_quantity=3)
+        selection = [{"kind": "product", "id": self.popcorn.pk, "quantity": 3}]
+        checkout_key = uuid.uuid4()
+        order = buy_candy_only(self.customer, selection, checkout_key)
+        config.candy_max_item_quantity = 1
+        config.save(update_fields=["candy_max_item_quantity"])
+        self.assertEqual(buy_candy_only(self.customer, selection, checkout_key).pk, order.pk)
+        with self.assertRaisesMessage(ValidationError, "hasta 1 unidad"):
+            buy_candy_only(self.customer, selection, uuid.uuid4())
+        self.popcorn.refresh_from_db()
+        self.assertEqual(self.popcorn.stock, 2)
+        self.assertEqual(CandyOrder.objects.count(), 1)
+
     def test_combo_availability_comes_from_its_products(self):
         self.assertEqual(self.combo.available_stock, 5)
         self.soda.stock = 3
@@ -291,6 +521,32 @@ class CandyClientViewTests(CandyFixture):
 
 
 class CandyManagerViewTests(CandyFixture):
+    def test_candy_codes_in_admission_show_specific_error_without_using_either_qr(self):
+        self.client.force_login(self.operator)
+        order = self.order_for([{"kind": "product", "id": self.popcorn.pk, "quantity": 1}])
+        url = reverse("manager:validar_entradas")
+        for code in (order.pickup_code.lower(), order.pickup_token, order.qr_payload):
+            for action in ("preview", "validate"):
+                with self.subTest(code_type=len(code), action=action):
+                    response = self.client.post(url, {"code": code, "action": action, "ticket_numbers": ["1"]})
+                    self.assertContains(response, "Este código corresponde a un pedido de Candy.")
+                    self.assertNotContains(response, "No encontramos una entrada con ese código.")
+        order.refresh_from_db()
+        self.assertIsNone(order.delivered_at)
+        self.assertFalse(self.purchase.tickets.filter(used_at__isnull=False).exists())
+
+    def test_switching_qr_modes_only_prefills_and_never_delivers(self):
+        self.client.force_login(self.operator)
+        order = self.order_for([{"kind": "product", "id": self.popcorn.pk, "quantity": 1}])
+        response = self.client.get(reverse("manager:entregar_candy"), {"code": order.qr_payload})
+        self.assertEqual(response.context["form"].initial["code"], order.pickup_code)
+        self.assertContains(response, "data-qr-mismatch")
+        order.refresh_from_db()
+        self.assertIsNone(order.delivered_at)
+        response = self.client.get(reverse("manager:validar_entradas"), {"code": self.purchase.qr_payload})
+        self.assertEqual(response.context["form"].initial["code"], self.purchase.validation_code)
+        self.assertFalse(self.purchase.tickets.filter(used_at__isnull=False).exists())
+
     def test_manager_creates_a_product_and_a_combo(self):
         self.client.force_login(self.manager)
         response = self.client.post(reverse("manager:candy_products_create"), {

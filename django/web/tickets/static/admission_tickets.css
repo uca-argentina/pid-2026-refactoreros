@@ -344,6 +344,10 @@
   .ticket-candy-callout { order: 4; margin: 16px 6px 0; }
   .candy-back-link { margin: 4px 6px 12px; }
 }
+@media (max-width: 580px) {
+  .ticket-card-action { flex-wrap: wrap; gap: 12px; }
+  .ticket-card .ticket-candy-link { display: flex; flex: 1 0 100%; box-sizing: border-box; min-height: 44px; justify-content: center; white-space: nowrap; }
+}
 
 
 .ticket-reprogram-screening { position: relative; z-index: 1; display: inline-flex; align-items: center; min-height: 38px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, .35); border-radius: 6px; color: rgba(255, 255, 255, .9); font-size: 13px; font-weight: 800; text-decoration: none; }

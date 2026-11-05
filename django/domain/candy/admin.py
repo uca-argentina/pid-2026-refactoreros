@@ -27,9 +27,9 @@ class CandyComboAdmin(admin.ModelAdmin):
 
 @admin.register(CandyOrder)
 class CandyOrderAdmin(AuditOnlyAdmin):
-    list_display = ("purchase", "total", "created_at", "delivered_at", "delivered_by")
+    list_display = ("purchase", "reward_user", "total", "created_at", "delivered_at", "delivered_by")
     list_filter = (("delivered_at", admin.EmptyFieldListFilter), "created_at")
-    search_fields = ("purchase__user__email", "purchase__screening__movie__title")
+    search_fields = ("purchase__user__email", "purchase__screening__movie__title", "reward_user__email")
 
 
 @admin.register(CandyPickup)

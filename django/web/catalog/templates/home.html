@@ -15,13 +15,13 @@
   <main class="client-main">
     {% if movies %}
       {% if promotions %}
-        <section class="promo-showcase" aria-labelledby="promo-showcase-title">
+        <section class="promo-showcase" aria-labelledby="promo-showcase-title" data-promo-carousel>
           <div class="promo-showcase-intro">
             <p class="promo-showcase-kicker"><i data-lucide="sparkles" aria-hidden="true"></i>Promociones vigentes</p>
             <h2 id="promo-showcase-title">Ahorrá en tu próxima función</h2>
             <p>Buscá las películas con la etiqueta de promo.</p>
           </div>
-          <div class="promo-list">
+          <div class="promo-list" id="promo-carousel-track" data-promo-track>
             {% for promotion in promotions %}
               <article class="promo-ticket">
                 <div class="promo-ticket-discount{% if promotion.discount_type == 'fixed' %} is-fixed{% endif %}">
@@ -41,6 +41,12 @@
                 </div>
               </article>
             {% endfor %}
+          </div>
+          <div class="promo-carousel-controls" data-promo-controls hidden>
+            <button type="button" data-promo-prev aria-label="Promoción anterior" aria-controls="promo-carousel-track">‹</button>
+            <div class="promo-carousel-dots" data-promo-dots aria-label="Elegir promoción"></div>
+            <span class="promo-carousel-count" data-promo-count></span>
+            <button type="button" data-promo-next aria-label="Siguiente promoción" aria-controls="promo-carousel-track">›</button>
           </div>
         </section>
         <h2 class="client-section-title">En cartelera</h2>
@@ -71,6 +77,8 @@
       </section>
     {% endif %}
   </main>
+  {% include "games/modal.html" %}
+  <script src="{% static 'promo_carousel.js' %}" defer></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     if (window.lucide) {

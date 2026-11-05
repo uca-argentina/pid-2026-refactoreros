@@ -23,6 +23,7 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+CANDY_CODE_MESSAGE = "Este código corresponde a un pedido de Candy."
 
 
 def normalize_purchase_credential(value, qr_prefix="BC2:", invalid_message="El código de entrada no es válido."):
@@ -34,6 +35,22 @@ def normalize_purchase_credential(value, qr_prefix="BC2:", invalid_message="El c
     if not re.fullmatch(r"[A-Za-z0-9_-]{32}", value):
         raise ValidationError(invalid_message)
     return value
+
+
+def ticket_credential(code):
+    if code.strip().upper().startswith("BCC:"):
+        normalize_purchase_credential(code.strip()[4:])
+        raise ValidationError(CANDY_CODE_MESSAGE)
+    return normalize_purchase_credential(code)
+
+
+def ticket_not_found(credential):
+    from domain.candy.models import CandyOrder
+
+    filters = {"pickup_token": credential} if len(credential) == 32 else {"pickup_code_digest": reservation_code_digest(credential)}
+    if CandyOrder.objects.filter(**filters).exists():
+        raise ValidationError(CANDY_CODE_MESSAGE)
+    raise ValidationError("No encontramos una entrada con ese código.")
 
 
 def check_purchase(purchase):
@@ -49,13 +66,13 @@ def check_purchase(purchase):
 def inspect_ticket(code, operator):
     if not can_validate_tickets(operator):
         raise PermissionDenied
-    credential = normalize_purchase_credential(code)
+    credential = ticket_credential(code)
     filters = {"validation_token": credential} if len(credential) == 32 else {"validation_code_digest": reservation_code_digest(credential)}
     purchase = TicketPurchase.objects.select_related(
         "screening__movie", "screening__room", "refund",
     ).prefetch_related("tickets").filter(**filters).first()
     if purchase is None:
-        raise ValidationError("No encontramos una entrada con ese código.")
+        ticket_not_found(credential)
     check_purchase(purchase)
     return purchase
 
@@ -63,7 +80,7 @@ def inspect_ticket(code, operator):
 def validate_ticket(code, operator, quantity=None, ticket_numbers=None):
     if not can_validate_tickets(operator):
         raise PermissionDenied
-    credential = normalize_purchase_credential(code)
+    credential = ticket_credential(code)
     selected_numbers = None
     if ticket_numbers is not None:
         try:
@@ -84,7 +101,7 @@ def validate_ticket(code, operator, quantity=None, ticket_numbers=None):
     filters = {"validation_token": credential} if len(credential) == 32 else {"validation_code_digest": reservation_code_digest(credential)}
     candidate = TicketPurchase.objects.select_related("screening").filter(**filters).first()
     if candidate is None:
-        raise ValidationError("No encontramos una entrada con ese código.")
+        ticket_not_found(credential)
     with transaction.atomic():
         screening = Screening.objects.select_for_update().filter(pk=candidate.screening_id).first()
         if screening is None:
@@ -207,7 +224,7 @@ def send_refund_notifications(refund_ids=None):
                 }
                 html_body = render_to_string("emails/refund_notice.html", context)
                 text_body = refund.notice
-                
+
                 msg = EmailMultiAlternatives(
                     subject="Función cancelada · Devolución registrada",
                     body=text_body,
@@ -288,7 +305,7 @@ def reprogram_purchase(*, user, purchase_pk, new_screening_pk, selected_seats):
     if not set(labels) <= reserved_by_user:
         raise ValidationError("Algunas butacas ya no están reservadas para tu compra.")
 
-    
+
     previous_total = purchase.total
     SeatPurchase.objects.filter(purchase=purchase).delete()
     purchase.screening = new_screening

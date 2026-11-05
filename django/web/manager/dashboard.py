@@ -3,12 +3,13 @@ from datetime import datetime, time, timedelta
 from decimal import Decimal
 from urllib.parse import urlencode
 
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 from django.db.models.functions import ExtractHour, ExtractMinute, ExtractWeekDay
 from django.utils import timezone
 from django.utils.formats import date_format
 
 from domain.movies.models import Movie
+from domain.candy.models import CandyOrder
 from domain.rooms.models import Room
 from domain.screenings.models import Screening
 from domain.seats.models import Seat
@@ -38,9 +39,10 @@ TIME_SLOT_MINUTES = 30
 
 def build_dashboard(
     period=None, date_from=None, date_to=None, now=None,
-    movie_id=None, room_id=None, revenue_date=None,
+    movie_id=None, room_id=None, revenue_date=None, view=None,
 ):
     now = now or timezone.now()
+    view = "candy" if view == "candy" else "movies"
     today = timezone.localdate(now)
     has_custom_range = date_from is not None or date_to is not None
 
@@ -61,9 +63,19 @@ def build_dashboard(
     movie_id = movie.pk if movie else None
     room_id = room.pk if room else None
     all_rows = screening_rows(completed_screenings(start, end))
+    standalone = standalone_candy_orders(start, end, movie_id, room_id)
+    plot_rows = filter_rows(all_rows, movie_id, room_id)
+    if view == "candy":
+        plot_candy = candy_metrics(plot_rows)
+        plot_rows = [{**row, "revenue": row["candy_revenue"], "ticket_revenue": Decimal("0"),
+                      "sold": plot_candy["orders_by_screening"].get(row["screening"].pk, 0)} for row in plot_rows]
+    plot_rows += [{"starts_at": timezone.localtime(order.created_at), "revenue": order.total,
+                   "ticket_revenue": Decimal("0"), "candy_revenue": order.total,
+                   "sold": 1 if view == "candy" else 0, "screening": None} for order in standalone]
+    axis_start = min((row["starts_at"].date() for row in plot_rows), default=first_date(all_rows))
     revenue = revenue_series(
-        filter_rows(all_rows, movie_id, room_id), start, end_date,
-        axis_start=first_date(all_rows),
+        plot_rows, start, end_date,
+        axis_start=axis_start,
     )
     selected_column = None
     if revenue and revenue_date:
@@ -83,6 +95,8 @@ def build_dashboard(
         selected_range = (start_of_day(first), min(start_of_day(after), end))
     rows = filter_rows(all_rows, movie_id, room_id, selected_range)
     summary = summarize(rows)
+    selected_standalone = standalone_candy_orders(start, end, movie_id, room_id, selected_range)
+    add_standalone_revenue(summary, selected_standalone)
     movies = top_movies(rows)
     time_slots = demand_by_purchase_time(start, end, movie_id, room_id, selected_range)
     previous = None
@@ -94,8 +108,11 @@ def build_dashboard(
             screening_rows(completed_screenings(start_previous, comparison_start)),
             movie_id, room_id,
         ))
+        add_standalone_revenue(previous, standalone_candy_orders(start_previous, comparison_start, movie_id, room_id))
 
     dashboard = {
+        "view": view,
+        "candy": candy_metrics(rows, selected_standalone) if view == "candy" else None,
         "periods": [
             {"key": value, "label": label, "active": not has_custom_range and value == key}
             for value, label, _days in PERIODS
@@ -104,7 +121,7 @@ def build_dashboard(
         "date_from": date_from,
         "date_to": date_to,
         "has_custom_range": has_custom_range,
-        "start": timezone.localdate(start) if start else first_date(all_rows),
+        "start": timezone.localdate(start) if start else axis_start,
         "end": end_date,
         "summary": summary,
         "deltas": build_deltas(summary, previous),
@@ -120,6 +137,55 @@ def build_dashboard(
     }
     add_filter_links(dashboard)
     return dashboard
+
+
+def standalone_candy_orders(start, end, movie_id=None, room_id=None, date_range=None):
+    orders = CandyOrder.objects.filter(customer__isnull=False, restocked_at__isnull=True, created_at__lt=end)
+    if movie_id or room_id:
+        return orders.none()
+    if start:
+        orders = orders.filter(created_at__gte=start)
+    if date_range:
+        orders = orders.filter(created_at__gte=date_range[0], created_at__lt=date_range[1])
+    return orders
+
+
+def add_standalone_revenue(summary, orders):
+    amount = orders.aggregate(total=Sum("total"))["total"] or Decimal("0")
+    summary["standalone_candy_revenue"] = amount
+    summary["revenue"] += amount
+    summary["candy_revenue"] += amount
+
+
+def candy_metrics(rows, standalone=None):
+    scope = Q(purchase__screening_id__in=[row["screening"].pk for row in rows])
+    if standalone is not None:
+        scope |= Q(pk__in=standalone.values("pk"))
+    orders = CandyOrder.objects.filter(scope, restocked_at__isnull=True)
+    ranking = {}
+    total = Decimal("0")
+    count = delivered = units = 0
+    by_screening = {}
+    for order in orders.only("items", "total", "delivered_at", "purchase__screening_id").select_related("purchase").iterator():
+        count += 1
+        total += order.total
+        delivered += order.delivered_at is not None
+        if order.purchase_id:
+            screening_id = order.purchase.screening_id
+            by_screening[screening_id] = by_screening.get(screening_id, 0) + 1
+        for line in order.items:
+            quantity = line["quantity"]
+            units += quantity
+            item = ranking.setdefault((line["kind"], line["id"]), {"name": line["name"], "kind": line["kind"], "units": 0, "revenue": Decimal("0")})
+            item["units"] += quantity
+            item["revenue"] += Decimal(line["subtotal"])
+    items = sorted(ranking.values(), key=lambda item: (-item["revenue"], -item["units"], item["name"]))
+    maximum = max((item["revenue"] for item in items), default=Decimal("0"))
+    for item in items:
+        item["width_css"] = css_percentage(percentage(item["revenue"], maximum))
+    return {"revenue": total, "orders": count, "units": units, "delivered": delivered, "pending": count - delivered,
+            "average_order": total / count if count else Decimal("0"), "items": items,
+            "orders_by_screening": by_screening}
 
 
 def selected_object(model, value):
@@ -149,6 +215,8 @@ def add_filter_links(dashboard):
                 params[key] = dashboard[key].isoformat()
     else:
         params["period"] = dashboard["period"]
+    if dashboard["view"] == "candy":
+        params["view"] = "candy"
     dashboard["clear_filters_url"] = "?" + urlencode(params)
     selected = {
         "movie": str(dashboard["selected_movie"].pk) if dashboard["selected_movie"] else None,
@@ -156,6 +224,8 @@ def add_filter_links(dashboard):
         "revenue_date": dashboard["selected_revenue_date"].isoformat() if dashboard["selected_revenue_date"] else None,
     }
     params.update({key: value for key, value in selected.items() if value})
+    dashboard["views"] = [{"key": key, "label": label, "icon": icon, "url": "?" + urlencode({**params, "view": key}), "active": dashboard["view"] == key}
+                          for key, label, icon in (("movies", "Películas", "clapperboard"), ("candy", "Candy", "popcorn"))]
 
     def link(key, value):
         updated = dict(params)
@@ -168,6 +238,7 @@ def add_filter_links(dashboard):
     for period in dashboard["periods"]:
         period["url"] = "?" + urlencode({
             "period": period["key"],
+            **({"view": "candy"} if dashboard["view"] == "candy" else {}),
             **{key: selected[key] for key in ("movie", "room") if selected[key]},
         })
     for key, items, object_key in (
@@ -238,6 +309,9 @@ def screening_rows(screenings):
         .values("screening_id")
         .annotate(sold=Sum("quantity"), revenue=Sum("total"))
     }
+    candy_sales = dict(CandyOrder.objects.filter(purchase__screening__in=ids, restocked_at__isnull=True)
+        .order_by().values("purchase__screening_id").annotate(revenue=Sum("total"))
+        .values_list("purchase__screening_id", "revenue"))
     used = dict(
         SeatPurchase.objects.filter(screening__in=ids, used_at__isnull=False)
         .order_by()
@@ -261,7 +335,9 @@ def screening_rows(screenings):
                 "screening": screening,
                 "starts_at": timezone.localtime(screening.starts_at),
                 "sold": sold,
-                "revenue": sale.get("revenue") or Decimal("0"),
+                "ticket_revenue": sale.get("revenue") or Decimal("0"),
+                "candy_revenue": candy_sales.get(screening.pk) or Decimal("0"),
+                "revenue": (sale.get("revenue") or Decimal("0")) + (candy_sales.get(screening.pk) or Decimal("0")),
                 "used": min(used.get(screening.pk, 0), sold),
                 "capacity": screening.capacity_snapshot or capacities.get(screening.room_id, 0),
             }
@@ -278,6 +354,8 @@ def summarize(rows):
     used = sum(row["used"] for row in rows)
     capacity = sum(row["capacity"] for row in rows)
     revenue = sum((row["revenue"] for row in rows), Decimal("0"))
+    ticket_revenue = sum((row.get("ticket_revenue", row["revenue"]) for row in rows), Decimal("0"))
+    candy_revenue = sum((row.get("candy_revenue", Decimal("0")) for row in rows), Decimal("0"))
     return {
         "screenings": len(rows),
         "sold": sold,
@@ -285,7 +363,9 @@ def summarize(rows):
         "unused": sold - used,
         "capacity": capacity,
         "revenue": revenue,
-        "average_ticket": revenue / sold if sold else Decimal("0"),
+        "ticket_revenue": ticket_revenue,
+        "candy_revenue": candy_revenue,
+        "average_ticket": ticket_revenue / sold if sold else Decimal("0"),
         "occupancy": percentage(sold, capacity),
         "attendance": percentage(used, sold),
         "attendance_css": css_percentage(percentage(used, sold)),
@@ -379,14 +459,16 @@ def revenue_series(rows, start, today, axis_start=None):
         key = advance(key)
 
     accumulated = {
-        key: {"revenue": Decimal("0"), "sold": 0, "screenings": 0}
+        key: {"revenue": Decimal("0"), "ticket_revenue": Decimal("0"), "candy_revenue": Decimal("0"), "sold": 0, "screenings": 0}
         for key in keys
     }
     for row in rows:
         data = accumulated[grouping_key(row["starts_at"].date(), granularity)]
         data["revenue"] += row["revenue"]
+        data["ticket_revenue"] += row.get("ticket_revenue", row["revenue"])
+        data["candy_revenue"] += row.get("candy_revenue", Decimal("0"))
         data["sold"] += row["sold"]
-        data["screenings"] += 1
+        data["screenings"] += row.get("screening") is not None
 
     maximum = max(data["revenue"] for data in accumulated.values())
     top, ticks = scale(float(maximum))
@@ -634,8 +716,11 @@ def presale(now, movie_id=None, room_id=None, date_range=None):
         sold=Sum("quantity"),
         revenue=Sum("total"),
     )
+    candy = CandyOrder.objects.filter(purchase__screening__in=screenings.values("pk"), restocked_at__isnull=True).aggregate(total=Sum("total"))["total"] or Decimal("0")
     return {
         "screenings": screenings.count(),
         "sold": sales["sold"] or 0,
-        "revenue": sales["revenue"] or Decimal("0"),
+        "ticket_revenue": sales["revenue"] or Decimal("0"),
+        "candy_revenue": candy,
+        "revenue": (sales["revenue"] or Decimal("0")) + candy,
     }

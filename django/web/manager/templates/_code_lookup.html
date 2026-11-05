@@ -14,6 +14,7 @@
       </div>
       <video data-camera playsinline muted hidden></video>
       <p class="visually-hidden" data-scanner-status role="status" aria-live="polite"></p>
+      <div data-qr-mismatch hidden><p data-qr-mismatch-message></p><a class="button" data-qr-switch data-ticket-url="{% url 'manager:validar_entradas' %}" data-candy-url="{% url 'manager:entregar_candy' %}">Cambiar de modo</a><button type="button" data-qr-stay>Seguir en este modo</button></div>
     </section>
 
     <section class="validation-manual" aria-labelledby="manual-title">

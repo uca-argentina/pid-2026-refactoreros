@@ -1,13 +1,16 @@
 from collections import Counter
 from decimal import Decimal
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import IntegrityError, models, transaction
+from django.db.models.functions import Cast
 from django.utils import timezone
 
 from domain.screenings.models import Screening
+from domain.cinema.models import CinemaSettings
 from domain.tickets.models import (
     UndoWindowMixin,
     generate_ticket_token,
@@ -16,7 +19,6 @@ from domain.tickets.models import (
 )
 
 CANDY_QR_PREFIX = "BCC:"
-MAX_ITEM_QUANTITY = 10
 LOW_STOCK_THRESHOLD = 10
 INVALID_SELECTION_MESSAGE = "La selección de candy no es válida."
 UNAVAILABLE_ITEM_MESSAGE = "Algún producto de candy ya no está a la venta. Revisá tu selección."
@@ -77,7 +79,8 @@ class CandyProduct(models.Model):
 
     @property
     def max_quantity(self):
-        return min(self.available_stock, MAX_ITEM_QUANTITY)
+        limit = getattr(self, "_purchase_quantity_limit", None)
+        return min(self.available_stock, limit if limit is not None else CinemaSettings.current().candy_max_item_quantity)
 
     @property
     def is_low_stock(self):
@@ -120,7 +123,8 @@ class CandyCombo(models.Model):
 
     @property
     def max_quantity(self):
-        return min(self.available_stock, MAX_ITEM_QUANTITY)
+        limit = getattr(self, "_purchase_quantity_limit", None)
+        return min(self.available_stock, limit if limit is not None else CinemaSettings.current().candy_max_item_quantity)
 
     @property
     def contents_label(self):
@@ -180,7 +184,13 @@ class CandyOrder(models.Model):
         on_delete=models.CASCADE,
         related_name="candy_order",
         db_column="compra_id",
+        null=True,
+        blank=True,
     )
+    reward_user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="reward_candy_orders")
+    reward_key = models.UUIDField(null=True, blank=True)
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="candy_orders")
+    checkout_key = models.UUIDField(null=True, blank=True)
     items = models.JSONField(default=list, blank=True)
     total = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True, db_column="creado_en")
@@ -202,9 +212,53 @@ class CandyOrder(models.Model):
         verbose_name_plural = "pedidos de candy"
         db_table = "candy_pedido"
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(condition=(models.Q(purchase__isnull=False, reward_user__isnull=True, reward_key__isnull=True, customer__isnull=True, checkout_key__isnull=True) | models.Q(purchase__isnull=True, reward_user__isnull=False, reward_key__isnull=False, customer__isnull=True, checkout_key__isnull=True) | models.Q(purchase__isnull=True, reward_user__isnull=True, reward_key__isnull=True, customer__isnull=False, checkout_key__isnull=False)), name="candy_order_single_origin"),
+            models.UniqueConstraint(fields=["reward_user", "reward_key"], name="candy_reward_order_idempotency"),
+            models.UniqueConstraint(fields=["customer", "checkout_key"], name="candy_checkout_idempotency"),
+        ]
 
     def __str__(self):
+        if self.is_reward_order:
+            return f"Premios · Pedido #{self.pk}"
+        if self.is_standalone_order:
+            return f"Candy · Pedido #{self.pk}"
         return f"Candy · Compra #{self.purchase_id}"
+
+    @classmethod
+    def for_user(cls, user):
+        if not user.is_authenticated:
+            return cls.objects.none()
+        now = timezone.now()
+        available = models.Q(delivered_at__isnull=True, restocked_at__isnull=True) & (
+            models.Q(purchase__isnull=True) | models.Q(
+                purchase__screening__status__in=(Screening.Status.PUBLISHED, Screening.Status.IN_PROGRESS),
+                purchase__refund__isnull=True, _pickup_ends_at__gt=now,
+            )
+        )
+        return cls.objects.filter(models.Q(customer=user) | models.Q(reward_user=user) | models.Q(purchase__user=user)).select_related(
+            "purchase__screening__movie", "purchase__screening__room", "purchase__refund",
+        ).annotate(
+            _pickup_ends_at=models.ExpressionWrapper(
+                models.F("purchase__screening__starts_at") + models.ExpressionWrapper(
+                    Cast("purchase__screening__movie__duration_minutes", models.IntegerField()) * models.Value(timedelta(minutes=1)),
+                    output_field=models.DurationField(),
+                ),
+                output_field=models.DateTimeField(),
+            ),
+        ).annotate(_pickup_priority=models.Case(models.When(available, then=0), default=1, output_field=models.IntegerField())).order_by("_pickup_priority", "-created_at", "-pk")
+
+    @property
+    def is_reward_order(self):
+        return self.reward_user_id is not None
+
+    @property
+    def is_standalone_order(self):
+        return self.customer_id is not None
+
+    @property
+    def user_id(self):
+        return self.customer_id if self.is_standalone_order else self.reward_user_id if self.is_reward_order else self.purchase.user_id
 
     @property
     def pickup_code(self):
@@ -241,6 +295,8 @@ class CandyOrder(models.Model):
 
     @property
     def is_refunded(self):
+        if self.is_reward_order or self.is_standalone_order:
+            return self.restocked_at is not None
         return (
             self.purchase.screening.status == Screening.Status.CANCELED
             or hasattr(self.purchase, "refund")
@@ -248,6 +304,8 @@ class CandyOrder(models.Model):
 
     @property
     def is_expired(self):
+        if self.is_reward_order or self.is_standalone_order:
+            return False
         screening = self.purchase.screening
         return (
             screening.status not in (Screening.Status.PUBLISHED, Screening.Status.IN_PROGRESS)
@@ -266,6 +324,8 @@ class CandyOrder(models.Model):
         return required
 
     def restock(self):
+        if self.is_reward_order:
+            return  # Reward units remain reserved by their coupons, independent of screenings.
         if self.delivered_at is not None or self.restocked_at is not None:
             return
         required = self.stock_requirements()
@@ -277,10 +337,11 @@ class CandyOrder(models.Model):
         self.save(update_fields=["restocked_at"])
 
     @staticmethod
-    def parse_selection(requested_items):
+    def parse_selection(requested_items, *, enforce_limit=True):
         if not isinstance(requested_items, list):
             raise ValidationError(INVALID_SELECTION_MESSAGE)
         quantities = {}
+        limit = CinemaSettings.current().candy_max_item_quantity if enforce_limit else None
         for item in requested_items:
             if not isinstance(item, dict) or item.get("kind") not in {"product", "combo"}:
                 raise ValidationError(INVALID_SELECTION_MESSAGE)
@@ -295,14 +356,14 @@ class CandyOrder(models.Model):
                 continue
             key = (item["kind"], item_id)
             quantities[key] = quantities.get(key, 0) + quantity
-            if quantities[key] > MAX_ITEM_QUANTITY:
+            if limit is not None and quantities[key] > limit:
                 raise ValidationError(
-                    f"Podés llevar hasta {MAX_ITEM_QUANTITY} unidades de cada producto o combo."
+                    f"Podés llevar hasta {limit} {'unidad' if limit == 1 else 'unidades'} de cada producto o combo."
                 )
         return quantities
 
     @classmethod
-    def create_for(cls, purchase, requested_items):
+    def create_for(cls, purchase, requested_items, *, customer=None, checkout_key=None):
         quantities = cls.parse_selection(requested_items)
         if not quantities:
             return None
@@ -355,8 +416,8 @@ class CandyOrder(models.Model):
                     raise ValidationError(f"No queda stock suficiente de {product.name}.")
             for product_id, quantity in required.items():
                 product = products[product_id]
-                product.stock -= quantity
-                product.save(update_fields=["stock"])
+                if not CandyProduct.objects.filter(pk=product.pk, stock__gte=quantity).update(stock=models.F("stock") - quantity):
+                    raise ValidationError(f"No queda stock suficiente de {product.name}.")
 
             items = []
             for line in lines:
@@ -368,6 +429,8 @@ class CandyOrder(models.Model):
                 })
             order = cls(
                 purchase=purchase,
+                customer=customer,
+                checkout_key=checkout_key,
                 items=items,
                 total=sum((Decimal(item["subtotal"]) for item in items), Decimal("0")),
             )

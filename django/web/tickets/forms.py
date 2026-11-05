@@ -3,8 +3,8 @@ import json
 from django import forms
 
 
-class TicketPurchaseForm(forms.Form):
-    selected_seats = forms.CharField(required=False)
+class CandyPurchaseForm(forms.Form):
+    checkout_key = forms.UUIDField(widget=forms.HiddenInput)
     candy_items = forms.CharField(required=False)
 
     def clean_candy_items(self):
@@ -18,6 +18,10 @@ class TicketPurchaseForm(forms.Form):
         if not isinstance(candy_items, list):
             raise forms.ValidationError("La selección de candy no es válida.")
         return candy_items
+
+class TicketPurchaseForm(CandyPurchaseForm):
+    checkout_key = None
+    selected_seats = forms.CharField(required=False)
 
     def clean_selected_seats(self):
         value = self.cleaned_data.get("selected_seats")

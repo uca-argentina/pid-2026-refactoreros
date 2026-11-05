@@ -249,7 +249,7 @@ def movie_screening_reprogram(request,purchase_pk):
 
     if current_screening.starts_at <= timezone.now():
         return redirect("home")
-    
+
     return render(request, "screening_reprogram_detail.html", {
         "cinema": CinemaSettings.current(),
         "movie": movie,

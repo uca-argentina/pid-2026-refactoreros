@@ -10,16 +10,19 @@ from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.cache import never_cache
 import json
 import re
+import uuid
 
 from domain.candy.models import CandyOrder
-from domain.candy.services import buy_tickets_with_candy, candy_menu
+from domain.candy.services import buy_candy_only, buy_tickets_with_candy, candy_menu
 from domain.tickets.services import reprogram_purchase
 from domain.cinema.models import CinemaSettings
 from domain.screenings.models import Screening
 from domain.tickets.models import PurchaseRefund, TicketPurchase, SeatReservation
 from web.catalog.views import build_seat_map, manager_role
 
-from .forms import TicketPurchaseForm,TicketReprogramForm
+from .forms import CandyPurchaseForm, TicketPurchaseForm, TicketReprogramForm
+from django.db import OperationalError
+from django.core.paginator import Paginator
 
 
 def purchase_error_message(error, fallback):
@@ -34,6 +37,46 @@ def purchase_error_message(error, fallback):
     if getattr(error, "messages", None):
         return error.messages[0]
     return fallback
+
+
+@login_required
+@never_cache
+@require_GET
+def candy_store_view(request):
+    return render(request, "candy_store.html", {
+        "cinema": CinemaSettings.current(), "manager_role": manager_role(request.user),
+        "candy": candy_menu(), "checkout_key": uuid.uuid4(),
+        "purchase_error": request.session.pop("candy_purchase_error", ""),
+        "orders": Paginator(CandyOrder.for_user(request.user), 12).get_page(request.GET.get("page")),
+    })
+
+
+@login_required
+@never_cache
+@require_POST
+def candy_purchase_view(request):
+    form = CandyPurchaseForm(request.POST)
+    if form.is_valid():
+        try:
+            order = buy_candy_only(request.user, form.cleaned_data["candy_items"], form.cleaned_data["checkout_key"])
+        except ValidationError as error:
+            request.session["candy_purchase_error"] = purchase_error_message(error, "No se pudo completar el pedido.")
+        except OperationalError:
+            request.session["candy_purchase_error"] = "Hay otra compra en curso. Volvé a intentarlo."
+        else:
+            messages.success(request, "Pago aprobado. Tu pedido de Candy está listo para retirar con su QR. ¡Que lo disfrutes!")
+            return redirect("candy_order_detail", pk=order.pk)
+    else:
+        request.session["candy_purchase_error"] = purchase_error_message(form.errors, "Revisá tu selección de Candy.")
+    return redirect("candy_store")
+
+
+@login_required
+@never_cache
+@require_GET
+def candy_order_detail_view(request, pk):
+    order = get_object_or_404(CandyOrder.for_user(request.user), pk=pk)
+    return render(request, "candy_detail.html", {"order": order, "purchase": order.purchase, "cinema": CinemaSettings.current(), "manager_role": manager_role(request.user)})
 
 
 @login_required
@@ -145,7 +188,7 @@ def screening_reprogram_view(request, purchase_pk, screening_pk):
     elif diff < 0:
         message += f" La nueva función cuesta ${-diff:.2f} menos."
     messages.success(request, message)
-    return redirect("my_tickets")    
+    return redirect("my_tickets")
 
 
 @login_required
@@ -448,6 +491,7 @@ def candy_detail_view(request, pk):
     return render(request, "candy_detail.html", {
         "order": order,
         "purchase": order.purchase,
+        "client_nav_section": "candy",
         "cinema": CinemaSettings.current(),
         "manager_role": manager_role(request.user),
     })

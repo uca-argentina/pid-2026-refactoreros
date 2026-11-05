@@ -1,0 +1,91 @@
+      <article class="panel-section viz-card viz-card-fill">
+        <header class="viz-header">
+          <div>
+            <h2>{% if dashboard.view == 'candy' %}Recaudación de Candy{% else %}Recaudación{% endif %}</h2>
+            <p>
+              {% if dashboard.revenue.granularity == "week" %}Por semana{% elif dashboard.revenue.granularity == "month" %}Por mes{% else %}Por día{% endif %}
+              de función{% if dashboard.selected_revenue_date %} · contexto del período{% endif %}
+            </p>
+          </div>
+          <span class="viz-interaction-hint"><i data-lucide="mouse-pointer-2" aria-hidden="true"></i>Filtrar por fecha</span>
+        </header>
+
+        {% with serie=dashboard.revenue %}
+          {% if serie %}
+            <div class="column-chart">
+              <div class="column-chart-y" aria-hidden="true">
+                {% for tick in serie.ticks %}
+                  <span style="bottom: {{ tick.position_css }}">${{ tick.value|floatformat:"0g" }}</span>
+                {% endfor %}
+              </div>
+              <div class="column-chart-plot">
+                {% for tick in serie.ticks %}
+                  <span class="column-chart-grid{% if forloop.first %} is-baseline{% endif %}" style="bottom: {{ tick.position_css }}" aria-hidden="true"></span>
+                {% endfor %}
+                <div class="column-chart-bars" style="--columns: {{ serie.columns|length }}" role="group" aria-label="Recaudación por período; seleccioná una barra para filtrar por fecha">
+                  {% for column in serie.columns %}
+                    <a
+                      class="column-slot{% if column.is_selected %} is-selected{% elif column.is_muted %} is-muted{% endif %}"
+                      href="{{ column.filter_url }}"
+                      data-dashboard-link
+                      data-focus-key="revenue-{{ column.date|date:'Y-m-d' }}"
+                      {% if column.is_selected %}aria-current="true"{% endif %}
+                      data-tip-title="{% if serie.granularity == 'week' %}Semana del {{ column.date|date:'d/m/Y' }}{% elif serie.granularity == 'month' %}{{ column.date|date:'F Y' }}{% else %}{{ column.date|date:'l d/m' }}{% endif %}"
+                      data-tip-value="${{ column.revenue|floatformat:'0g' }}"
+                      data-tip-meta="{{ column.sold }} {% if dashboard.view == 'candy' %}{{ column.sold|pluralize:'pedido,pedidos' }}{% else %}{{ column.sold|pluralize:'entrada,entradas' }}{% endif %} · {{ column.screenings }} {{ column.screenings|pluralize:'función,funciones' }}"
+                      aria-label="{% if column.is_selected %}Quitar filtro:{% else %}Filtrar por{% endif %} {% if serie.granularity == 'week' %}semana del {{ column.date|date:'d/m/Y' }}{% elif serie.granularity == 'month' %}{{ column.date|date:'F Y' }}{% else %}{{ column.date|date:'l d/m' }}{% endif %}: ${{ column.revenue|floatformat:'0g' }}"
+                    >
+                      <span class="column-bar" style="height: {{ column.height_css }}">
+                        {% if column.is_peak %}
+                          <span class="column-peak{% if forloop.counter <= 2 %} is-start{% elif forloop.revcounter <= 2 %} is-end{% endif %}">${{ column.revenue|floatformat:"0g" }}</span>
+                        {% endif %}
+                      </span>
+                    </a>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="column-chart-x" style="--columns: {{ serie.columns|length }}" aria-hidden="true">
+                {% for column in serie.columns %}
+                  <span{% if column.secondary_label %} class="is-secondary"{% endif %}>{% if column.show_label %}{% if serie.granularity == "month" %}{{ column.date|date:"b y" }}{% else %}{{ column.date|date:"d/m" }}{% endif %}{% endif %}</span>
+                {% endfor %}
+              </div>
+            </div>
+
+            <details class="viz-table">
+              <summary>Ver tabla</summary>
+              <div class="table-shell">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{% if serie.granularity == "week" %}Semana del{% elif serie.granularity == "month" %}Mes{% else %}Día{% endif %}</th>
+                      <th scope="col">Recaudación</th>
+                      {% if dashboard.view != "candy" %}<th scope="col">Entradas ($)</th><th scope="col">Candy ($)</th>{% endif %}
+                      <th scope="col">{% if dashboard.view == "candy" %}Pedidos{% else %}Entradas{% endif %}</th>
+                      <th scope="col">Funciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for column in serie.columns %}
+                      <tr>
+                        <td data-label="Fecha">{% if serie.granularity == "month" %}{{ column.date|date:"F Y" }}{% else %}{{ column.date|date:"d/m/Y" }}{% endif %}</td>
+                        <td data-label="Recaudación">${{ column.revenue|floatformat:"0g" }}</td>
+                        {% if dashboard.view != "candy" %}<td data-label="Entradas ($)">${{ column.ticket_revenue|floatformat:"0g" }}</td><td data-label="Candy ($)">${{ column.candy_revenue|floatformat:"0g" }}</td>{% endif %}
+                        <td data-label="{% if dashboard.view == 'candy' %}Pedidos{% else %}Entradas{% endif %}">{{ column.sold }}</td>
+                        <td data-label="Funciones">{{ column.screenings }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          {% else %}
+            <div class="empty-state compact">
+              <i data-lucide="chart-no-axes-column" aria-hidden="true"></i>
+              <div>
+                <h3>Sin funciones realizadas</h3>
+                <p>No hubo funciones publicadas en este período. Probá con un rango más amplio.</p>
+              </div>
+            </div>
+          {% endif %}
+        {% endwith %}
+      </article>
