@@ -55,6 +55,11 @@ class PromotionPricingTests(TestCase):
         promotion.seat_types.add(self.seat_type)
         return promotion
 
+    def test_discount_label_keeps_integer_zeros(self):
+        self.assertEqual(Promotion(discount_value=Decimal("30.00")).discount_label, "30%")
+        self.assertEqual(Promotion(discount_value=Decimal("100.00")).discount_label, "100%")
+        self.assertEqual(Promotion(discount_value=Decimal("12.50")).discount_label, "12.5%")
+
     def test_applies_discount_only_when_day_time_and_seat_type_match(self):
         promotion = self.create_promotion()
 

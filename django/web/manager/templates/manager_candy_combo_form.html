@@ -1,0 +1,50 @@
+{% extends "manager_base.html" %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>{{ form_title }}</h1>
+  </section>
+
+  <div class="form-layout">
+    <form class="manager-form" method="post" enctype="{{ enctype }}">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+
+      {% for field in form.combo_fields %}
+        <label{% if field.field.widget.input_type == "checkbox" %} class="checkbox-field"{% endif %}>
+          <span>{{ field.label }}</span>
+          {{ field }}
+          {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+          {{ field.errors }}
+        </label>
+      {% endfor %}
+
+      <fieldset class="candy-combo-products">
+        <legend>Productos del combo</legend>
+        <p>Indicá cuántas unidades de cada producto incluye. Al venderse, el combo descuenta ese stock.</p>
+        <div class="candy-combo-product-list">
+          {% for row in form.product_rows %}
+            <label class="candy-combo-product{% if not row.product.is_active %} is-inactive{% endif %}">
+              <span>
+                <strong>{{ row.product.name }}</strong>
+                <small>{{ row.product.get_category_display }} · ${{ row.product.price|floatformat:2 }} · Stock {{ row.product.stock }}{% if not row.product.is_active %} · Pausado{% endif %}</small>
+              </span>
+              {{ row.field }}
+              {{ row.field.errors }}
+            </label>
+          {% empty %}
+            <p>Primero cargá productos de candy para poder armar combos.</p>
+          {% endfor %}
+        </div>
+      </fieldset>
+
+      <div class="form-actions">
+        <button type="submit">
+          <i data-lucide="save" aria-hidden="true"></i>
+          <span>{{ submit_label }}</span>
+        </button>
+        <a href="{% url 'manager:candy_combos_list' %}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

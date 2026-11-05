@@ -37,6 +37,10 @@
             <i data-lucide="scan-line" aria-hidden="true"></i>
             <span>Validar entradas</span>
           </a>
+          <a href="{% url 'manager:entregar_candy' %}" class="nav-candy-pickup {% if section == 'Entregar candy' %}is-active{% endif %}">
+            <i data-lucide="package-check" aria-hidden="true"></i>
+            <span>Entregar candy</span>
+          </a>
         {% endif %}
         {% if manager_role != "operator" %}
         <a href="{% url 'manager:home' %}" class="nav-dashboard {% if not section %}is-active{% endif %}">
@@ -45,6 +49,7 @@
         </a>
         {% endif %}
         {% if manager_role == "manager" %}
+          <a href="{% url 'games:dashboard' %}" class="nav-games {% if section == 'Juegos' %}is-active{% endif %}"><i data-lucide="ferris-wheel" aria-hidden="true"></i><span>Juegos</span></a>
           <a href="{% url 'manager:dashboard' %}" class="nav-analytics {% if section == 'Dashboard' %}is-active{% endif %}">
             <i data-lucide="chart-column" aria-hidden="true"></i>
             <span>Dashboard</span>
@@ -65,6 +70,10 @@
             <i data-lucide="badge-percent" aria-hidden="true"></i>
             <span>Promociones</span>
           </a>
+          <a href="{% url 'manager:candy_products_list' %}" class="nav-candy {% if section == 'Candy' %}is-active{% endif %}">
+            <i data-lucide="popcorn" aria-hidden="true"></i>
+            <span>Candy</span>
+          </a>
           <a href="{% url 'manager:peliculas_list' %}" class="nav-movies {% if section == 'Películas' or section == 'Peliculas' %}is-active{% endif %}">
             <i data-lucide="clapperboard" aria-hidden="true"></i>
             <span>Películas</span>
@@ -77,7 +86,7 @@
             <i data-lucide="settings" aria-hidden="true"></i>
             <span>Configuración</span>
           </a>
-          <button type="button" class="manager-manage-toggle{% if section == 'Usuarios' or section == 'Salas' or section == 'Butacas' or section == 'Promociones' or section == 'Películas' or section == 'Peliculas' or section == 'Funciones' %} is-active{% endif %}" aria-expanded="false" aria-controls="manager-manage-menu">
+          <button type="button" class="manager-manage-toggle{% if section == 'Usuarios' or section == 'Salas' or section == 'Butacas' or section == 'Promociones' or section == 'Candy' or section == 'Películas' or section == 'Peliculas' or section == 'Funciones' %} is-active{% endif %}" aria-expanded="false" aria-controls="manager-manage-menu">
             <i data-lucide="chevron-up" aria-hidden="true"></i>
             <span>Gestionar</span>
           </button>
@@ -86,10 +95,12 @@
 
       {% if manager_role == "manager" %}
         <div class="manager-manage-menu" id="manager-manage-menu" hidden>
+          <a href="{% url 'games:dashboard' %}"><i data-lucide="ferris-wheel" aria-hidden="true"></i><span>Juegos</span></a>
           <a href="{% url 'manager:usuarios_list' %}"><i data-lucide="users" aria-hidden="true"></i><span>Usuarios</span></a>
           <a href="{% url 'manager:salas_list' %}"><i data-lucide="building-2" aria-hidden="true"></i><span>Salas</span></a>
           <a href="{% url 'manager:seat_types_list' %}"><i data-lucide="armchair" aria-hidden="true"></i><span>Butacas</span></a>
           <a href="{% url 'manager:promotions_list' %}"><i data-lucide="badge-percent" aria-hidden="true"></i><span>Promociones</span></a>
+          <a href="{% url 'manager:candy_products_list' %}"><i data-lucide="popcorn" aria-hidden="true"></i><span>Candy</span></a>
           <a href="{% url 'manager:peliculas_list' %}"><i data-lucide="clapperboard" aria-hidden="true"></i><span>Películas</span></a>
           <a href="{% url 'manager:funciones_list' %}"><i data-lucide="calendar-clock" aria-hidden="true"></i><span>Funciones</span></a>
         </div>

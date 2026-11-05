@@ -12,6 +12,8 @@ const purchaseSavings = document.querySelector("[data-purchase-savings]");
 const purchaseSavingsAmount = document.querySelector("[data-purchase-savings-amount]");
 const purchasePromotions = document.querySelector("[data-purchase-promotions]");
 const purchasePromotionsList = document.querySelector("[data-purchase-promotions-list]");
+const cartCandyRow = document.querySelector("[data-cart-candy-row]");
+const cartCandyLines = document.querySelector("[data-cart-candy-lines]");
 const seatMaps = document.querySelectorAll(".client-seat-map");
 let reservationExpiresAt = null;
 let reservationTimer = null;
@@ -132,6 +134,34 @@ function seatPrice(seat) {
 
 function seatBasePrice(seat) {
   return parseSeatPrice(seat?.dataset.seatBasePrice) ?? seatPrice(seat);
+}
+
+function selectedCandyItems() {
+  return [...document.querySelectorAll("[data-candy-item]")].filter(
+    (item) => Number(item.dataset.quantity || 0) > 0,
+  );
+}
+
+function candyItemTotal(item) {
+  return (parseSeatPrice(item.dataset.price) ?? 0) * Number(item.dataset.quantity || 0);
+}
+
+function renderCandyCart(candyItems) {
+  if (!cartCandyRow || !cartCandyLines) {
+    return;
+  }
+  cartCandyRow.hidden = candyItems.length === 0;
+  cartCandyLines.innerHTML = "";
+  candyItems.forEach((item) => {
+    const line = document.createElement("li");
+    const label = document.createElement("span");
+    const price = document.createElement("strong");
+    label.textContent = `${item.dataset.quantity} × ${item.dataset.name}`;
+    price.textContent = `$${formatMoney(candyItemTotal(item))}`;
+    line.appendChild(label);
+    line.appendChild(price);
+    cartCandyLines.appendChild(line);
+  });
 }
 
 function csrfToken() {
@@ -402,14 +432,17 @@ function updateSeatDrivenPurchaseState() {
   const requiresSeatSelection = Boolean(activeSeatMap);
   const selectedCount = selectedSeats.length;
   const seatStateUpdating = hasPendingSeatOperations(activeSeatMap);
+  const candyItems = selectedCandyItems();
+  const candyTotal = candyItems.reduce((sum, item) => sum + candyItemTotal(item), 0);
   const total = selectedSeats.reduce(
     (sum, seat) => sum + seatPrice(seat),
-    0,
+    candyTotal,
   );
   const baseTotal = selectedSeats.reduce(
     (sum, seat) => sum + seatBasePrice(seat),
-    0,
+    candyTotal,
   );
+  renderCandyCart(candyItems);
   const savings = Math.max(baseTotal - total, 0);
 
   if (purchaseSummary) {
@@ -535,6 +568,8 @@ document.querySelectorAll('input[name="funcion"]').forEach((input) => {
 if (!document.querySelector('input[name="funcion"]')) {
   updateSeatDrivenPurchaseState();
 }
+
+document.addEventListener("candy:change", updateSeatDrivenPurchaseState);
 
 document.querySelectorAll("button.client-seat").forEach((seat) => {
   seat.addEventListener("click", () => {

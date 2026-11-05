@@ -1,12 +1,14 @@
 from django.urls import path
 
 from . import views
+from .candy_pickup import CandyPickupView
 from .validation import TicketValidationView
 
 app_name = "manager"
 
 urlpatterns = [
     path("validar-entradas/", TicketValidationView.as_view(), name="validar_entradas"),
+    path("entregar-candy/", CandyPickupView.as_view(), name="entregar_candy"),
     path("", views.ManagementHomeView.as_view(), name="home"),
     path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
     path("configuracion/", views.CinemaSettingsUpdateView.as_view(), name="configuracion"),
@@ -26,6 +28,14 @@ urlpatterns = [
     path("promociones/nueva/", views.PromotionCreateView.as_view(), name="promotions_create"),
     path("promociones/<int:pk>/editar/", views.PromotionUpdateView.as_view(), name="promotions_update"),
     path("promociones/<int:pk>/eliminar/", views.PromotionDeleteView.as_view(), name="promotions_delete"),
+    path("candy/", views.CandyProductsListView.as_view(), name="candy_products_list"),
+    path("candy/productos/nuevo/", views.CandyProductCreateView.as_view(), name="candy_products_create"),
+    path("candy/productos/<int:pk>/editar/", views.CandyProductUpdateView.as_view(), name="candy_products_update"),
+    path("candy/productos/<int:pk>/eliminar/", views.CandyProductDeleteView.as_view(), name="candy_products_delete"),
+    path("candy/combos/", views.CandyCombosListView.as_view(), name="candy_combos_list"),
+    path("candy/combos/nuevo/", views.CandyComboCreateView.as_view(), name="candy_combos_create"),
+    path("candy/combos/<int:pk>/editar/", views.CandyComboUpdateView.as_view(), name="candy_combos_update"),
+    path("candy/combos/<int:pk>/eliminar/", views.CandyComboDeleteView.as_view(), name="candy_combos_delete"),
     path("peliculas/", views.MoviesListView.as_view(), name="peliculas_list"),
     path("peliculas/nueva/", views.MovieCreateView.as_view(), name="peliculas_create"),
     path("peliculas/<int:pk>/editar/", views.MovieUpdateView.as_view(), name="peliculas_update"),

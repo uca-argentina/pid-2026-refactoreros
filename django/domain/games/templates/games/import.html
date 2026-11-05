@@ -1,0 +1,10 @@
+{% extends "games/admin_base.html" %}
+{% block games_content %}<section class="page-heading"><h1>Importar preguntas</h1></section><p>Se agregan entre 1 y 500 preguntas por importación (hasta 1 MB). Se valida todo antes de guardar; no se reemplazan preguntas existentes. Exportar produce el mismo formato, compatible con contenido de un LLM.</p>
+<pre style="overflow:auto">{"questions": [{
+  "text": "¿Quién dirigió Jurassic Park?",
+  "options": ["Steven Spielberg", "James Cameron", "Ridley Scott"],
+  "correct": 0,
+  "difficulty": 1,
+  "active": true
+}]}</pre><p>correct: índice 0, 1 o 2. difficulty: 1 fácil, 2 media, 3 difícil. Tres opciones diferentes de hasta 250 caracteres. Pregunta de hasta 500 caracteres. active es opcional (true por defecto). Texto UTF-8, sin bloques Markdown.</p>
+<form class="manager-form" method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.as_p }}<div class="form-actions"><button class="ga-button ga-primary" type="submit">Validar e importar</button><a href="{% url 'games:dashboard' %}">Cancelar</a></div></form>{% endblock %}

@@ -1,6 +1,10 @@
 from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.cache import never_cache
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 
 from domain.cinema.models import CinemaSettings
 from domain.movies.models import Movie
@@ -8,6 +12,7 @@ from domain.promotions.pricing import PromotionPriceCalculator
 from domain.screenings.models import Screening
 from domain.seat_types.models import SeatType
 from domain.tickets.models import TicketPurchase
+from domain.tickets.services import check_reprogramming_window
 from web.manager.views import manager_role
 
 
@@ -133,20 +138,47 @@ def build_seat_map(screening, user=None, price_calculator=None):
     }
 
 
+def best_promotion_quote(screenings, price_calculator):
+    quotes = (
+        price_calculator.quote(
+            base_price=price,
+            seat_type_id=int(type_id),
+            screening_starts_at=screening.starts_at,
+        )
+        for screening in screenings
+        for type_id, price in (screening.prices_by_type or {}).items()
+    )
+    return max(
+        (quote for quote in quotes if quote.promotion),
+        key=lambda quote: quote.discount,
+        default=None,
+    )
+
+
 def home_view(request):
     Screening.finalize_expired()
     published = Screening.published()
-    movies = Movie.objects.filter(
-        screenings__status=Screening.Status.PUBLISHED
-    ).prefetch_related(
-        Prefetch("screenings", queryset=published, to_attr="published_screenings")
-    ).distinct()
+    movies = list(
+        Movie.objects.filter(
+            screenings__status=Screening.Status.PUBLISHED
+        ).prefetch_related(
+            Prefetch("screenings", queryset=published, to_attr="published_screenings")
+        ).distinct()
+    )
+    price_calculator = PromotionPriceCalculator.current()
+    for movie in movies:
+        movie.promotion_quote = best_promotion_quote(movie.published_screenings, price_calculator)
+    promotions = sorted(
+        price_calculator.promotions,
+        key=lambda promotion: not promotion.is_available_today,
+    )
     return render(
         request,
         "home.html",
         {
             "cinema": CinemaSettings.current(),
             "movies": movies,
+            "promotions": promotions if movies else [],
             "manager_role": manager_role(request.user),
         },
     )
@@ -167,6 +199,7 @@ def movie_detail_view(request, pk):
     screening = movie.published_screenings[0]
     price_calculator = PromotionPriceCalculator.current()
     for item in movie.published_screenings:
+        item.local_date = timezone.localdate(item.starts_at)
         item.tickets_available = TicketPurchase.available_for(item)
         item.seat_map = build_seat_map(
             item,
@@ -196,11 +229,67 @@ def movie_detail_view(request, pk):
         },
     )
 
+@login_required
+@never_cache
+def movie_screening_reprogram(request,purchase_pk):
+    Screening.finalize_expired()
+
+    purchase = get_object_or_404(
+        request.user.ticket_purchases.select_related("screening__movie"),
+        pk=purchase_pk,
+    )
+    current = purchase.screening
+    movie = current.movie
+    current_screening = purchase.screening
+    movie = current_screening.movie
+    try:
+        check_reprogramming_window(current_screening)
+    except ValidationError as error:
+        messages.error(request, error.messages[0])
+        return redirect("my_tickets")
+
+    alternatives = list(
+        Screening.published()
+        .filter(movie=movie)
+        .exclude(pk=current_screening.pk)
+        .order_by("starts_at")
+    )
+    price_calculator = PromotionPriceCalculator.current()
+    add_details_to_screenings(alternatives,request.user,price_calculator)
+
+    return render(request, "screening_reprogram_detail.html", {
+        "cinema": CinemaSettings.current(),
+        "movie": movie,
+        "purchase": purchase,
+        "current_screening": current_screening,
+        "screenings": alternatives,
+        "manager_role": manager_role(request.user),
+    })
 
 def screening_detail_view(request, pk):
     Screening.finalize_expired()
     screening = get_object_or_404(Screening.published(), pk=pk)
     return redirect("seat_selection", pk=screening.pk)
+
+def add_details_to_screenings(screenings,user,price_calculator):
+    for item in screenings:
+        item.local_date = timezone.localdate(item.starts_at)
+        item.tickets_available = TicketPurchase.available_for(item)
+        item.seat_map = build_seat_map(
+            item,
+            user=user,
+            price_calculator=price_calculator,
+        )
+        item.current_price_from = item.seat_map["price_from"] if item.seat_map else item.price_from
+        item.promotion_names = sorted(
+            {
+                tier["promotion"]
+                for tier in (item.seat_map or {}).get("legend", [])
+                if tier["promotion"]
+            }
+        )
+        item.has_promotion = bool(item.promotion_names)
+        item.promotion_summary = ", ".join(item.promotion_names)
 
 
 def _error_page(request, status, title, description, eyebrow):

@@ -1,0 +1,27 @@
+{% load l10n %}
+{% if candy.combos or candy.products %}
+  <section class="candy-picker" data-candy-picker aria-labelledby="candy-picker-title">
+    <input type="hidden" name="candy_items" value="">
+    <header class="candy-picker-header">
+      <h2 id="candy-picker-title"><i data-lucide="popcorn" aria-hidden="true"></i>{% if standalone_candy %}Elegí tus favoritos{% else %}Sumá candy{% endif %}</h2>
+      <p>{% if standalone_candy %}Elegí productos o combos y retiralos con tu QR en el Candy.{% else %}Lo retirás en el candy bar con un código propio, antes o durante la función.{% endif %}</p>
+    </header>
+
+    {% if candy.combos %}
+      <h3 class="candy-picker-group">Combos</h3>
+      <div class="candy-grid">
+        {% for combo in candy.combos %}
+          {% include "_candy_item.html" with item=combo kind="combo" detail=combo.contents_label %}
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% if candy.products %}
+      <h3 class="candy-picker-group">Productos</h3>
+      <div class="candy-grid">
+        {% for product in candy.products %}
+          {% include "_candy_item.html" with item=product kind="product" detail=product.get_category_display %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
+{% endif %}

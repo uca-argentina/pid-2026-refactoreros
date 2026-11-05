@@ -1,0 +1,26 @@
+{% load l10n %}
+<article class="candy-item{% if item.max_quantity <= 0 %} is-sold-out{% endif %}" data-candy-item data-kind="{{ kind }}" data-id="{{ item.pk|unlocalize }}" data-name="{{ item.name }}" data-price="{{ item.price|unlocalize }}" data-max="{{ item.max_quantity|unlocalize }}" data-quantity="0">
+  {% if item.image %}
+    <img class="candy-item-image" src="{{ item.image.url }}" alt="">
+  {% else %}
+    <span class="candy-item-icon" aria-hidden="true"><i data-lucide="{{ item.icon }}"></i></span>
+  {% endif %}
+  <div class="candy-item-body">
+    <h4>{{ item.name }}</h4>
+    <p>{{ detail }}</p>
+  </div>
+  <div class="candy-item-footer">
+    <p class="candy-item-price">
+      <strong>${{ item.price|floatformat:"-2g" }}</strong>
+    </p>
+    {% if item.max_quantity > 0 %}
+      <div class="candy-stepper" role="group" aria-label="Cantidad de {{ item.name }}">
+        <button type="button" data-candy-step="-1" aria-label="Quitar {{ item.name }}" disabled><i data-lucide="minus" aria-hidden="true"></i></button>
+        <output data-candy-quantity aria-live="polite">0</output>
+        <button type="button" data-candy-step="1" aria-label="Agregar {{ item.name }}"><i data-lucide="plus" aria-hidden="true"></i></button>
+      </div>
+    {% else %}
+      <span class="candy-sold-out">Agotado</span>
+    {% endif %}
+  </div>
+</article>

@@ -69,7 +69,7 @@ class Promotion(models.Model):
     @property
     def discount_label(self):
         if self.discount_type == self.DiscountType.PERCENTAGE:
-            value = format(self.discount_value.normalize(), "f").rstrip("0").rstrip(".")
+            value = format(self.discount_value.normalize(), "f")
             return f"{value}%"
         return f"${self.discount_value:.2f}"
 
@@ -90,6 +90,11 @@ class Promotion(models.Model):
     def seat_types_label(self):
         seat_types = list(self.seat_types.all())
         return ", ".join(seat_type.name for seat_type in seat_types) or "Todos los tipos"
+
+    @property
+    def is_available_today(self):
+        weekdays = {int(day) for day in self.weekdays or []}
+        return not weekdays or timezone.localdate().weekday() in weekdays
 
     def applies_to(self, seat_type_id, screening_starts_at):
         if not self.is_active:

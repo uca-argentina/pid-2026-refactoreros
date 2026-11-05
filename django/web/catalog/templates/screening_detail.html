@@ -48,7 +48,7 @@
 
         <section class="screening-options" aria-label="Funciones disponibles">
           <h2>Elegí tu función</h2>
-          {% regroup screenings by starts_at.date as screenings_by_day %}
+          {% regroup screenings by local_date as screenings_by_day %}
           <div class="screening-day-list">
             {% for day in screenings_by_day %}
               <section class="screening-day-group">
