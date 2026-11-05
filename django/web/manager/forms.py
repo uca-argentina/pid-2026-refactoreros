@@ -19,6 +19,11 @@ MAX_MOVIE_IMAGE_SIZE_BYTES = MAX_MOVIE_IMAGE_SIZE_MB * 1024 * 1024
 
 
 class CinemaSettingsForm(forms.ModelForm):
+    candy_max_item_quantity = forms.IntegerField(
+        min_value=1,
+        label="Máximo de unidades por producto o combo de Candy en cada pedido",
+        help_text="Se aplica al Candy comprado solo o con entradas. Si el stock es menor, prevalece el stock disponible.",
+    )
     seat_reservation_minutes = forms.IntegerField(
         min_value=1,
         label="Reserva temporal de butacas (minutos)",
@@ -38,7 +43,7 @@ class CinemaSettingsForm(forms.ModelForm):
 
     class Meta:
         model = CinemaSettings
-        fields = ("seat_reservation_minutes", "seat_refresh_seconds", "admission_undo_seconds")
+        fields = ("seat_reservation_minutes", "seat_refresh_seconds", "admission_undo_seconds", "candy_max_item_quantity")
 
 
 class UserManagementForm(forms.ModelForm):

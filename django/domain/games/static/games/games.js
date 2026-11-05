@@ -141,10 +141,10 @@
   function drawWheel(layout) {
     const wheel = $('prize-wheel');
     wheel.replaceChildren();
-    const colors = ['#bf2438', '#63202b', '#da4938', '#3c1720', '#a33129', '#866031'];
+    const palettes = {over: ['#ad2335', '#424247'], spin: ['#793fa3', '#69243d'], attempt: ['#793fa3', '#69243d'], prize: ['#bd8525', '#e0af47']};
     if (!layout.length) { wheel.style.background = '#32141a'; return; }
     const part = 360 / layout.length;
-    wheel.style.background = `conic-gradient(${layout.map((_, i) => `${colors[i % colors.length]} ${i * part}deg ${(i + 1) * part}deg`).join(',')})`;
+    wheel.style.background = `conic-gradient(${layout.map((slot, i) => `${(palettes[slot.kind] || palettes.over)[i % 2]} ${i * part}deg ${(i + 1) * part}deg`).join(',')})`;
     layout.forEach((slot, i) => {
       const dense = layout.length > 12;
       const label = node('span', '', `wheel-label${dense ? ' is-dense' : ''}`);
@@ -166,7 +166,7 @@
     const active = state.run && !state.run.finished;
     const extra = active ? state.run.source === 'extra' : !state.daily_ready && state.extra_attempts > 0;
     $('trivia-title').textContent = extra ? 'Trivia extra' : 'Trivia diaria';
-    $('trivia-rules').textContent = extra ? 'Una pregunta. Si acertás, ganás una tirada. Un error o agotar el tiempo termina la partida.' : 'Hasta 3 preguntas. Cada acierto, una tirada. Un error o agotar el tiempo termina la partida.';
+    $('trivia-rules').textContent = extra ? 'Una pregunta, una tirada si acertás.' : 'Hasta 3 preguntas. Cada acierto suma una tirada.';
     $('start-trivia').replaceChildren(node('span', extra ? 'Empezar trivia extra' : 'Empezar trivia'), node('span', '↗'));
     $('earn-spins').replaceChildren(node('span', extra ? 'Jugá tu trivia extra y ganá una tirada' : 'Jugá la trivia y ganá hasta 3 tiradas'), node('span', '→'));
     $('start-trivia').hidden = Boolean(active) || (authenticated && !state.can_start); $('start-trivia').disabled = busy || !authenticated || !state.can_start;
@@ -187,7 +187,7 @@
       area.append(node('h3', '¡No te quedan más preguntas por hoy!', 'trivia-exhausted'), node('p', '¡Te esperamos mañana!', 'trivia-tomorrow'));
     } else if (authenticated && !state.bank_ready) {
       area.append(node('h3', 'Por ahora no hay preguntas disponibles', 'trivia-exhausted'), node('p', 'Conservás tu oportunidad. Volvé más tarde.', 'trivia-tomorrow'));
-    } else area.append(node('p', 'Una respuesta correcta = una tirada. ¿Listo para jugar?', 'game-question'));
+    } else area.append(node('p', '¿Listo para jugar?', 'game-question'));
     $('trivia-progress').hidden = !active && authenticated && !state.can_start;
     updateTimer();
     cooldown();

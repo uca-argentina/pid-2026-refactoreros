@@ -25,6 +25,35 @@ def key():
 
 
 class GameTests(TestCase):
+    def test_admin_can_grant_single_question_extra_trivia(self):
+        self.client.force_login(self.manager)
+        payload = {"key": key(), "amount": 2, "reason": "Compensación", "reward": "attempt"}
+        url = reverse("games:user", args=[self.user.pk])
+        self.assertEqual(self.client.post(url, payload).status_code, 302)
+        self.client.post(url, payload)
+        account = GameAccount.objects.get(user=self.user)
+        self.assertEqual((account.extra_attempts, account.spins), (2, 0))
+        event = GameEvent.objects.get(kind="attempts_granted")
+        self.assertEqual(event.actor, self.manager)
+
+    def test_archived_slots_and_audit_export(self):
+        self.client.force_login(self.manager)
+        self.client.post(reverse("games:delete", args=["slot", self.slot.pk]))
+        self.slot.refresh_from_db()
+        self.assertFalse(self.slot.active)
+        url = reverse("games:dashboard")
+        self.assertNotContains(self.client.get(url, {"tab": "wheel"}), "Pochoclos")
+        self.assertContains(self.client.get(url, {"tab": "archived"}), "Pochoclos")
+        today = timezone.localdate().isoformat()
+        query = {"tab": "events", "export": "csv", "date_from": today, "date_to": today}
+        response = self.client.get(url, query)
+        self.assertContains(response, "slot_archived")
+        self.assertEqual(response["Content-Type"], "text/csv; charset=utf-8")
+        self.assertNotContains(self.client.get(url, {**query, "date_from": "2099-01-01", "date_to": "2099-01-01"}), "slot_archived")
+        self.assertEqual(self.client.get(url, {**query, "date_from": "2026-02-31"}).status_code, 400)
+        self.client.force_login(self.user)
+        self.assertEqual(self.client.get(url, query).status_code, 403)
+
     def setUp(self):
         User = get_user_model()
         self.user = User.objects.create_user(username="player", password="game-test-password")
@@ -299,7 +328,7 @@ class GameTests(TestCase):
         self.client.force_login(self.operator)
         self.assertEqual(self.client.post(url, {"key": key(), "amount": 2, "reason": "Prueba"}).status_code, 403)
         self.client.force_login(self.manager)
-        self.assertContains(self.client.get(url), "Otorgar tiradas adicionales manualmente")
+        self.assertContains(self.client.get(url), "Otorgar tiradas o trivias adicionales manualmente")
         self.assertContains(self.client.get(url), "data-spin-stepper")
         for amount in (0, 101, -1, "1.5"):
             self.assertEqual(self.client.post(url, {"key": key(), "amount": amount, "reason": "Prueba"}).status_code, 200)
@@ -424,6 +453,18 @@ class GameTests(TestCase):
         self.client.force_login(self.user)
         self.assertContains(self.client.get(reverse("games:pickup_detail", args=[order.pk])), order.qr_payload)
 
+    def test_pickup_orders_prioritize_ready_orders_and_highlight_only_their_qrs(self):
+        delivered = CandyOrder.objects.create(reward_user=self.user, reward_key=key(), total=0, delivered_at=timezone.now())
+        ready = CandyOrder.objects.create(reward_user=self.user, reward_key=key(), total=0)
+        CandyOrder.objects.filter(pk=ready.pk).update(created_at=timezone.now() - timedelta(days=2))
+        other = CandyOrder.objects.create(reward_user=self.other, reward_key=key(), total=0)
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("candy_store"))
+        self.assertEqual([order.pk for order in response.context["orders"]], [ready.pk, delivered.pk])
+        self.assertContains(response, 'class="ticket-qr-link is-imminent-ticket"', count=1)
+        self.assertContains(response, 'class="ticket-history-link"', count=1)
+        self.assertNotContains(response, reverse("candy_order_detail", args=[other.pk]))
+
     def test_prizes_empty_state_and_shared_modal_preserve_coupons_and_orders(self):
         self.client.force_login(self.user)
         url = reverse("games:coupons")
@@ -446,7 +487,8 @@ class GameTests(TestCase):
         response = self.client.get(url)
         self.assertNotContains(response, 'class="prizes-empty"')
         self.assertNotContains(response, 'id="prize-pickup-form"')
-        self.assertContains(response, reverse("games:pickup_detail", args=[order.pk]))
+        self.assertContains(response, reverse("candy_store") + "#mis-retiros")
+        self.assertNotContains(response, "data-candy-order")
         self.assertContains(response, 'id="games-dialog"')
 
     def test_home_has_permanent_launcher_and_modal_without_separate_game_page(self):
@@ -495,7 +537,7 @@ class GameTests(TestCase):
         strict = Client(enforce_csrf_checks=True); strict.force_login(self.user)
         self.assertEqual(strict.post(url, {"key": key(), "coupons": [coupon.pk]}).status_code, 403)
         response = self.client.post(url, {"key": key(), "coupons": [coupon.pk]})
-        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("candy_store") + "#mis-retiros", fetch_redirect_response=False)
         self.assertEqual(CandyOrder.objects.count(), 1)
 
 

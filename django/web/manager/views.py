@@ -195,6 +195,7 @@ class DashboardView(ManagerRequiredMixin, TemplateView):
             movie_id=self.request.GET.get("movie"),
             room_id=self.request.GET.get("room"),
             revenue_date=self.request.GET.get("revenue_date"),
+            view=self.request.GET.get("view"),
         )
         context["date_filter_error"] = date_filter_error
         return context

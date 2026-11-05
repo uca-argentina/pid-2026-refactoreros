@@ -39,6 +39,7 @@ class ImportForm(forms.Form):
 
 class GrantForm(forms.Form):
     key = forms.UUIDField(widget=forms.HiddenInput)
+    reward = forms.ChoiceField(label="Qué otorgar", choices=[("spin", "Tiradas adicionales"), ("attempt", "Trivias adicionales · una pregunta cada una")], initial="spin", required=False)
     amount = forms.IntegerField(label="Tiradas adicionales", min_value=1, max_value=100,
         widget=forms.NumberInput(attrs={"step": 1, "inputmode": "numeric"}))
     reason = forms.CharField(label="Motivo", max_length=500, widget=forms.Textarea(attrs={"rows": 2}))

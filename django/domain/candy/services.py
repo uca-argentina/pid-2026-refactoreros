@@ -1,6 +1,8 @@
 from datetime import timedelta
+import uuid
 
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
@@ -16,12 +18,15 @@ NOT_FOUND_MESSAGE = "No encontramos un retiro de candy con ese código."
 
 
 def candy_menu():
+    limit = CinemaSettings.current().candy_max_item_quantity
     combos = [
         combo
         for combo in CandyCombo.objects.filter(is_active=True).prefetch_related("items__product")
         if combo.items.all()
     ]
     products = CandyProduct.in_menu_order(CandyProduct.objects.filter(is_active=True))
+    for item in combos + products:
+        item._purchase_quantity_limit = limit
     return {"combos": combos, "products": products}
 
 
@@ -36,6 +41,26 @@ def buy_tickets_with_candy(user, screening, selected_seats, candy_items):
         )
         CandyOrder.create_for(purchase, candy_items)
     return purchase
+
+
+def buy_candy_only(user, candy_items, checkout_key):
+    if not user.is_authenticated or not user.is_active:
+        raise PermissionDenied
+    try:
+        checkout_key = uuid.UUID(str(checkout_key))
+    except (ValueError, TypeError, AttributeError):
+        raise ValidationError("El identificador del pedido no es válido.")
+    quantities = CandyOrder.parse_selection(candy_items, enforce_limit=False)
+    if not quantities:
+        raise ValidationError("Elegí al menos un producto o combo.")
+    with transaction.atomic():
+        get_user_model().objects.select_for_update().get(pk=user.pk)
+        previous = CandyOrder.objects.filter(customer=user, checkout_key=checkout_key).first()
+        if previous:
+            if quantities != CandyOrder.parse_selection(previous.items, enforce_limit=False):
+                raise ValidationError("Este pedido ya fue confirmado con otra selección. Iniciá una nueva compra.")
+            return previous
+        return CandyOrder.create_for(None, candy_items, customer=user, checkout_key=checkout_key)
 
 
 def pickup_filters(code):
@@ -80,7 +105,7 @@ def deliver_candy_order(code, operator):
     if candidate is None:
         raise ValidationError(NOT_FOUND_MESSAGE)
     with transaction.atomic():
-        if not candidate.is_reward_order and not Screening.objects.select_for_update().filter(pk=candidate.purchase.screening_id).exists():
+        if candidate.purchase_id and not Screening.objects.select_for_update().filter(pk=candidate.purchase.screening_id).exists():
             raise ValidationError("La función no existe.")
         try:
             order = CandyOrder.objects.select_for_update().get(**filters)
@@ -120,7 +145,7 @@ def undo_candy_pickup(pickup_id, operator):
         undo_seconds = CinemaSettings.current().admission_undo_seconds
         if pickup.created_at < now - timedelta(seconds=undo_seconds):
             raise ValidationError("El plazo para deshacer esta entrega ya venció.")
-        if not pickup.order.is_reward_order and not Screening.objects.select_for_update().filter(pk=pickup.order.purchase.screening_id).exists():
+        if pickup.order.purchase_id and not Screening.objects.select_for_update().filter(pk=pickup.order.purchase.screening_id).exists():
             raise ValidationError("La función ya no existe.")
         order = CandyOrder.objects.select_for_update().get(pk=pickup.order_id)
         if order.is_refunded:

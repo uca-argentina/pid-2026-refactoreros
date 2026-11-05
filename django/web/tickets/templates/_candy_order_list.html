@@ -1,0 +1,12 @@
+{% if orders %}
+<section class="game-inventory" id="mis-retiros" aria-labelledby="candy-orders-title"><h2 id="candy-orders-title">Mis pedidos de retiro</h2><p>Todos tus retiros de Candy: compras, premios y pedidos con entradas.</p><div class="coupon-grid">
+{% for order in orders %}
+<article class="game-coupon pickup-order {% if order.pickup_open %}pickup-order-ready{% else %}pickup-order-delivered{% endif %}" data-candy-order="{{ order.pk }}">
+  <span class="pickup-order-status"><i data-lucide="{% if order.delivered_at %}check-check{% elif order.pickup_open %}popcorn{% else %}circle-x{% endif %}" aria-hidden="true"></i>{% if order.delivered_at %}Retirado{% elif order.is_refunded %}Devuelto{% elif order.is_expired %}Vencido{% else %}Listo para retirar{% endif %}</span>
+  <p class="pickup-order-origin">{% if order.is_reward_order %}Premio de ruleta{% elif order.is_standalone_order %}Compra de Candy{% else %}Con tus entradas · {{ order.purchase.screening.movie.title }}{% endif %}</p>
+  <h3>Pedido #{{ order.pk }}</h3><p class="pickup-order-summary">{{ order.summary }}</p>
+  <p>{% if order.delivered_at %}Retirado {{ order.delivered_at|date:"d/m/Y H:i" }}{% else %}Creado {{ order.created_at|date:"d/m/Y H:i" }}{% endif %}</p>
+  <a class="{% if order.pickup_open %}ticket-qr-link is-imminent-ticket{% else %}ticket-history-link{% endif %}" href="{% url order_detail_url order.pk %}"><i data-lucide="{% if order.pickup_open %}qr-code{% else %}receipt-text{% endif %}" aria-hidden="true"></i><span>{% if order.pickup_open %}Mostrar QR de retiro{% else %}Ver detalle{% endif %}</span></a>
+</article>
+{% endfor %}
+</div></section>{% endif %}

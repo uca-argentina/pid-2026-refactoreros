@@ -3,8 +3,8 @@
   <section class="candy-picker" data-candy-picker aria-labelledby="candy-picker-title">
     <input type="hidden" name="candy_items" value="">
     <header class="candy-picker-header">
-      <h2 id="candy-picker-title"><i data-lucide="popcorn" aria-hidden="true"></i>Sumá candy</h2>
-      <p>Lo retirás en el candy bar con un código propio, antes o durante la función.</p>
+      <h2 id="candy-picker-title"><i data-lucide="popcorn" aria-hidden="true"></i>{% if standalone_candy %}Elegí tus favoritos{% else %}Sumá candy{% endif %}</h2>
+      <p>{% if standalone_candy %}Elegí productos o combos y retiralos con tu QR en el Candy.{% else %}Lo retirás en el candy bar con un código propio, antes o durante la función.{% endif %}</p>
     </header>
 
     {% if candy.combos %}

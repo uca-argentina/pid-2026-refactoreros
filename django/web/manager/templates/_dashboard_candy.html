@@ -1,0 +1,17 @@
+{% with candy=dashboard.candy %}
+<section class="kpi-grid" aria-label="Indicadores de Candy">
+  <article class="kpi-card"><span class="kpi-label"><i data-lucide="banknote" aria-hidden="true"></i>Recaudación de Candy</span><strong class="kpi-value">${{ candy.revenue|floatformat:"0g" }}</strong><span class="kpi-meta">Ventas con entrada y pedidos de Candy</span></article>
+  <article class="kpi-card"><span class="kpi-label"><i data-lucide="shopping-bag" aria-hidden="true"></i>Pedidos de Candy</span><strong class="kpi-value">{{ candy.orders }}</strong><span class="kpi-meta">{{ candy.delivered }} retirados · {{ candy.pending }} sin retirar</span></article>
+  <article class="kpi-card"><span class="kpi-label"><i data-lucide="receipt" aria-hidden="true"></i>Pedido promedio</span><strong class="kpi-value">${{ candy.average_order|floatformat:"0g" }}</strong><span class="kpi-meta">Recaudación por pedido</span></article>
+  <article class="kpi-card"><span class="kpi-label"><i data-lucide="popcorn" aria-hidden="true"></i>Unidades vendidas</span><strong class="kpi-value">{{ candy.units }}</strong><span class="kpi-meta">Cada combo cuenta como una unidad</span></article>
+</section>
+<section class="dashboard-grid dashboard-grid-halves candy-dashboard-grid">
+  {% include "_dashboard_revenue.html" %}
+  <article class="panel-section viz-card"><header class="viz-header"><div><h2>Productos y combos con mayor recaudación</h2><p>Ventas de Candy en la selección actual</p></div></header>
+  {% if candy.items %}
+  <ol class="bar-list">{% for item in candy.items %}<li class="bar-item candy-ranking-item"><div class="bar-item-head"><span class="bar-item-rank">{{ forloop.counter }}</span><span class="bar-item-name">{{ item.name }}</span><strong class="bar-item-value">${{ item.revenue|floatformat:"0g" }}</strong></div><div class="bar-track"><span class="bar-fill" style="width:{{ item.width_css }}"></span></div><span class="bar-item-meta">{% if item.kind == 'combo' %}Combo{% else %}Producto{% endif %} · {{ item.units }} {{ item.units|pluralize:"unidad vendida,unidades vendidas" }}</span></li>{% endfor %}</ol>
+  {% else %}<div class="empty-state compact"><i data-lucide="popcorn" aria-hidden="true"></i><div><h3>Sin ventas de Candy</h3><p>No hay pedidos pagos para estas fechas y filtros.</p></div></div>{% endif %}
+  </article>
+</section>
+<p class="viz-note">Candy con entrada se contabiliza por fecha de función; los pedidos independientes, por fecha de pago. Al filtrar por película o sala se muestran sólo pedidos con entrada. Se excluyen devoluciones y premios de Juegos.</p>
+{% endwith %}

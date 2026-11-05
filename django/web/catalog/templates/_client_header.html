@@ -10,6 +10,7 @@
     <div class="client-nav-primary">
       <a href="{% url 'games:coupons' %}" aria-label="Mis premios" title="Mis premios"{% if client_nav_section == 'prizes' %} class="is-active" aria-current="page"{% endif %}><i data-lucide="gift" aria-hidden="true"></i><span>Mis premios</span></a>
       <a class="client-movies-link{% if client_nav_section == 'movies' %} is-active{% endif %}" href="{% url 'home' %}" aria-label="Películas" title="Películas"{% if client_nav_section == 'movies' %} aria-current="page"{% endif %}><i data-lucide="clapperboard" aria-hidden="true"></i><span>Películas</span></a>
+      <a class="client-candy-link{% if client_nav_section == 'candy' %} is-active{% endif %}" href="{% url 'candy_store' %}" aria-label="Candy" title="Candy"{% if client_nav_section == 'candy' %} aria-current="page"{% endif %}><i data-lucide="popcorn" aria-hidden="true"></i><span>Candy</span></a>
       {% if request.user.is_authenticated %}
         <a class="client-tickets-link{% if client_nav_section == 'tickets' %} is-active{% endif %}{% if has_imminent_admission %} has-imminent-ticket{% endif %}" href="{% url 'my_tickets' %}" aria-label="Mis entradas" title="Mis entradas"{% if client_nav_section == 'tickets' %} aria-current="page"{% endif %}><i data-lucide="ticket" aria-hidden="true"></i><span>Mis entradas</span></a>
       {% else %}

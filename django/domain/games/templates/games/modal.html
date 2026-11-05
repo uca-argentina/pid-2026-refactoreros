@@ -14,7 +14,7 @@
     <p id="wheel-result" class="wheel-result" role="status" aria-live="polite"></p>
     <button type="button" id="earn-spins" class="game-earn" data-show-trivia>Jugá la trivia y ganá hasta 3 tiradas <span aria-hidden="true">→</span></button>
   </section>
-  <section class="game-card trivia-card" id="panel-trivia" role="tabpanel" aria-labelledby="tab-trivia" hidden><h3 class="trivia-heading"><span id="trivia-title">Trivia diaria</span><span class="trivia-tagline">Tu conocimiento tiene premio</span></h3><p id="trivia-rules">Hasta 3 preguntas. Cada acierto, una tirada. Un error o agotar el tiempo termina la partida.</p><p id="question-timer" class="question-timer" role="timer" aria-label="Tiempo restante" hidden></p>
+  <section class="game-card trivia-card" id="panel-trivia" role="tabpanel" aria-labelledby="tab-trivia" hidden><h3 class="trivia-heading"><span id="trivia-title">Trivia diaria</span><span class="trivia-tagline">Tu conocimiento tiene premio</span></h3><p id="trivia-rules">Hasta 3 preguntas. Cada acierto suma una tirada.</p><p id="question-timer" class="question-timer" role="timer" aria-label="Tiempo restante" hidden></p>
     <div id="trivia-progress" class="game-progress" aria-label="Progreso de la trivia"></div><div id="question-area"></div><p id="cooldown" class="game-cooldown"></p><button id="start-trivia" class="game-button" type="button">Empezar trivia <span aria-hidden="true">↗</span></button><button class="game-button game-button-pink trivia-to-wheel" type="button" data-show-wheel>Ir a la ruleta <span aria-hidden="true">↻</span></button>
   </section>
   <div class="game-confetti" id="game-confetti" aria-hidden="true"></div><form hidden>{% csrf_token %}</form>

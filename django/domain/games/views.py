@@ -1,4 +1,5 @@
 import json
+import csv
 import uuid
 from functools import wraps
 
@@ -10,7 +11,9 @@ from django.core.paginator import Paginator
 from django.db import OperationalError, transaction
 from django.db.models import OuterRef, Q, Subquery, Sum
 from django.db.models.deletion import ProtectedError
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+from django.urls import reverse
+from django.utils.dateparse import parse_date
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
@@ -57,7 +60,7 @@ def coupons(request):
     return render(request, "games/coupons.html", context(
         game_initial=services.state(request.user),
         coupons=PrizeCoupon.objects.filter(user=request.user, status="available", pickup_order__isnull=True).select_related("product"),
-        orders=CandyOrder.objects.filter(reward_user=request.user), pickup_key=uuid.uuid4()))
+        has_pickup_orders=CandyOrder.objects.filter(reward_user=request.user).exists(), pickup_key=uuid.uuid4()))
 
 
 @login_required
@@ -67,7 +70,8 @@ def pickup(request):
     try:
         ids = [int(pk) for pk in request.POST.getlist("coupons")]
         order = services.request_pickup(request.user, ids, request.POST.get("key"))
-        return redirect("games:pickup_detail", pk=order.pk)
+        messages.success(request, f"Tu retiro de premios #{order.pk} está listo en Candy.")
+        return redirect(f"{reverse('candy_store')}#mis-retiros")
     except (ValueError, ValidationError) as error:
         services.audit(request.user, "pickup_request_rejected")
         messages.error(request, " ".join(error.messages) if isinstance(error, ValidationError) else "Selección inválida.")
@@ -81,7 +85,7 @@ def pickup(request):
 @require_GET
 def pickup_detail(request, pk):
     order = get_object_or_404(CandyOrder, pk=pk, reward_user=request.user)
-    return render(request, "candy_detail.html", context(order=order))
+    return render(request, "candy_detail.html", context(order=order, client_nav_section="candy"))
 
 
 @login_required
@@ -122,7 +126,8 @@ def dashboard(request):
         "questions": Question.objects.annotate(last_assigned_at=Subquery(
             QuestionUse.objects.filter(question_id=OuterRef("pk")).order_by("-created_at").values("created_at")[:1]
         )).order_by("difficulty", "pk"),
-        "wheel": WheelSlot.objects.select_related("product"),
+        "wheel": WheelSlot.objects.filter(active=True).select_related("product"),
+        "archived": WheelSlot.objects.filter(active=False).select_related("product"),
         "users": get_user_model().objects.order_by("username"),
         "events": GameEvent.objects.select_related("user", "actor"),
         "runs": TriviaRun.objects.select_related("user").prefetch_related("answers"),
@@ -135,7 +140,7 @@ def dashboard(request):
     if search:
         if tab == "questions":
             rows = rows.filter(text__icontains=search)
-        elif tab == "wheel":
+        elif tab in ("wheel", "archived"):
             rows = rows.filter(label__icontains=search)
         elif tab == "users":
             rows = rows.filter(Q(username__icontains=search) | Q(email__icontains=search))
@@ -143,7 +148,31 @@ def dashboard(request):
             rows = rows.filter(Q(kind__icontains=search) | Q(user__username__icontains=search))
         else:
             rows = rows.filter(user__username__icontains=search)
-    return render(request, "games/dashboard.html", context(tab=tab, q=search,
+    dates = {name: request.GET.get(name, "") for name in ("date_from", "date_to")}
+    if tab == "events":
+        for name, value in dates.items():
+            if value:
+                try:
+                    parsed = parse_date(value)
+                except ValueError:
+                    parsed = None
+                if parsed is None:
+                    return HttpResponse("Fecha inválida.", status=400)
+                rows = rows.filter(**{f"created_at__date__{'gte' if name == 'date_from' else 'lte'}": parsed})
+        if dates["date_from"] and dates["date_to"] and dates["date_from"] > dates["date_to"]:
+            return HttpResponse("El rango de fechas es inválido.", status=400)
+        if request.GET.get("export") == "csv":
+            response = HttpResponse(content_type="text/csv; charset=utf-8")
+            timestamp = timezone.localtime().strftime("%Y%m%d-%H%M%S")
+            response["Content-Disposition"] = f'attachment; filename="auditoria-juegos-{timestamp}.csv"'
+            response.write("\ufeff")
+            writer = csv.writer(response)
+            writer.writerow(["ID", "Fecha", "Evento", "Usuario ID", "Administrador ID", "Detalle"])
+            for event in rows.iterator(chunk_size=1000):
+                kind = "'" + event.kind if event.kind.startswith(("=", "+", "-", "@", "\t", "\r", "\n")) else event.kind
+                writer.writerow([event.pk, timezone.localtime(event.created_at).isoformat(), kind, event.user_id, event.actor_id, json.dumps(event.data, ensure_ascii=False)])
+            return response
+    return render(request, "games/dashboard.html", context(tab=tab, q=search, **dates,
         question_count=len({services.question_fingerprint(q["text"]) for level in Question.Difficulty.values for q in services.new_questions(level)}),
         slot_count=WheelSlot.objects.filter(active=True).aggregate(n=Sum("count"))["n"] or 0,
         question_seconds=WheelConfig.objects.get_or_create(pk=1)[0].question_seconds,
@@ -195,6 +224,12 @@ def delete(request, kind, pk):
     with transaction.atomic():
         services.lock_wheel()
         obj = get_object_or_404(Question if kind == "question" else WheelSlot, pk=pk)
+        if kind == "slot":
+            obj.active = False
+            obj.save(update_fields=["active"])
+            services.audit(None, "slot_archived", {"id": pk}, request.user)
+            messages.info(request, "Casilla archivada. Su historial se conserva.")
+            return redirect("/juegos/gestion/?tab=wheel")
         try:
             with transaction.atomic():
                 obj.delete()
@@ -241,7 +276,8 @@ def import_questions(request):
 @require_GET
 def export_questions(request):
     response = JsonResponse({"questions": list(Question.objects.order_by("pk").values("text", "options", "correct", "difficulty", "active"))}, json_dumps_params={"ensure_ascii": False, "indent": 2})
-    response["Content-Disposition"] = 'attachment; filename="preguntas.json"'
+    timestamp = timezone.localtime().strftime("%Y%m%d-%H%M%S")
+    response["Content-Disposition"] = f'attachment; filename="preguntas-{timestamp}.json"'
     return response
 
 
@@ -251,8 +287,9 @@ def user_detail(request, pk):
     form = GrantForm(request.POST if request.method == "POST" else None, initial={"key": uuid.uuid4(), "amount": 1})
     if request.method == "POST" and form.is_valid():
         try:
-            services.grant(request.user, user, form.cleaned_data["amount"], form.cleaned_data["reason"], form.cleaned_data["key"], reward="spin")
-            messages.success(request, "Tiradas adicionales otorgadas.")
+            reward = form.cleaned_data.get("reward") or "spin"
+            services.grant(request.user, user, form.cleaned_data["amount"], form.cleaned_data["reason"], form.cleaned_data["key"], reward=reward)
+            messages.success(request, "Trivias adicionales otorgadas." if reward == "attempt" else "Tiradas adicionales otorgadas.")
             return redirect("games:user", pk=pk)
         except ValidationError as error:
             form.add_error(None, error)

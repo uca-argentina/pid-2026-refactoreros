@@ -11,8 +11,8 @@
     {% if order %}
       <section class="validation-result" aria-labelledby="pickup-result-title" data-found-entry>
         <h2 id="pickup-result-title">Retiro encontrado</h2>
-        <h3>{% if order.is_reward_order %}Premios de Juegos{% else %}{{ order.purchase.screening.movie.title }}{% endif %}</h3>
-        {% if not order.is_reward_order %}<p>{{ order.purchase.screening.room.name }} · {{ order.purchase.screening.starts_at|date:"d/m/Y H:i" }}</p>{% endif %}
+        <h3>{% if order.is_standalone_order %}Pedido de Candy #{{ order.pk }}{% elif order.is_reward_order %}Premios de Juegos{% else %}{{ order.purchase.screening.movie.title }}{% endif %}</h3>
+        {% if order.purchase_id %}<p>{{ order.purchase.screening.room.name }} · {{ order.purchase.screening.starts_at|date:"d/m/Y H:i" }}</p>{% endif %}
         <p>Cliente: <strong>{{ order.customer_display_name }}</strong></p>
         <ul class="candy-pickup-items" aria-label="Productos a entregar">
           {% for line in order.lines %}
@@ -43,7 +43,7 @@
         {% for pickup in pickup_history %}
           <article class="validation-history-item{% if pickup.reverted_at %} is-reverted{% endif %}">
             <div>
-              <strong>{% if pickup.order.is_reward_order %}Premios de Juegos{% else %}{{ pickup.order.purchase.screening.movie.title }}{% endif %}</strong>
+              <strong>{% if pickup.order.is_standalone_order %}Pedido de Candy #{{ pickup.order.pk }}{% elif pickup.order.is_reward_order %}Premios de Juegos{% else %}{{ pickup.order.purchase.screening.movie.title }}{% endif %}</strong>
               <span class="validation-history-customer">{{ pickup.customer_display_name }}</span>
               <p>{{ pickup.order.summary }} · {{ pickup.created_at|date:"H:i:s" }}</p>
             </div>

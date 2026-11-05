@@ -36,6 +36,8 @@ def client_navigation(request):
     if match:
         if match.app_name == "games":
             context["client_nav_section"] = "prizes"
+        elif match.url_name in {"candy_store", "candy_purchase", "candy_order_detail"}:
+            context["client_nav_section"] = "candy"
         elif match.url_name in {"my_tickets", "ticket_detail", "candy_detail", "ticket_admission_status"}:
             context["client_nav_section"] = "tickets"
         elif match.url_name in {"home", "listing", "movie_detail", "screening_detail", "screening_page", "seat_selection", "ticket_purchase"} and not match.app_name:

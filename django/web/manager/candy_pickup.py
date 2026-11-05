@@ -1,4 +1,5 @@
 from datetime import timedelta
+import re
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -27,6 +28,13 @@ class CandyPickupView(StaffAccessMixin, FormView):
     template_name = "manager_candy_pickup.html"
     form_class = CandyPickupForm
     history_page_size = 15
+
+    def get_initial(self):
+        initial = super().get_initial()
+        code = self.request.GET.get("code", "")
+        if re.fullmatch(r"BCC:[A-Za-z2-9]{6}", code, re.I):
+            initial["code"] = code[4:].upper()
+        return initial
 
     def has_manager_access(self, role):
         return role in {"operator", "manager"}

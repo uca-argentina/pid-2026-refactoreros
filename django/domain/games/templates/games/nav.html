@@ -1,6 +1,7 @@
 <nav class="ga-tabs" aria-label="Administración de juegos">
 <a href="{% url 'games:dashboard' %}?tab=questions" {% if tab == 'questions' %}aria-current="page"{% endif %}><i data-lucide="circle-help" aria-hidden="true"></i>Preguntas</a>
 <a href="{% url 'games:dashboard' %}?tab=wheel" {% if tab == 'wheel' %}aria-current="page"{% endif %}><i data-lucide="ferris-wheel" aria-hidden="true"></i>Ruleta y premios</a>
+<a href="{% url 'games:dashboard' %}?tab=archived" {% if tab == 'archived' %}aria-current="page"{% endif %}><i data-lucide="archive" aria-hidden="true"></i>Casillas archivadas</a>
 <a href="{% url 'games:dashboard' %}?tab=users" {% if tab == 'users' %}aria-current="page"{% endif %}><i data-lucide="users" aria-hidden="true"></i>Usuarios</a>
 <a href="{% url 'games:dashboard' %}?tab=runs" {% if tab == 'runs' %}aria-current="page"{% endif %}><i data-lucide="list-checks" aria-hidden="true"></i>Partidas y respuestas</a>
 <a href="{% url 'games:dashboard' %}?tab=spins" {% if tab == 'spins' %}aria-current="page"{% endif %}><i data-lucide="rotate-cw" aria-hidden="true"></i>Tiradas</a>

@@ -544,3 +544,21 @@ button:focus-visible,a:focus-visible,summary:focus-visible {
     display:none
   }
 }
+#prize-pickup-form .game-button:disabled { background: #38383d; border-color: #55555d; color: #a8a8b1; box-shadow: none; opacity: 1; cursor: not-allowed; }
+.game-inventory { margin-top:36px; }
+.pickup-order { display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:12px; }
+.pickup-order-ready { border-color:#538bb770; background:linear-gradient(145deg,#152c42,#101b2b); color:#edf6ff; box-shadow:inset 0 1px 0 #9acbff18; }
+.pickup-order-delivered { border-color:#ffffff18; background:linear-gradient(145deg,#242328,#1a191e); color:#bcb9c3; }
+.pickup-order-status { display:inline-flex; align-items:center; gap:7px; padding:7px 10px; border-radius:999px; background:#4284b72b; color:#a9d6ff; font-size:12px; font-weight:800; }
+.pickup-order-status svg,.pickup-order .ticket-history-link svg { width:17px; height:17px; flex-shrink:0; }
+.pickup-order-delivered .pickup-order-status { background:#ffffff09; color:#aaa7b1; }
+.pickup-order h3,.pickup-order p { margin:0; }
+.pickup-order h3 { color:inherit; }
+.pickup-order .pickup-order-summary { font-size:15px; line-height:1.5; color:inherit; }
+.pickup-order > a { margin-top:auto; box-sizing:border-box; min-height:44px; justify-content:center; gap:8px; }
+.pickup-order .ticket-history-link { color:#aaa7b1; border-color:#ffffff26; }
+.pickup-order .ticket-qr-link { color:#fff; }
+.pickup-order-ready p { color:#a5b8cc; }
+.pickup-order-delivered p { color:#9a97a2; }
+.pickup-order a:focus-visible { outline:2px solid #a9d6ff; outline-offset:5px; }
+@media(max-width:580px) { .pickup-order > a { width:100%; white-space:normal; } }
