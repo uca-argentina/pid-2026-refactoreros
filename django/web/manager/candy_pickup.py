@@ -42,9 +42,9 @@ class CandyPickupView(StaffAccessMixin, FormView):
             self.request.GET.get("page")
         )
         history = list(history_page)
-        names = customer_display_names({pickup.order.purchase.user_id for pickup in history})
+        names = customer_display_names({pickup.order.user_id for pickup in history})
         for pickup in history:
-            pickup.customer_display_name = names.get(pickup.order.purchase.user_id, "Cliente")
+            pickup.customer_display_name = names.get(pickup.order.user_id, "Cliente")
         context["pickup_history"] = history
         context["pickup_history_page"] = history_page
         return context
@@ -66,8 +66,8 @@ class CandyPickupView(StaffAccessMixin, FormView):
         try:
             if action == "preview":
                 order = inspect_candy_order(code, self.request.user)
-                order.customer_display_name = customer_display_names([order.purchase.user_id]).get(
-                    order.purchase.user_id, "Cliente"
+                order.customer_display_name = customer_display_names([order.user_id]).get(
+                    order.user_id, "Cliente"
                 )
                 return self.render_to_response(self.get_context_data(form=form, order=order))
             if action != "deliver":

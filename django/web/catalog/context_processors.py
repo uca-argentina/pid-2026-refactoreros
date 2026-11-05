@@ -27,8 +27,23 @@ def client_navigation(request):
             purchase__user=request.user,
             read_at__isnull=True,
         ).count()
-    return {
+    context = {
         "manager_role": staff_role(request.user),
         "has_imminent_admission": has_imminent_admission,
         "unread_notifications": unread_notifications,
     }
+    match = request.resolver_match
+    if match:
+        if match.app_name == "games":
+            context["client_nav_section"] = "prizes"
+        elif match.url_name in {"my_tickets", "ticket_detail", "candy_detail", "ticket_admission_status"}:
+            context["client_nav_section"] = "tickets"
+        elif match.url_name in {"home", "listing", "movie_detail", "screening_detail", "screening_page", "seat_selection", "ticket_purchase"} and not match.app_name:
+            context["client_nav_section"] = "movies"
+    if match and match.url_name in ("home", "listing") and not match.app_name:
+        from domain.games.services import state, wheel_layout
+        context["game_initial"] = state(request.user) if request.user.is_authenticated else {
+            "spins": 0, "extra_attempts": 0, "daily_ready": False, "run": None,
+            "next_daily_at": None, "layout": wheel_layout(),
+        }
+    return context

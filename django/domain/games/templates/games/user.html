@@ -1,0 +1,18 @@
+{% extends "games/admin_base.html" %}
+{% load static %}
+{% block games_content %}
+<section class="page-heading"><h1>Juegos · {{ target.username }}</h1><a href="{% url 'games:dashboard' %}?tab=users">Volver a usuarios</a></section>
+<p>{{ account.spins }} tiradas disponibles · {{ account.extra_attempts }} oportunidades extra · Diaria: {% if daily_ready %}Disponible{% else %}{{ account.next_daily_at|date:"d/m/Y H:i:s" }}{% endif %}</p>
+<p>Inventario: {{ available_prizes }} premios disponibles · {{ requested_prizes }} en pedidos de retiro · {{ redeemed_prizes }} canjeados.</p>
+<details class="ga-grant" {% if form.errors %}open{% endif %}><summary>Otorgar tiradas adicionales manualmente</summary>
+<form method="post" class="manager-form ga-editor">{% csrf_token %}{{ form.key }}{{ form.key.errors }}{{ form.non_field_errors }}
+<label for="{{ form.amount.id_for_label }}">{{ form.amount.label }}</label>
+<div class="ga-stepper" data-spin-stepper><button type="button" data-step="-1" aria-label="Quitar una tirada">−</button>{{ form.amount }}<button type="button" data-step="1" aria-label="Agregar una tirada">+</button></div>{{ form.amount.errors }}
+<p class="ga-note">Se suman a las tiradas de ruleta del usuario. El motivo queda registrado.</p>
+<label for="{{ form.reason.id_for_label }}">{{ form.reason.label }}{{ form.reason }}{{ form.reason.errors }}</label>
+<button class="ga-button ga-primary" type="submit"><i data-lucide="rotate-cw" aria-hidden="true"></i>Otorgar tiradas</button></form></details>
+{% if form.errors %}<p role="alert">Revisá el formulario de tiradas adicionales.</p>{% endif %}
+<nav class="ga-tabs" aria-label="Historial del usuario"><a href="?tab=coupons" {% if tab == 'coupons' %}aria-current="page"{% endif %}>Inventario y cupones</a><a href="?tab=runs" {% if tab == 'runs' %}aria-current="page"{% endif %}>Partidas y respuestas</a><a href="?tab=spins" {% if tab == 'spins' %}aria-current="page"{% endif %}>Tiradas</a><a href="?tab=events" {% if tab == 'events' %}aria-current="page"{% endif %}>Eventos y otorgamientos</a></nav>
+{% include "games/rows.html" %}
+{% endblock %}
+{% block extra_scripts %}<script src="{% static 'games/admin.js' %}" defer></script>{% endblock %}

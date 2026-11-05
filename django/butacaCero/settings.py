@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     "domain.seat_types",
     "domain.promotions",
     "domain.candy",
+    "domain.games",
     "web.auth",
     "web.catalog",
     "web.manager",

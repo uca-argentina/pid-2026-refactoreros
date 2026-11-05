@@ -1,0 +1,13 @@
+{% extends "games/admin_base.html" %}
+{% block games_content %}
+<section class="page-heading ga-heading"><div><span class="ga-kicker">CENTRO DE EXPERIENCIAS</span><h1>Juegos</h1><p>Configuración, recompensas e historial en un solo lugar.</p></div><a class="ga-button" href="{% url 'games:settings' %}"><i data-lucide="timer" aria-hidden="true"></i>Configurar tiempo</a></section>
+<div class="ga-stats"><div><i data-lucide="list-checks" aria-hidden="true"></i><strong>{{ question_count }}</strong><span>preguntas disponibles ahora</span></div><div><i data-lucide="ferris-wheel" aria-hidden="true"></i><strong>{{ slot_count }}</strong><span>casillas configuradas</span></div><div><i data-lucide="timer" aria-hidden="true"></i><strong>{{ question_seconds }} s</strong><span>por pregunta nueva</span></div></div>
+{% include "games/nav.html" %}
+<section class="ga-workbench"><div class="ga-actions">
+{% if tab == 'questions' %}<a class="ga-button ga-primary" href="{% url 'games:create' 'question' %}"><i data-lucide="plus" aria-hidden="true"></i>Nueva pregunta</a><a class="ga-button" href="{% url 'games:import' %}"><i data-lucide="upload" aria-hidden="true"></i>Importar JSON</a><a class="ga-button" href="{% url 'games:export' %}"><i data-lucide="download" aria-hidden="true"></i>Exportar JSON</a>{% endif %}
+{% if tab == 'wheel' %}<a class="ga-button ga-primary" href="{% url 'games:create' 'slot' %}"><i data-lucide="plus" aria-hidden="true"></i>Nueva casilla</a><a class="ga-button" href="{% url 'manager:candy_products_list' %}">Productos y stock de Candy</a><p>Hasta 24 casillas activas. Cada casilla tiene la misma probabilidad; cantidad y orden definen la distribución. Premios sin stock se excluyen antes de girar.</p>{% endif %}
+</div>
+<form method="get" class="ga-search"><input type="hidden" name="tab" value="{{ tab }}"><label class="visually-hidden" for="game-admin-search">Buscar registros</label><i data-lucide="search" aria-hidden="true"></i><input id="game-admin-search" name="q" value="{{ q }}" maxlength="100" placeholder="Buscar registros…"><button class="ga-button" type="submit">Buscar</button></form></section>
+<p class="ga-note"><i data-lucide="info" aria-hidden="true"></i>Una pregunta puede volver a asignarse después de 24 horas, nunca dentro de la misma partida. Cada casilla de tirada extra ganada desaparece para ese usuario.</p>
+{% include "games/rows.html" %}
+{% endblock %}

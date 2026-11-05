@@ -1,0 +1,25 @@
+{% load static %}
+{% if not games_styles_loaded %}<link rel="stylesheet" href="{% static 'games/games.css' %}">{% endif %}
+<button type="button" id="games-launcher" class="games-launcher" aria-label="Abrir ruleta y trivia" aria-haspopup="dialog" aria-controls="games-dialog"><span class="launcher-wheel" aria-hidden="true">✦</span><span class="launcher-caption">JUGÁ & GANÁ</span><b id="launcher-balance" aria-label="Tiradas disponibles">{{ game_initial.spins }}</b></button>
+<dialog id="games-dialog" class="games-dialog" aria-labelledby="games-title">
+<div class="game-main" data-games data-api="{% url 'games:home' %}" data-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}">
+  <div class="game-toolbar"><div><button id="sound-toggle" class="game-quiet game-sound" type="button" aria-pressed="true" aria-label="Silenciar sonido" title="Silenciar sonido"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><g data-sound-on><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></g><g data-sound-off hidden><path d="m16 9 6 6m0-6-6 6"/></g></svg></button><button id="games-close" class="game-quiet" type="button" aria-label="Cerrar juegos">✕</button></div></div>
+  <header class="game-modal-heading"><h2 id="games-title">Tu próxima función<br><em>viene con premio.</em></h2><p>Girá, sorprendete y sumá tus favoritos del Candy.</p></header>
+  <div class="game-inventory-shortcut"><a href="{% url 'games:coupons' %}">Mis premios ↗</a><span hidden><strong id="attempt-balance">{{ game_initial.extra_attempts }}</strong></span></div>
+  {% if not request.user.is_authenticated %}<p class="game-login">Tu próxima sorpresa te espera. <a href="{% url 'login' %}?next={% url 'home' %}%3Fjuegos%3D1">Iniciá sesión para jugar</a></p>{% endif %}
+  <div class="game-tabs" role="tablist" aria-label="Elegir juego"><button type="button" id="tab-wheel" role="tab" aria-selected="true" aria-controls="panel-wheel" data-game-tab="wheel">✦ Ruleta</button><button type="button" id="tab-trivia" role="tab" aria-selected="false" aria-controls="panel-trivia" data-game-tab="trivia">✧ Ganar tiradas</button></div>
+  <p id="game-status" class="game-status" role="status" aria-live="polite"></p><p id="game-error" class="game-error" role="alert" hidden></p>
+  <section class="game-card roulette-card" id="panel-wheel" role="tabpanel" aria-labelledby="tab-wheel">
+    <p class="wheel-balance"><strong id="spin-balance">{{ game_initial.spins }}</strong> tiradas restantes</p><div class="wheel-stage"><div class="wheel-pointer" aria-hidden="true"></div><div id="prize-wheel" class="prize-wheel" aria-hidden="true"></div><button type="button" id="wheel-hub" class="wheel-hub" aria-label="Girar ruleta"><span aria-hidden="true">↻</span><small>GIRAR</small></button></div>
+    <p id="wheel-result" class="wheel-result" role="status" aria-live="polite"></p>
+    <button type="button" id="earn-spins" class="game-earn" data-show-trivia>Jugá la trivia y ganá hasta 3 tiradas <span aria-hidden="true">→</span></button>
+  </section>
+  <section class="game-card trivia-card" id="panel-trivia" role="tabpanel" aria-labelledby="tab-trivia" hidden><h3 class="trivia-heading"><span id="trivia-title">Trivia diaria</span><span class="trivia-tagline">Tu conocimiento tiene premio</span></h3><p id="trivia-rules">Hasta 3 preguntas. Cada acierto, una tirada. Un error o agotar el tiempo termina la partida.</p><p id="question-timer" class="question-timer" role="timer" aria-label="Tiempo restante" hidden></p>
+    <div id="trivia-progress" class="game-progress" aria-label="Progreso de la trivia"></div><div id="question-area"></div><p id="cooldown" class="game-cooldown"></p><button id="start-trivia" class="game-button" type="button">Empezar trivia <span aria-hidden="true">↗</span></button><button class="game-button game-button-pink trivia-to-wheel" type="button" data-show-wheel>Ir a la ruleta <span aria-hidden="true">↻</span></button>
+  </section>
+  <div class="game-confetti" id="game-confetti" aria-hidden="true"></div><form hidden>{% csrf_token %}</form>
+</div>
+<dialog id="game-outcome" class="game-outcome" aria-labelledby="outcome-title" aria-describedby="outcome-description"><p class="game-tag" id="outcome-kicker">¡ES TUYO!</p><h2 id="outcome-title"></h2><p id="outcome-description"></p><div class="outcome-symbol" id="outcome-symbol" aria-hidden="true">✦</div><a id="outcome-inventory" class="game-button" href="{% url 'games:coupons' %}" hidden>Ver mis premios →</a><button id="outcome-continue" type="button" class="game-button game-button-pink">Seguir jugando</button></dialog>
+</dialog>
+{{ game_initial|json_script:"game-initial" }}
+<script src="{% static 'games/games.js' %}" defer></script>

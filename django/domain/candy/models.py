@@ -180,7 +180,11 @@ class CandyOrder(models.Model):
         on_delete=models.CASCADE,
         related_name="candy_order",
         db_column="compra_id",
+        null=True,
+        blank=True,
     )
+    reward_user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="reward_candy_orders")
+    reward_key = models.UUIDField(null=True, blank=True)
     items = models.JSONField(default=list, blank=True)
     total = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True, db_column="creado_en")
@@ -202,9 +206,23 @@ class CandyOrder(models.Model):
         verbose_name_plural = "pedidos de candy"
         db_table = "candy_pedido"
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(condition=(models.Q(purchase__isnull=False, reward_user__isnull=True, reward_key__isnull=True) | models.Q(purchase__isnull=True, reward_user__isnull=False, reward_key__isnull=False)), name="candy_order_single_origin"),
+            models.UniqueConstraint(fields=["reward_user", "reward_key"], name="candy_reward_order_idempotency"),
+        ]
 
     def __str__(self):
+        if self.is_reward_order:
+            return f"Premios · Pedido #{self.pk}"
         return f"Candy · Compra #{self.purchase_id}"
+
+    @property
+    def is_reward_order(self):
+        return self.reward_user_id is not None
+
+    @property
+    def user_id(self):
+        return self.reward_user_id if self.is_reward_order else self.purchase.user_id
 
     @property
     def pickup_code(self):
@@ -241,6 +259,8 @@ class CandyOrder(models.Model):
 
     @property
     def is_refunded(self):
+        if self.is_reward_order:
+            return False
         return (
             self.purchase.screening.status == Screening.Status.CANCELED
             or hasattr(self.purchase, "refund")
@@ -248,6 +268,8 @@ class CandyOrder(models.Model):
 
     @property
     def is_expired(self):
+        if self.is_reward_order:
+            return False
         screening = self.purchase.screening
         return (
             screening.status not in (Screening.Status.PUBLISHED, Screening.Status.IN_PROGRESS)
@@ -266,6 +288,8 @@ class CandyOrder(models.Model):
         return required
 
     def restock(self):
+        if self.is_reward_order:
+            return  # Reward units remain reserved by their coupons, independent of screenings.
         if self.delivered_at is not None or self.restocked_at is not None:
             return
         required = self.stock_requirements()

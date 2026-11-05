@@ -36,6 +36,7 @@
               {% endif %}
             </td>
             <td class="table-actions" data-label="Acciones">
+              <a href="{% url 'games:user' item.user.pk %}"><i data-lucide="ferris-wheel" aria-hidden="true"></i><span>Juegos</span></a>
               {% if item.can_edit %}
                 <a href="{% url 'manager:usuarios_update' item.user.pk %}">
                   <i data-lucide="pencil" aria-hidden="true"></i>

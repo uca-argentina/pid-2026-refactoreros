@@ -80,19 +80,24 @@ def deliver_candy_order(code, operator):
     if candidate is None:
         raise ValidationError(NOT_FOUND_MESSAGE)
     with transaction.atomic():
-        if not Screening.objects.select_for_update().filter(pk=candidate.purchase.screening_id).exists():
+        if not candidate.is_reward_order and not Screening.objects.select_for_update().filter(pk=candidate.purchase.screening_id).exists():
             raise ValidationError("La función no existe.")
         try:
-            order = CandyOrder.objects.select_for_update().select_related(
-                "purchase__screening__room",
-            ).get(**filters)
+            order = CandyOrder.objects.select_for_update().get(**filters)
         except CandyOrder.DoesNotExist:
             raise ValidationError(NOT_FOUND_MESSAGE)
         check_candy_order(order)
-        order.delivered_at = timezone.now()
+        # Conditional delivery is also safe on databases without row-level locks.
+        delivered_at = timezone.now()
+        if not CandyOrder.objects.filter(pk=order.pk, delivered_at__isnull=True).update(delivered_at=delivered_at, delivered_by=operator):
+            raise ValidationError("Este candy ya fue entregado.")
+        order.delivered_at = delivered_at
         order.delivered_by = operator
-        order.save(update_fields=["delivered_at", "delivered_by"])
         pickup = CandyPickup.objects.create(order=order, operator=operator)
+        if order.is_reward_order:
+            from domain.games.services import audit
+            order.prize_coupons.filter(status="requested").update(status="redeemed", redeemed_at=delivered_at, redeemed_by=operator)
+            audit(order.reward_user, "coupon_redeemed", {"order": order.pk, "coupons": list(order.prize_coupons.values_list("pk", flat=True))}, operator)
         return order, pickup
 
 
@@ -104,7 +109,7 @@ def undo_candy_pickup(pickup_id, operator):
     except (TypeError, ValueError):
         raise ValidationError("La entrega a deshacer no es válida.")
     with transaction.atomic():
-        pickup = CandyPickup.objects.select_for_update().select_related(
+        pickup = CandyPickup.objects.select_for_update(of=("self",)).select_related(
             "order__purchase",
         ).filter(pk=pickup_id, operator=operator).first()
         if pickup is None:
@@ -115,7 +120,7 @@ def undo_candy_pickup(pickup_id, operator):
         undo_seconds = CinemaSettings.current().admission_undo_seconds
         if pickup.created_at < now - timedelta(seconds=undo_seconds):
             raise ValidationError("El plazo para deshacer esta entrega ya venció.")
-        if not Screening.objects.select_for_update().filter(pk=pickup.order.purchase.screening_id).exists():
+        if not pickup.order.is_reward_order and not Screening.objects.select_for_update().filter(pk=pickup.order.purchase.screening_id).exists():
             raise ValidationError("La función ya no existe.")
         order = CandyOrder.objects.select_for_update().get(pk=pickup.order_id)
         if order.is_refunded:
@@ -123,6 +128,10 @@ def undo_candy_pickup(pickup_id, operator):
         order.delivered_at = None
         order.delivered_by = None
         order.save(update_fields=["delivered_at", "delivered_by"])
+        if order.is_reward_order:
+            from domain.games.services import audit
+            order.prize_coupons.update(status="requested", redeemed_at=None, redeemed_by=None)
+            audit(order.reward_user, "prize_delivery_undone", {"order": order.pk}, operator)
         pickup.reverted_at = now
         pickup.save(update_fields=["reverted_at"])
         return pickup

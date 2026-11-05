@@ -15,7 +15,7 @@
   {% include "_client_header.html" %}
   <main class="client-main">
     <article class="ticket-qr-card candy-qr-card">
-      <a class="candy-back-link" href="{% url 'ticket_detail' purchase.pk %}"><span aria-hidden="true">&larr;</span> Volver a la entrada</a>
+      {% if order.is_reward_order %}<a class="candy-back-link" href="{% url 'games:coupons' %}">← Volver a mis premios</a>{% else %}<a class="candy-back-link" href="{% url 'ticket_detail' purchase.pk %}"><span aria-hidden="true">&larr;</span> Volver a la entrada</a>{% endif %}
       {% if order.delivered_at %}
         <section class="ticket-admission-update is-visible" aria-live="polite">
           <span class="ticket-admission-kicker"><i data-lucide="sparkles" aria-hidden="true"></i>Candy entregado</span>
@@ -28,11 +28,11 @@
       {% endif %}
       <div class="ticket-qr-summary">
         <h1>Retiro de candy</h1>
-        <p>{{ purchase.screening.movie.title }} · {{ purchase.screening.room.name }} · {{ purchase.screening.starts_at|date:"d/m/Y H:i" }}</p>
+        {% if order.is_reward_order %}<p>Premios de Juegos · Pedido #{{ order.pk }}</p>{% else %}<p>{{ purchase.screening.movie.title }} · {{ purchase.screening.room.name }} · {{ purchase.screening.starts_at|date:"d/m/Y H:i" }}</p>{% endif %}
       </div>
       {% if order.pickup_open %}
         <p class="ticket-code candy-code"><span>Código de retiro</span><strong>{{ order.pickup_code }}</strong></p>
-        <p class="ticket-sharing-notice candy-notice"><strong>Mostralo en el candy bar.</strong> Podés retirarlo una sola vez, antes o durante la función. Es distinto al código de tu entrada.</p>
+        <p class="ticket-sharing-notice candy-notice"><strong>Mostralo en el candy bar.</strong> {% if order.is_reward_order %}Este QR permite retirar los premios seleccionados una sola vez.{% else %}Podés retirarlo una sola vez, antes o durante la función. Es distinto al código de tu entrada.{% endif %}</p>
       {% elif order.is_refunded %}
         <p>{{ purchase.refund.notice|default:"La función se canceló y el candy se devolvió." }}</p>
       {% elif not order.delivered_at %}
@@ -55,8 +55,8 @@
               </ul>
             </dd>
           </div>
-          <div><dt>Total pagado</dt><dd>$ {{ order.total|floatformat:2 }}</dd></div>
-          <div><dt>Fecha de pago</dt><dd>{{ order.created_at|date:"d/m/Y H:i" }}</dd></div>
+          <div><dt>{% if order.is_reward_order %}Premios sin cargo{% else %}Total pagado{% endif %}</dt><dd>$ {{ order.total|floatformat:2 }}</dd></div>
+          <div><dt>{% if order.is_reward_order %}Fecha del pedido{% else %}Fecha de pago{% endif %}</dt><dd>{{ order.created_at|date:"d/m/Y H:i" }}</dd></div>
         </dl>
       </section>
     </article>

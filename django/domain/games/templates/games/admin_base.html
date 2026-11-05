@@ -1,0 +1,4 @@
+{% extends "manager_base.html" %}
+{% load static %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'games/admin.css' %}">{% endblock %}
+{% block content %}<div class="games-admin">{% block games_content %}{% endblock %}</div>{% endblock %}
