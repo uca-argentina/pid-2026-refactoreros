@@ -1,5 +1,5 @@
 {% load static %}
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="same-origin"><title>Mis premios | Butaca Cero</title><link rel="stylesheet" href="{% static 'catalog.css' %}"><link rel="stylesheet" href="{% static 'admission_tickets.css' %}"><link rel="stylesheet" href="{% static 'games/games.css' %}"></head><body class="client-page games-page">
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="same-origin"><title>Mis premios | Butaca Cero</title><link rel="icon" href="{% static 'favicon.ico' %}" sizes="any"><link rel="icon" href="{% static 'favicon-96x96.png' %}" type="image/png"><link rel="stylesheet" href="{% static 'catalog.css' %}"><link rel="stylesheet" href="{% static 'admission_tickets.css' %}"><link rel="stylesheet" href="{% static 'games/games.css' %}"></head><body class="client-page games-page">
 {% include "_client_header.html" %}<main class="game-main" data-prize-inventory>
 {% for message in messages %}<p role="alert">{{ message }}</p>{% endfor %}
 {% if not coupons and not has_pickup_orders %}
