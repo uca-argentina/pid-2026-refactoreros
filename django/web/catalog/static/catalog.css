@@ -81,7 +81,14 @@ body {
   grid-column: 3;
   justify-self: end;
   justify-content: flex-end;
+  flex-wrap: nowrap;
   gap: 12px;
+  min-width: 0;
+}
+
+.client-nav-account > a {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .client-header nav a {
@@ -2758,6 +2765,31 @@ body {
 
   .client-header .client-manager-link span {
     display: none;
+  }
+}
+
+/* Pantallas medianas o con zoom: las acciones de cuenta pasan a solo ícono
+   para que no se partan en dos filas. */
+@media (min-width: 1401px) and (max-width: 2099px) {
+  .client-nav-account {
+    gap: 8px;
+  }
+
+  .client-user-pill {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .client-header .client-notifications-label,
+  .client-header nav a.client-logout-link span {
+    display: none;
+  }
+
+  .client-header nav a.client-notifications-link,
+  .client-header nav a.client-logout-link {
+    justify-content: center;
+    min-width: 36px;
+    padding: 0 8px;
   }
 }
 
