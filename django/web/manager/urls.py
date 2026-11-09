@@ -40,6 +40,7 @@ urlpatterns = [
     path("peliculas/nueva/", views.MovieCreateView.as_view(), name="peliculas_create"),
     path("peliculas/<int:pk>/editar/", views.MovieUpdateView.as_view(), name="peliculas_update"),
     path("peliculas/<int:pk>/eliminar/", views.MovieDeleteView.as_view(), name="peliculas_delete"),
+    path("peliculas/<int:pk>/destacar/", views.MovieToggleFeatureView.as_view(), name="peliculas_feature"),
     path("funciones/", views.ScreeningsListView.as_view(), name="funciones_list"),
     path("funciones/historial/", views.ScreeningsHistoryListView.as_view(), name="funciones_historial"),
     path("funciones/nueva/", views.ScreeningCreateView.as_view(), name="funciones_create"),
@@ -47,4 +48,5 @@ urlpatterns = [
     path("funciones/<int:pk>/estado/", views.ScreeningChangeStatusView.as_view(), name="funciones_estado"),
     path("funciones/<int:pk>/cancelar/", views.ScreeningCancelView.as_view(), name="funciones_cancelar"),
     path("funciones/<int:pk>/eliminar/", views.ScreeningDeleteView.as_view(), name="funciones_delete"),
+    path("funciones-hoy", views.TodayScreeningView.as_view(), name="funciones_hoy"),
 ]

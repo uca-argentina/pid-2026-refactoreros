@@ -44,6 +44,14 @@
             <dt>Desde</dt>
             <dd>${{ screening.current_price_from|default:screening.price_from }}</dd>
           </div>
+          <div>
+            {% if movie.trailer_url %}
+              <dt>Trailer</dt>
+              <a class="trailer-button" href="{{ movie.trailer_url }}" target="_blank" rel="noopener">
+                <span>Ver trailer</span>
+              </a>
+            {% endif %}
+          </div>
         </dl>
 
         <section class="screening-options" aria-label="Funciones disponibles">
@@ -59,7 +67,7 @@
                       <a class="screening-time-chip" href="{% url 'seat_selection' item.pk %}" title="{{ item.room.name }} - desde ${{ item.current_price_from|default:item.price_from }}{% if item.has_promotion %} - Promoción disponible: {{ item.promotion_summary }}{% endif %}">
                         <span>{{ item.starts_at|date:"H:i" }}</span>
                         <small>
-                          {{ item.room.name }} · ${{ item.current_price_from|default:item.price_from }}{% if item.has_promotion %} · <em class="screening-promotion-badge" aria-label="Promoción disponible">Promo</em>{% endif %}
+                          {{ item.room.name }} · ${{ item.current_price_from|default:item.price_from }} · {{ item.get_language_display }}{% if item.has_promotion %} · <em class="screening-promotion-badge" aria-label="Promoción disponible">Promo</em>{% endif %}
                         </small>
                       </a>
                     {% else %}
@@ -76,6 +84,24 @@
         </section>
 
         <p>{{ movie.synopsis }}</p>
+        <section>
+          <h2>Reseñas</h2>
+          {% if average_stars %}<p>Promedio: {{ average_stars|floatformat:1 }} / 5</p>{% endif %}
+          {% for review in reviews %}
+            <p><strong>{{ review.user.first_name|default:review.user.username }}</strong> — {{ review.stars }}/5<br>{{ review.comment }}</p>
+          {% empty %}
+            <p>Todavía no hay reseñas.</p>
+          {% endfor %}
+
+          {% if user.is_authenticated %}
+            <form method="post" action="{% url 'movie_review' movie.pk %}">
+              {% csrf_token %}
+              {{ review_form.as_p }}
+              <button type="submit">Enviar reseña</button>
+            </form>
+          {% endif %}
+        </section>
+
       </section>
     </article>
   </main>

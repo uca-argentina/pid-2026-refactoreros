@@ -1,7 +1,6 @@
 import json
-
 from django import forms
-
+from domain.cinema.models import CinemaSettings
 
 class CandyPurchaseForm(forms.Form):
     checkout_key = forms.UUIDField(widget=forms.HiddenInput)
@@ -33,6 +32,9 @@ class TicketPurchaseForm(CandyPurchaseForm):
             raise forms.ValidationError("La seleccion de asientos no es valida.")
         if not isinstance(selected_seats, list) or not selected_seats:
             raise forms.ValidationError("La seleccion de asientos no es valida.")
+        limit = CinemaSettings.current().max_tickets_per_purchase
+        if len(selected_seats) > limit:
+            raise forms.ValidationError(f"Podés comprar como máximo {limit} entradas por compra.")
         return selected_seats
 
 class TicketReprogramForm(TicketPurchaseForm):

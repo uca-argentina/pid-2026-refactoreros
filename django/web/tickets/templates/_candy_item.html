@@ -13,12 +13,14 @@
     <p class="candy-item-price">
       <strong>${{ item.price|floatformat:"-2g" }}</strong>
     </p>
-    {% if item.max_quantity > 0 %}
+    {% if item.max_quantity > item.get_low_stock_number %}
       <div class="candy-stepper" role="group" aria-label="Cantidad de {{ item.name }}">
         <button type="button" data-candy-step="-1" aria-label="Quitar {{ item.name }}" disabled><i data-lucide="minus" aria-hidden="true"></i></button>
         <output data-candy-quantity aria-live="polite">0</output>
         <button type="button" data-candy-step="1" aria-label="Agregar {{ item.name }}"><i data-lucide="plus" aria-hidden="true"></i></button>
       </div>
+    {% elif item.max_quantity < item.get_low_stock_number and item.max_quantity > 0 %}
+      <span class="candy-last-units">¡Últimas unidades!</span>
     {% else %}
       <span class="candy-sold-out">Agotado</span>
     {% endif %}

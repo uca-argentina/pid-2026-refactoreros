@@ -1,0 +1,17 @@
+{% extends "manager_base.html" %}
+{% block content %}
+  <h1>Funciones de hoy</h1>
+  <table>
+    <tr><th>Hora</th><th>Película</th><th>Sala</th><th>Estado</th></tr>
+    {% for screening in screenings %}
+      <tr>
+        <td>{{ screening.starts_at|date:"H:i" }}</td>
+        <td>{{ screening.movie.title }}</td>
+        <td>{{ screening.room.name }}</td>
+        <td>{{ screening.get_status_display }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4">No hay funciones hoy.</td></tr>
+    {% endfor %}
+  </table>
+{% endblock %}

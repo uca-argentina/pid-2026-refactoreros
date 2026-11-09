@@ -19,7 +19,6 @@ from domain.tickets.models import (
 )
 
 CANDY_QR_PREFIX = "BCC:"
-LOW_STOCK_THRESHOLD = 10
 INVALID_SELECTION_MESSAGE = "La selección de candy no es válida."
 UNAVAILABLE_ITEM_MESSAGE = "Algún producto de candy ya no está a la venta. Revisá tu selección."
 
@@ -84,7 +83,11 @@ class CandyProduct(models.Model):
 
     @property
     def is_low_stock(self):
-        return 0 < self.stock <= LOW_STOCK_THRESHOLD
+        return 0 < self.stock <= CinemaSettings.current().candy_low_stock_threshold
+    
+    @property
+    def get_low_stock_number(self):
+        return CinemaSettings.current().candy_low_stock_threshold
 
 
 class CandyCombo(models.Model):

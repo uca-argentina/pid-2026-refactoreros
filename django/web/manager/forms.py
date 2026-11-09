@@ -39,6 +39,16 @@ class CinemaSettingsForm(forms.ModelForm):
         label="Recarga automática de butacas (segundos)",
         help_text="Frecuencia con la que el cliente vuelve a consultar disponibilidad.",
     )
+    max_tickets_per_purchase = forms.IntegerField(
+        min_value=1,
+        label="Máximo de entradas por compra",
+        help_text="Número máximo de entradas que un cliente puede comprar en una sola transacción.",
+    )
+    candy_low_stock_threshold = forms.IntegerField(
+        min_value=10,
+        label="Umbral de stock bajo de candy",
+        help_text="Despues de que numero de stock aparece el candy como stock bajo.",
+    )
     admission_undo_seconds = forms.IntegerField(
         min_value=5,
         max_value=600,
@@ -48,7 +58,7 @@ class CinemaSettingsForm(forms.ModelForm):
 
     class Meta:
         model = CinemaSettings
-        fields = ("seat_reservation_minutes", "seat_refresh_seconds", "admission_undo_seconds", "candy_max_item_quantity", "ticket_reprogram_minutes")
+        fields = ("seat_reservation_minutes", "seat_refresh_seconds", "admission_undo_seconds", "candy_max_item_quantity", "ticket_reprogram_minutes", "max_tickets_per_purchase", "candy_low_stock_threshold")
 
 
 class UserManagementForm(forms.ModelForm):
@@ -271,6 +281,7 @@ class MovieForm(forms.ModelForm):
             "rating",
             "duration_minutes",
             "image",
+            "trailer_url",
         )
         widgets = {
             "image": forms.ClearableFileInput(attrs={"accept": "image/*"}),
@@ -282,9 +293,11 @@ class MovieForm(forms.ModelForm):
             "rating": "Clasificación",
             "duration_minutes": "Duración en minutos",
             "image": "Imagen del cartel",
+            "trailer_url": "Trailer",
         }
         help_texts = {
             "image": f"Peso maximo: {MAX_MOVIE_IMAGE_SIZE_MB} MB.",
+            "trailer_url": "Link de youtube (opcional)",
         }
 
     def clean_image(self):
@@ -294,7 +307,6 @@ class MovieForm(forms.ModelForm):
                 f"La imagen no puede superar los {MAX_MOVIE_IMAGE_SIZE_MB} MB."
             )
         return image
-
 
 class SeatTypeForm(forms.ModelForm):
     class Meta:
@@ -532,11 +544,12 @@ class ScreeningForm(forms.ModelForm):
     )
     class Meta:
         model = Screening
-        fields = ("movie", "room", "starts_at")
+        fields = ("movie", "room", "starts_at", "language")
         labels = {
             "movie": "Película",
             "room": "Sala",
             "starts_at": "Fecha y horario",
+            "language": "Idioma",
         }
 
     def __init__(self, *args, **kwargs):

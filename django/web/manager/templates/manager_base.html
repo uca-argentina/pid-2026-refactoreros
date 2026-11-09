@@ -41,6 +41,10 @@
             <i data-lucide="package-check" aria-hidden="true"></i>
             <span>Entregar candy</span>
           </a>
+          <a href="{% url 'manager:funciones_hoy' %}" class="nav-candy-pickup">
+            <i data-lucide="calendar" aria-hidden="true"></i>
+            <span>Funciones de hoy</span>
+          </a>
         {% endif %}
         {% if manager_role != "operator" %}
         <a href="{% url 'manager:home' %}" class="nav-dashboard {% if not section %}is-active{% endif %}">

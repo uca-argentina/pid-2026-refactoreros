@@ -318,6 +318,7 @@ body {
   position: relative;
 }
 
+
 .movie-card-promo {
   position: absolute;
   top: 12px;
@@ -1008,6 +1009,13 @@ body {
 
 .candy-sold-out {
   color: rgba(255, 255, 255, .6);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.candy-last-units {
+  color: rgba(251, 255, 0, 0.6);
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;

@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import Movie
+from .models import Review
 
 @admin.register(Movie)
 class MovieAdmin(admin.ModelAdmin):
@@ -15,4 +16,11 @@ class MovieAdmin(admin.ModelAdmin):
         "rating",
         "duration_minutes",
         "image",
+        "trailer_url",
     )
+    
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ("movie", "user", "stars", "created_at")
+    list_filter = ("stars",)
+    search_fields = ("comment",)

@@ -1,19 +1,21 @@
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch, Q, Avg
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.views.decorators.http import require_POST
 
 from domain.cinema.models import CinemaSettings
-from domain.movies.models import Movie
+from domain.movies.models import Movie, Review
 from domain.promotions.pricing import PromotionPriceCalculator
 from domain.screenings.models import Screening
 from domain.seat_types.models import SeatType
 from domain.tickets.models import TicketPurchase
 from domain.tickets.services import check_reprogramming_window
 from web.manager.views import manager_role
+from .forms import ReviewForm
 
 
 def index_to_letters(index):
@@ -156,15 +158,22 @@ def best_promotion_quote(screenings, price_calculator):
 
 
 def home_view(request):
+    selected_genre = request.GET.get("genero", "")
     Screening.finalize_expired()
     published = Screening.published()
-    movies = list(
-        Movie.objects.filter(
-            screenings__status=Screening.Status.PUBLISHED
-        ).prefetch_related(
-            Prefetch("screenings", queryset=published, to_attr="published_screenings")
-        ).distinct()
-    )
+    
+    queryset = Movie.objects.filter(
+        screenings__status=Screening.Status.PUBLISHED
+    ).prefetch_related(
+        Prefetch("screenings", queryset=published, to_attr="published_screenings")
+    ).distinct()
+
+    if selected_genre:
+        queryset = queryset.filter(genre=selected_genre)
+
+    queryset = queryset.order_by("-is_featured")
+    movies = list(queryset)
+    
     price_calculator = PromotionPriceCalculator.current()
     for movie in movies:
         movie.promotion_quote = best_promotion_quote(movie.published_screenings, price_calculator)
@@ -180,9 +189,10 @@ def home_view(request):
             "movies": movies,
             "promotions": promotions if movies else [],
             "manager_role": manager_role(request.user),
+            "genres": Movie.Genre.choices,
+            "selected_genre": selected_genre,
         },
     )
-
 
 @never_cache
 def movie_detail_view(request, pk):
@@ -226,6 +236,9 @@ def movie_detail_view(request, pk):
             "screenings": movie.published_screenings,
             "tickets_available": screening.tickets_available,
             "manager_role": manager_role(request.user),
+            "reviews": movie.reviews.select_related("user"),
+            "average_stars": movie.reviews.aggregate(avg=Avg("stars"))["avg"],
+            "review_form": ReviewForm(),
         },
     )
 
@@ -332,3 +345,15 @@ def server_error_view(request):
         request, 500, "Se apagaron las luces antes de tiempo.",
         "Tuvimos un problema inesperado. Esperá unos segundos e intentá de nuevo.", "Error inesperado",
     )
+
+@login_required
+@require_POST
+def movie_review_view(request, pk):
+    movie = get_object_or_404(Movie, pk=pk)
+    form = ReviewForm(request.POST)
+    if form.is_valid():
+        Review.objects.update_or_create(movie=movie, user=request.user, defaults=form.cleaned_data)
+        messages.success(request, "¡Gracias por tu reseña!")
+    else:
+        messages.error(request, "La reseña no es válida. Elegí entre 1 y 5 estrellas.")
+    return redirect("movie_detail", pk=movie.pk)

@@ -1,5 +1,6 @@
 from django.db import models
-
+from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 class Movie(models.Model):
     class Rating(models.TextChoices):
@@ -32,6 +33,8 @@ class Movie(models.Model):
         db_column="duracion_minutos",
     )
     image = models.ImageField(upload_to="peliculas/", verbose_name="Imagen del cartel", db_column="imagen")
+    trailer_url = models.URLField(blank=True, verbose_name="Trailer", help_text="Ingrese el link de youtube (opcional)", db_column="trailer")
+    is_featured = models.BooleanField(default=False, db_column="destacada")
 
     class Meta:
         verbose_name = "Película"
@@ -50,3 +53,14 @@ class Movie(models.Model):
 
     def __str__(self):
         return self.title
+
+class Review(models.Model):
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="reviews")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reviews")
+    stars = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [models.UniqueConstraint(fields=["movie", "user"], name="review_unique_per_user")]

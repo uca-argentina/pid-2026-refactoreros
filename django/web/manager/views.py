@@ -152,6 +152,12 @@ class ManagementHomeView(StaffAccessMixin, TemplateView):
                 "icon": "users",
                 "tone": "rose",
             },
+            {
+                "label": "Entradas vendidas hoy",
+                "value": TicketPurchase.objects.filter(created_at__date=today).aggregate(total=Sum("quantity"))["total"] or 0,
+                "icon": "tickets",
+                "tone": "red",
+            },
         ]
         context["next_screenings"] = upcoming_screenings.order_by("starts_at")[:5]
         context["hidden_upcoming_count"] = upcoming_screenings.filter(
@@ -1089,3 +1095,28 @@ class ScreeningCancelView(ManagerRequiredMixin, DetailView):
         context["section"] = "Funciones"
         context["tickets_sold"] = TicketPurchase.sold_quantity(self.object)
         return context
+
+class TodayScreeningView(StaffAccessMixin, TemplateView):
+    template_name = "manager_funciones_hoy.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["section"] = "Funciones de hoy"
+        context["screenings"] = (
+            Screening.objects.filter(starts_at__date=timezone.localdate())
+            .select_related("movie", "room")
+            .order_by("starts_at")
+        )
+        return context
+
+class MovieToggleFeatureView(ManagerRequiredMixin, DetailView):
+    model = Movie
+    
+    def post(self, request, *args, **kwargs):
+        movie = self.get_object()
+        movie.is_featured = not movie.is_featured
+        movie.save(update_fields=["is_featured"])
+        status = "destacada" if movie.is_featured else "dejado de destacar"
+        messages.success(request, f"La pelicula ha sido {status}.")
+        return redirect("manager:peliculas_list")
+    

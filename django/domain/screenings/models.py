@@ -18,6 +18,10 @@ class Screening(models.Model):
         CANCELED = "cancelada", "Cancelada"
         FINISHED = "finalizada", "Finalizada"
 
+    class Language(models.TextChoices):
+        DUBBED = "doblada", "Doblada"
+        SUBTITLED = "subtitulada", "Subtitulada"
+
     TRANSITIONS = {
         Status.DRAFT: (Status.SCHEDULED, Status.PUBLISHED),
         Status.SCHEDULED: (Status.DRAFT, Status.PUBLISHED, Status.CANCELED),
@@ -41,6 +45,7 @@ class Screening(models.Model):
     prices_by_type = models.JSONField(default=dict, blank=True, db_column="precios_por_tipo")
     room_layout_snapshot = models.JSONField(default=list, blank=True, db_column="sala_configuracion_snapshot")
     capacity_snapshot = models.PositiveIntegerField(default=0, db_column="capacidad_snapshot")
+    language = models.CharField(max_length=20, choices=Language.choices, default=Language.SUBTITLED, db_column="idioma")
 
     class Meta:
         verbose_name = "función"

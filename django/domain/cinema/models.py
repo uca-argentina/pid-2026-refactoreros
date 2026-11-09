@@ -9,6 +9,8 @@ class CinemaSettings(models.Model):
     login_image = models.ImageField(upload_to="branding/", blank=True, db_column="imagen_login")
     seat_reservation_minutes = models.PositiveIntegerField(default=5, db_column="reserva_asientos_minutos")
     seat_refresh_seconds = models.PositiveIntegerField(default=5, db_column="recarga_asientos_segundos")
+    max_tickets_per_purchase = models.PositiveIntegerField(default=5, db_column="max_entradas_por_compra")
+    candy_low_stock_threshold = models.PositiveIntegerField(default=10, db_column="umbral_stock_candy")
     admission_undo_seconds = models.PositiveIntegerField(default=30, db_column="deshacer_validacion_segundos")
     candy_max_item_quantity = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1)])
     ticket_reprogram_minutes = models.PositiveIntegerField(default=120)

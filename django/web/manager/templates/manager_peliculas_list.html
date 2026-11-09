@@ -50,6 +50,18 @@
                 <i data-lucide="trash-2" aria-hidden="true"></i>
                 <span>Eliminar</span>
               </a>
+              <form method="post" action="{% url 'manager:peliculas_feature' movie.pk %}">
+                {% csrf_token %}
+                <button type="submit">
+                  {% if movie.is_featured %}
+                    <i data-lucide="stars" aria-hidden="true"></i>
+                    <span>No destacar</span>
+                  {% else %}
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <span>Destacar</span>
+                  {% endif %}
+                </button>
+              </form>
             </td>
           </tr>
         {% empty %}

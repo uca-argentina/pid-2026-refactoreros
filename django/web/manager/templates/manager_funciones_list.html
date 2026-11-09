@@ -88,6 +88,7 @@
           <th>Vendidas</th>
           <th>Disponibles</th>
           <th>Acciones</th>
+          <th>Idioma</th>
         </tr>
       </thead>
       <tbody>
@@ -192,9 +193,10 @@
                 </div>
               {% endwith %}
             </td>
+            <td>{{ screening.get_language_display }}</td>
           </tr>
         {% empty %}
-          <tr><td colspan="8">No hay funciones cargadas.</td></tr>
+          <tr><td colspan="9">No hay funciones cargadas.</td></tr>
         {% endfor %}
       </tbody>
     </table>
