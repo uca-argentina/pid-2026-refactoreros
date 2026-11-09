@@ -1,3 +1,7 @@
+import {formatMoney, parseSeatPrice} from "./shared/money.js";
+import {initializeSeatMapViewport} from "./checkout/viewport.js";
+import {createReservationApi} from "./checkout/api.js";
+
 const purchaseForm = document.querySelector(".purchase-form");
 const selectedSeatsInput = purchaseForm?.querySelector('input[name="selected_seats"]');
 const purchaseButton = purchaseForm?.querySelector('.purchase-action button[type="submit"]');
@@ -24,58 +28,9 @@ const pendingSeatOperations = new WeakMap();
 const pendingSeatTimers = new WeakMap();
 const pendingSeatFlushes = new WeakMap();
 
-function updateSeatMapPanHints(seatMap) {
-  const viewport = seatMap.querySelector("[data-seat-map-viewport]");
-  if (!viewport) {
-    return;
-  }
-
-  const maxScrollLeft = Math.max(viewport.scrollWidth - viewport.clientWidth, 0);
-  const isCompactViewport = window.matchMedia("(max-width: 860px)").matches;
-  const canPanLeft = isCompactViewport && viewport.scrollLeft > 1;
-  const canPanRight = isCompactViewport && viewport.scrollLeft < maxScrollLeft - 1;
-  seatMap.classList.toggle("can-pan-left", canPanLeft);
-  seatMap.classList.toggle("can-pan-right", canPanRight);
-  seatMap.querySelectorAll("[data-seat-map-pan]").forEach((button) => {
-    button.disabled = button.dataset.seatMapPan === "left" ? !canPanLeft : !canPanRight;
-  });
-}
-
-function centerSeatMapViewport(seatMap) {
-  const viewport = seatMap.querySelector("[data-seat-map-viewport]");
-  if (!viewport || seatMap.dataset.viewportCentered) {
-    return;
-  }
-
-  const maxScrollLeft = Math.max(viewport.scrollWidth - viewport.clientWidth, 0);
-  viewport.scrollLeft = maxScrollLeft / 2;
-  seatMap.dataset.viewportCentered = "true";
-  updateSeatMapPanHints(seatMap);
-}
-
-function initializeSeatMapViewport(seatMap) {
-  const viewport = seatMap.querySelector("[data-seat-map-viewport]");
-  if (!viewport) {
-    return;
-  }
-
-  viewport.addEventListener("scroll", () => updateSeatMapPanHints(seatMap), {passive: true});
-  seatMap.querySelectorAll("[data-seat-map-pan]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const direction = button.dataset.seatMapPan === "left" ? -1 : 1;
-      viewport.scrollBy({
-        left: direction * viewport.clientWidth * 0.7,
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-      });
-    });
-  });
-  window.requestAnimationFrame(() => centerSeatMapViewport(seatMap));
-
-  if ("ResizeObserver" in window) {
-    new ResizeObserver(() => updateSeatMapPanHints(seatMap)).observe(viewport);
-  }
-  window.addEventListener("resize", () => updateSeatMapPanHints(seatMap));
-}
+const {sendSeatOperations} = createReservationApi({
+  csrfToken, markUnavailableSeats, applyReservationState, syncSeatStatus,
+});
 
 function setPurchaseProcessing(processing) {
   if (!purchaseButton) {
@@ -110,22 +65,6 @@ function serializeSelectedSeats(seatMap) {
 
 function selectedSeatsFor(seatMap) {
   return seatMap ? Array.from(seatMap.querySelectorAll("button.client-seat.is-selected")) : [];
-}
-
-function formatMoney(value) {
-  return value.toLocaleString("es-AR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function parseSeatPrice(rawValue) {
-  const rawPrice = String(rawValue || "").trim();
-  const normalizedPrice = rawPrice.includes(",")
-    ? rawPrice.replace(/\./g, "").replace(",", ".")
-    : rawPrice;
-  const price = Number(normalizedPrice);
-  return Number.isFinite(price) ? price : null;
 }
 
 function seatPrice(seat) {
@@ -282,29 +221,6 @@ async function syncSeatStatus(seatMap) {
   }
 }
 
-async function requestSingleSeatReservation(seat, action) {
-  const seatMap = seat.closest(".client-seat-map");
-  const reservationUrl = seatMap?.dataset.reservationUrl;
-  if (!reservationUrl) {
-    return {ok: true};
-  }
-  const response = await fetch(reservationUrl, {
-    method: "POST",
-    headers: {
-      "Accept": "application/json",
-      "Content-Type": "application/json",
-      "X-CSRFToken": csrfToken(),
-    },
-    body: JSON.stringify({action, label: seat.dataset.seatLabel}),
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok || !payload.ok) {
-    markUnavailableSeats(seatMap, payload.unavailable || [seat.dataset.seatLabel]);
-    throw new Error(payload.error || "La butaca ya no está disponible.");
-  }
-  return payload;
-}
-
 function queuedOperationsFor(seatMap) {
   let queue = pendingSeatOperations.get(seatMap);
   if (!queue) {
@@ -312,39 +228,6 @@ function queuedOperationsFor(seatMap) {
     pendingSeatOperations.set(seatMap, queue);
   }
   return queue;
-}
-
-async function sendSeatOperations(seatMap, operations) {
-  const batchUrl = seatMap?.dataset.reservationBatchUrl;
-  if (!batchUrl) {
-    const processed = [];
-    for (const operation of operations) {
-      const seat = seatMap.querySelector(`[data-seat-label="${operation.label}"]`);
-      await requestSingleSeatReservation(seat, operation.action);
-      processed.push(operation);
-    }
-    await syncSeatStatus(seatMap);
-    return {ok: true, processed};
-  }
-
-  const response = await fetch(batchUrl, {
-    method: "POST",
-    headers: {
-      "Accept": "application/json",
-      "Content-Type": "application/json",
-      "X-CSRFToken": csrfToken(),
-    },
-    body: JSON.stringify({operations}),
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (payload.unavailable || payload.reserved) {
-    applyReservationState(seatMap, payload);
-  }
-  if (!response.ok || !payload.ok) {
-    const firstError = (payload.errors || [])[0]?.error;
-    throw new Error(firstError || payload.error || "Algunas butacas ya no estan disponibles.");
-  }
-  return payload;
 }
 
 function clearPendingState(seatMap, operations) {
@@ -431,6 +314,8 @@ function updateSeatDrivenPurchaseState() {
   const selectedSeats = selectedSeatsFor(activeSeatMap);
   const requiresSeatSelection = Boolean(activeSeatMap);
   const selectedCount = selectedSeats.length;
+  const requiredCount = Number(activeSeatMap?.dataset.requiredQuantity || 0);
+  const quantityValid = requiredCount ? selectedCount === requiredCount : selectedCount > 0;
   const seatStateUpdating = hasPendingSeatOperations(activeSeatMap);
   const candyItems = selectedCandyItems();
   const candyTotal = candyItems.reduce((sum, item) => sum + candyItemTotal(item), 0);
@@ -506,7 +391,7 @@ function updateSeatDrivenPurchaseState() {
   }
 
   if (purchaseButton && requiresSeatSelection && !purchaseSubmitting && !purchasePreparing) {
-    purchaseButton.disabled = selectedCount === 0 || seatStateUpdating;
+    purchaseButton.disabled = !quantityValid || seatStateUpdating;
     purchaseButton.classList.toggle("is-processing", seatStateUpdating && selectedCount > 0);
     purchaseButton.setAttribute("aria-busy", String(seatStateUpdating && selectedCount > 0));
     if (selectedCount === 0) {
@@ -617,7 +502,7 @@ purchaseForm?.addEventListener("submit", async (event) => {
   }
 
   const activeSeatMap = getActiveSeatMap();
-  if (activeSeatMap && selectedSeatsFor(activeSeatMap).length === 0) {
+  if (activeSeatMap && (selectedSeatsFor(activeSeatMap).length === 0 || (Number(activeSeatMap.dataset.requiredQuantity) && selectedSeatsFor(activeSeatMap).length !== Number(activeSeatMap.dataset.requiredQuantity)))) {
     event.preventDefault();
     updateSeatDrivenPurchaseState();
     return;
@@ -630,11 +515,15 @@ purchaseForm?.addEventListener("submit", async (event) => {
     setPurchaseProcessing(true);
     try {
       await flushSeatReservations(activeSeatMap);
+      purchasePreparing = false;
       if (selectedSeatsFor(activeSeatMap).length > 0) {
-        purchasePreparing = false;
         purchaseButton.disabled = false;
         submitAfterReservationFlush = true;
         purchaseForm.requestSubmit();
+      } else {
+        purchaseButton.classList.remove("is-processing");
+        purchaseButton.removeAttribute("aria-busy");
+        updateSeatDrivenPurchaseState();
       }
     } catch (error) {
       purchasePreparing = false;

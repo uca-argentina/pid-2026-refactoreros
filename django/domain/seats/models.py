@@ -14,3 +14,6 @@ class Seat(models.Model):
         verbose_name = "Asiento"
         verbose_name_plural = "Asientos"
         ordering = ["room"]
+        constraints = [
+            models.UniqueConstraint(fields=["room", "row", "column"], name="unique_seat_position_in_room"),
+        ]

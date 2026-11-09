@@ -1,6 +1,10 @@
+{% extends "client_base.html" %}
 {% load static %}
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="same-origin"><title>Mis premios | Butaca Cero</title><link rel="icon" href="{% static 'favicon.ico' %}" sizes="any"><link rel="icon" href="{% static 'favicon-96x96.png' %}" type="image/png"><link rel="stylesheet" href="{% static 'catalog.css' %}"><link rel="stylesheet" href="{% static 'admission_tickets.css' %}"><link rel="stylesheet" href="{% static 'games/games.css' %}"></head><body class="client-page games-page">
-{% include "_client_header.html" %}<main class="game-main" data-prize-inventory>
+{% block title %}Mis premios | Butaca Cero{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'admission_tickets.css' %}"><link rel="stylesheet" href="{% static 'games/games.css' %}">{% endblock %}
+{% block body_class %}client-page games-page{% endblock %}
+{% block content %}
+<main class="game-main" data-prize-inventory>
 {% for message in messages %}<p role="alert">{{ message }}</p>{% endfor %}
 {% if not coupons and not has_pickup_orders %}
 <section class="prizes-empty" aria-labelledby="prizes-empty-title">
@@ -17,4 +21,7 @@
 {% endif %}
 </main>
 {% include "games/modal.html" with games_styles_loaded=True %}
-<script src="https://unpkg.com/lucide@latest"></script><script>if(window.lucide)lucide.createIcons();const pickupForm=document.getElementById('prize-pickup-form');if(pickupForm){const button=pickupForm.querySelector('[type=submit]');const sync=()=>{button.disabled=!pickupForm.querySelector('input[name=coupons]:checked');};pickupForm.addEventListener('change',sync);window.addEventListener('pageshow',sync);pickupForm.addEventListener('submit',e=>{sync();if(button.disabled)e.preventDefault();});sync();}</script></body></html>
+{% endblock %}
+{% block extra_scripts %}
+<script>if(window.lucide)lucide.createIcons();const pickupForm=document.getElementById('prize-pickup-form');if(pickupForm){const button=pickupForm.querySelector('[type=submit]');const sync=()=>{button.disabled=!pickupForm.querySelector('input[name=coupons]:checked');};pickupForm.addEventListener('change',sync);window.addEventListener('pageshow',sync);pickupForm.addEventListener('submit',e=>{sync();if(button.disabled)e.preventDefault();});sync();}</script>
+{% endblock %}

@@ -1,19 +1,10 @@
+{% extends "client_base.html" %}
 {% load static %}
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="referrer" content="no-referrer">
-  <title>Entrada | {{ cinema.name|default:"Butaca Cero" }}</title>
-  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
-  <link rel="icon" href="{% static 'favicon-96x96.png' %}" type="image/png">
-  <link rel="stylesheet" href="{% static 'catalog.css' %}">
-  <link rel="stylesheet" href="{% static 'admission_tickets.css' %}">
-</head>
-<body class="client-page">
-  {% include "_client_header.html" %}
-  <main class="client-main">
+{% block title %}Entrada | {{ cinema.name|default:"Butaca Cero" }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'admission_tickets.css' %}">{% endblock %}
+{% block body_class %}client-page{% endblock %}
+{% block content %}
+<main class="client-main">
     <article class="ticket-qr-card"{% if available %} data-ticket-status-url="{% url 'ticket_admission_status' purchase.pk %}" data-used-count="{{ used_count }}"{% endif %}>
       {% if used_count %}
         <section class="ticket-admission-update is-visible" data-admission-update aria-live="polite">
@@ -79,16 +70,15 @@
       {% endif %}
     </article>
   </main>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script>
-    if (window.lucide) {
-      lucide.createIcons();
-    }
-  </script>
-  {% if available %}
-    <script src="{% static 'qrcode.min.js' %}"></script>
-    <script src="{% static 'ticket_detail.js' %}" defer></script>
-    <script>
+
+
+
+{% endblock %}
+{% block extra_scripts %}
+{% if available %}
+<script src="{% static 'qrcode.min.js' %}"></script>
+<script src="{% static 'ticket_detail.js' %}" defer></script>
+<script>
       document.querySelectorAll("[data-qr-payload]").forEach(function (target) {
         var size = Math.min(480, Math.max(160, target.clientWidth - 20));
         new QRCode(target, {
@@ -101,6 +91,5 @@
         });
       });
     </script>
-  {% endif %}
-</body>
-</html>
+{% endif %}
+{% endblock %}

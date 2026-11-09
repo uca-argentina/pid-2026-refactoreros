@@ -1,0 +1,196 @@
+.manager-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  max-width: 760px;
+  min-width: 0;
+  padding: 22px;
+}
+
+.manager-form label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+
+.manager-form input,
+.manager-form select,
+.manager-form textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.manager-form label > span {
+  font-weight: 600;
+}
+
+.manager-form textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.checkbox-field {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+}
+
+.checkbox-field input {
+  width: auto;
+  min-height: 0;
+}
+
+.promotion-form {
+  gap: 22px;
+}
+
+.promotion-form-grid,
+.promotion-time-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.promotion-active-field {
+  align-self: end;
+  min-height: 42px;
+}
+
+.promotion-discount-control {
+  display: flex;
+  min-width: 0;
+}
+
+.promotion-discount-control input {
+  min-width: 0;
+  border-radius: 2px 0 0 2px;
+}
+
+.promotion-discount-affix {
+  display: inline-flex;
+  flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-left: 0;
+  border-radius: 0 2px 2px 0;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.promotion-discount-control:not(.is-percentage) input {
+  order: 2;
+  border-radius: 0 2px 2px 0;
+}
+
+.promotion-discount-control:not(.is-percentage) .promotion-discount-affix {
+  order: 1;
+  border: 1px solid var(--border);
+  border-right: 0;
+  border-radius: 2px 0 0 2px;
+}
+
+.promotion-discount-control:focus-within .promotion-discount-affix {
+  border-color: var(--brand);
+}
+
+.promotion-client-error {
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.promotion-form input[aria-invalid="true"],
+.promotion-form select[aria-invalid="true"] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 16%, transparent);
+}
+
+.promotion-discount-control:has(input[aria-invalid="true"]) .promotion-discount-affix {
+  border-color: var(--danger);
+}
+
+.promotion-chip-fieldset {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.promotion-chip-fieldset legend {
+  padding: 0;
+  font-weight: 600;
+}
+
+.promotion-chip-fieldset p {
+  margin: -3px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.promotion-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.promotion-choice-chip {
+  position: relative;
+  display: inline-flex;
+}
+
+.promotion-choice-chip input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.promotion-choice-chip span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.promotion-choice-chip input:checked + span {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+
+.promotion-choice-chip input:focus-visible + span {
+  outline: 3px solid color-mix(in srgb, var(--brand) 30%, transparent);
+  outline-offset: 2px;
+}
+
+.promotion-seat-type-chip span {
+  border: 3px solid var(--seat-type-color);
+  color: var(--seat-type-color);
+}
+
+.promotion-seat-type-chip input:checked + span {
+  border-color: var(--seat-type-color);
+  background: color-mix(in srgb, var(--seat-type-color) 22%, var(--input-bg));
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--seat-type-color);
+}
+

@@ -1,18 +1,10 @@
+{% extends "client_base.html" %}
 {% load static %}
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mis entradas | {{ cinema.name|default:"Butaca Cero" }}</title>
-  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
-  <link rel="icon" href="{% static 'favicon-96x96.png' %}" type="image/png">
-  <link rel="stylesheet" href="{% static 'catalog.css' %}">
-  <link rel="stylesheet" href="{% static 'admission_tickets.css' %}">
-</head>
-<body class="client-page">
-  {% include "_client_header.html" %}
-  <main class="client-main">
+{% block title %}Mis entradas | {{ cinema.name|default:"Butaca Cero" }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'admission_tickets.css' %}">{% endblock %}
+{% block body_class %}client-page{% endblock %}
+{% block content %}
+<main class="client-main">
     {% if messages %}
       <div class="client-messages client-messages-success">
         {% for message in messages %}<p>{{ message }}</p>{% endfor %}
@@ -75,7 +67,4 @@
       </section>
     {% endif %}
   </main>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script>if (window.lucide) { lucide.createIcons(); }</script>
-</body>
-</html>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% load l10n %}
+      {% if screening.seat_map %}
+        <section class="client-seat-map" data-screening-id="{{ screening.pk }}" data-available="{{ screening.tickets_available|unlocalize }}" {% if required_quantity %}data-required-quantity="{{ required_quantity|unlocalize }}"{% endif %} data-refresh-interval-seconds="{{ cinema.seat_refresh_seconds|unlocalize }}" data-reservation-url="{% url 'seat_reservation' screening.pk %}" data-reservation-batch-url="{% url 'seat_reservation_batch' screening.pk %}" data-reservation-status-url="{% url 'seat_reservation_status' screening.pk %}" data-reservation-batch-delay-ms="1000" aria-label="Seleccionar asientos">
+          <div class="client-seat-map-viewport" data-seat-map-viewport>
+            <div class="client-seat-stage">
+              <div class="client-screen-marker" aria-hidden="true">
+                <span>Pantalla</span>
+              </div>
+              <div class="client-seat-grid">
+              <div class="client-seat-row client-seat-column-row" aria-hidden="true">
+                <span class="client-seat-row-label"></span>
+                <div class="client-seat-cells">
+                  {% for column in screening.seat_map.columns %}
+                    <span class="client-seat-column-label{% if column.is_aisle %} is-aisle{% endif %}">{{ column.label }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+              {% for row in screening.seat_map.rows %}
+                <div class="client-seat-row{% if row.is_aisle %} is-aisle-row{% endif %}">
+                  <span class="client-seat-row-label">{{ row.label }}</span>
+                  <div class="client-seat-cells">
+                    {% for cell in row.cells %}
+                      {% if cell.is_seat %}
+                        <button type="button" class="client-seat{% if cell.icon_url %} has-custom-icon{% endif %}{% if cell.is_unavailable %} is-unavailable{% endif %}" style="--seat-color: {{ cell.color }};" data-seat-label="{{ cell.label }}" data-seat-type-id="{{ cell.type_id }}" data-seat-price="{{ cell.price|unlocalize }}" data-seat-base-price="{{ cell.base_price|unlocalize }}" data-seat-promotion="{{ cell.promotion }}" title="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.promotion %} · {{ cell.promotion }} aplicada, antes ${{ cell.base_price }}{% endif %}{% if cell.is_unavailable %} - No disponible{% endif %}" aria-label="{{ cell.accessibility_label }} - {{ cell.type }} - ${{ cell.price }}{% if cell.promotion %}, {{ cell.promotion }} aplicada, antes ${{ cell.base_price }}{% endif %}{% if cell.is_unavailable %} - No disponible{% endif %}"{% if cell.is_unavailable %} disabled aria-disabled="true"{% endif %}>
+                          {% if cell.icon_url %}
+                            <img class="client-seat-icon" src="{{ cell.icon_url }}" alt="">
+                          {% else %}
+                            {{ cell.label }}
+                          {% endif %}
+                        </button>
+                      {% else %}
+                        <span class="client-seat aisle" aria-hidden="true"></span>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+              </div>
+            </div>
+          </div>
+          <button type="button" class="seat-map-pan-hint seat-map-pan-hint-left" data-seat-map-pan="left" aria-label="Ver butacas hacia la izquierda" disabled><span aria-hidden="true">&#8249;</span></button>
+          <button type="button" class="seat-map-pan-hint seat-map-pan-hint-right" data-seat-map-pan="right" aria-label="Ver butacas hacia la derecha" disabled><span aria-hidden="true">&#8250;</span></button>
+        </section>
+      {% endif %}

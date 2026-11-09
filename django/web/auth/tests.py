@@ -214,6 +214,17 @@ class LoginFlowTests(TestCase):
 
 
 class LogoutFlowTests(TestCase):
+    def test_logout_requires_post_and_csrf(self):
+        from django.test import Client
+
+        user = get_user_model().objects.create_user(username="logout-method")
+        self.client.force_login(user)
+        self.assertEqual(self.client.get(reverse("logout")).status_code, 405)
+        self.assertIn("_auth_user_id", self.client.session)
+        strict = Client(enforce_csrf_checks=True)
+        strict.force_login(user)
+        self.assertEqual(strict.post(reverse("logout")).status_code, 403)
+
     def test_logout_cierra_sesion_y_redirige_a_login(self):
         user = get_user_model().objects.create_user(
             username="ana@mail.com",
@@ -222,7 +233,7 @@ class LogoutFlowTests(TestCase):
         )
         self.client.force_login(user)
 
-        response = self.client.get(reverse("logout"))
+        response = self.client.post(reverse("logout"))
 
         self.assertRedirects(response, reverse("login"))
         self.assertNotIn("_auth_user_id", self.client.session)

@@ -1,0 +1,54 @@
+.candy-combo-products {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.candy-combo-products legend {
+  padding: 0;
+  font-weight: 600;
+}
+
+.candy-combo-products > p {
+  margin: -3px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.candy-combo-product-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: 8px;
+}
+
+.manager-form .candy-combo-product {
+  grid-template-columns: minmax(0, 1fr) 82px;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.candy-combo-product strong {
+  display: block;
+  font-size: 14px;
+}
+
+.candy-combo-product small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.candy-combo-product .errorlist {
+  grid-column: 1 / -1;
+}
+
+.candy-combo-product.is-inactive {
+  opacity: .7;
+}

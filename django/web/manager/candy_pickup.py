@@ -14,7 +14,7 @@ from django.views.generic import FormView
 from domain.candy.models import CandyPickup
 from domain.candy.services import deliver_candy_order, inspect_candy_order, undo_candy_pickup
 from .validation import TicketValidationForm, customer_display_names
-from .views import StaffAccessMixin
+from .access import StaffAccessMixin
 
 
 class CandyPickupForm(TicketValidationForm):

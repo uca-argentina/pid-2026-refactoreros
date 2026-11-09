@@ -1,3 +1,4 @@
+from django.views.decorators.http import require_POST
 from django.contrib.auth import login, logout
 from django.db import transaction
 from django.shortcuts import redirect, render
@@ -6,7 +7,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from domain.cinema.models import CinemaSettings
 from domain.users.forms import CustomerSignupForm, LoginForm
 from domain.users.models import Customer
-from web.manager.views import manager_role
+from domain.users.roles import staff_role as manager_role
 
 
 def _safe_next_url(request):
@@ -83,6 +84,7 @@ def signup_view(request):
     )
 
 
+@require_POST
 def logout_view(request):
     logout(request)
     return redirect("login")

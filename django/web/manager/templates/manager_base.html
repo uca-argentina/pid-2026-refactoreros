@@ -106,10 +106,10 @@
         </div>
       {% endif %}
 
-      <a class="logout-link" href="{% url 'logout' %}">
+      <form class="logout-form" method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="logout-link">
         <i data-lucide="log-out" aria-hidden="true"></i>
         <span>Salir</span>
-      </a>
+      </button></form>
     </aside>
 
     <div class="manager-workspace">
@@ -134,9 +134,9 @@
             <i data-lucide="circle-user-round" aria-hidden="true"></i>
             <span>{{ request.user.get_full_name|default:request.user.email|default:request.user.username }}</span>
           </div>
-          <a class="mobile-logout-link" href="{% url 'logout' %}" aria-label="Cerrar sesión" title="Cerrar sesión">
+          <form class="logout-form" method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="mobile-logout-link" aria-label="Cerrar sesión" title="Cerrar sesión">
             <i data-lucide="log-out" aria-hidden="true"></i>
-          </a>
+          </button></form>
         </div>
       </header>
 
@@ -153,7 +153,7 @@
       </main>
     </div>
   </div>
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="{% static 'vendor/lucide-0.468.0.min.js' %}"></script>
   <script>
     (function () {
       var root = document.documentElement;

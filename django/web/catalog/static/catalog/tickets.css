@@ -1,0 +1,124 @@
+.ticket-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 520px));
+  justify-content: start;
+  gap: 18px;
+}
+
+.ticket-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  min-height: 142px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 14px;
+  color: #fff;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .06)),
+    rgba(255, 255, 255, .04);
+}
+
+.ticket-card::before,
+.ticket-card::after {
+  content: "";
+  position: absolute;
+  right: 204px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--dark);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .16);
+  transform: translateX(50%);
+}
+
+.ticket-card::before {
+  top: -11px;
+}
+
+.ticket-card::after {
+  bottom: -11px;
+}
+
+.ticket-main {
+  display: grid;
+  align-content: center;
+  padding: 20px 24px;
+}
+
+.ticket-card dt {
+  color: rgba(255, 255, 255, .62);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ticket-card span {
+  width: fit-content;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(255, 255, 255, .12);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.ticket-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ticket-card .ticket-status {
+  border-color: rgba(248, 113, 113, .5);
+  color: #fecaca;
+  background: rgba(185, 28, 28, .35);
+}
+
+.ticket-card.is-cancelled h2,
+.ticket-card.is-cancelled .ticket-summary {
+  opacity: .55;
+}
+
+.ticket-card.is-cancelled h2 {
+  text-decoration: line-through;
+}
+
+.ticket-card h2,
+.ticket-card p,
+.ticket-summary {
+  margin: 0;
+}
+
+.ticket-card h2 {
+  margin-top: 12px;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.ticket-card p {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, .72);
+}
+
+.ticket-summary {
+  display: grid;
+  align-content: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px 28px;
+  border-left: 1px dashed rgba(255, 255, 255, .24);
+  background: rgba(0, 0, 0, .18);
+}
+
+.ticket-card dd {
+  margin: 5px 0 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: clamp(20px, 2vw, 24px);
+  font-weight: 800;
+}
+

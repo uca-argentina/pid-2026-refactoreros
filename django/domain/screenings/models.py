@@ -29,12 +29,12 @@ class Screening(models.Model):
 
     movie = models.ForeignKey(
         Movie,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="screenings",
         verbose_name="Pelicula",
         db_column="pelicula_id",
     )
-    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="screenings", db_column="sala_id")
+    room = models.ForeignKey(Room, on_delete=models.PROTECT, related_name="screenings", db_column="sala_id")
     starts_at = models.DateTimeField(db_column="fecha_horario")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT, db_column="estado")
     ticket_price = models.DecimalField(max_digits=8, decimal_places=2, db_column="precio_entrada")
