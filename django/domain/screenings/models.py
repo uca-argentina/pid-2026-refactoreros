@@ -46,6 +46,7 @@ class Screening(models.Model):
     room_layout_snapshot = models.JSONField(default=list, blank=True, db_column="sala_configuracion_snapshot")
     capacity_snapshot = models.PositiveIntegerField(default=0, db_column="capacidad_snapshot")
     language = models.CharField(max_length=20, choices=Language.choices, default=Language.SUBTITLED, db_column="idioma")
+    warning = models.CharField(max_length=80, blank=True, db_column="aviso", verbose_name="Aviso para el público")
 
     class Meta:
         verbose_name = "función"

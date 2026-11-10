@@ -25,6 +25,7 @@
           <th>Clasificación</th>
           <th>Duración</th>
           <th>Acciones</th>
+          <th>Estreno</th>
         </tr>
       </thead>
       <tbody>
@@ -63,9 +64,10 @@
                 </button>
               </form>
             </td>
+            <td data-label="Estreno">{% if movie.is_featured %} {{ movie.release_date }} {% else %} {{ "-" }} {% endif %}</td>
           </tr>
         {% empty %}
-          <tr><td colspan="6">No se encontró ninguna película.</td></tr>
+          <tr><td colspan="7">No se encontró ninguna película.</td></tr>
         {% endfor %}
       </tbody>
     </table>

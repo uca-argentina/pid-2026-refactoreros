@@ -144,6 +144,14 @@ class CandyCombo(models.Model):
     def saving(self):
         return max(self.components_price - self.price, Decimal("0"))
 
+    @property
+    def is_low_stock(self):
+        return 0 < self.available_stock <= CinemaSettings.current().candy_low_stock_threshold
+    
+    @property
+    def get_low_stock_number(self):
+        return CinemaSettings.current().candy_low_stock_threshold
+
 
 class CandyComboItem(models.Model):
     combo = models.ForeignKey(

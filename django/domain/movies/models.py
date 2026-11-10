@@ -1,6 +1,8 @@
 from django.db import models
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.utils import timezone
+from datetime import timedelta
 
 class Movie(models.Model):
     class Rating(models.TextChoices):
@@ -35,6 +37,7 @@ class Movie(models.Model):
     image = models.ImageField(upload_to="peliculas/", verbose_name="Imagen del cartel", db_column="imagen")
     trailer_url = models.URLField(blank=True, verbose_name="Trailer", help_text="Ingrese el link de youtube (opcional)", db_column="trailer")
     is_featured = models.BooleanField(default=False, db_column="destacada")
+    release_date = models.DateField(null=True, db_column="fechaDeEstreno")
 
     class Meta:
         verbose_name = "Película"
@@ -50,6 +53,13 @@ class Movie(models.Model):
         if hours:
             return f"{hours} h"
         return f"{minutes} min"
+
+    @property
+    def check_release_date(self):
+        today = timezone.localdate()
+        lastWeek = timezone.localdate() - timedelta(days=6)
+
+        return today >= self.release_date and self.release_date >= lastWeek
 
     def __str__(self):
         return self.title

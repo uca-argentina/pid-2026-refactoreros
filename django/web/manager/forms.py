@@ -282,9 +282,11 @@ class MovieForm(forms.ModelForm):
             "duration_minutes",
             "image",
             "trailer_url",
+            "release_date",
         )
         widgets = {
             "image": forms.ClearableFileInput(attrs={"accept": "image/*"}),
+            "release_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
         labels = {
             "title": "Título",
@@ -294,6 +296,7 @@ class MovieForm(forms.ModelForm):
             "duration_minutes": "Duración en minutos",
             "image": "Imagen del cartel",
             "trailer_url": "Trailer",
+            "release_date": "Fecha de estreno",
         }
         help_texts = {
             "image": f"Peso maximo: {MAX_MOVIE_IMAGE_SIZE_MB} MB.",
@@ -544,12 +547,13 @@ class ScreeningForm(forms.ModelForm):
     )
     class Meta:
         model = Screening
-        fields = ("movie", "room", "starts_at", "language")
+        fields = ("movie", "room", "starts_at", "language", "warning")
         labels = {
             "movie": "Película",
             "room": "Sala",
             "starts_at": "Fecha y horario",
             "language": "Idioma",
+            "warning": "Aviso",
         }
 
     def __init__(self, *args, **kwargs):

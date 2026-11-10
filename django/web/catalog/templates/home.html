@@ -71,7 +71,12 @@
               {% endwith %}
             {% endif %}
             {% if movie.is_featured %}
-              <span class="movie-card-featured"><i data-lucide="star" aria-hidden="true"></i> Destacada</span>
+              <span class="movie-card-featured"><i data-lucide="star" aria-hidden="true"></i>Destacada</span>
+            {% endif %}
+            {% if movie.release_date %}
+              {% if movie.check_release_date %}
+                <span><i aria-hidden="true"></i>🎬Estreno</span>
+              {% endif %}
             {% endif %}
             <div class="movie-card-body">
               <h2>{{ movie.title }}</h2>

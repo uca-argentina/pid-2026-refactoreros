@@ -1015,10 +1015,16 @@ body {
 }
 
 .candy-last-units {
-  color: rgba(251, 255, 0, 0.6);
+  color: rgb(251, 255, 0);
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
+  flex-basis: 100%;
+  order: -1;
+}
+
+.candy-item-footer {
+  flex-wrap: wrap;      /* permite que los elementos bajen a otra línea */
 }
 
 .client-seat-map {

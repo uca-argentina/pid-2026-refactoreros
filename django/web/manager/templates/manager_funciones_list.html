@@ -89,6 +89,7 @@
           <th>Disponibles</th>
           <th>Acciones</th>
           <th>Idioma</th>
+          <th>Aviso</th>
         </tr>
       </thead>
       <tbody>
@@ -194,6 +195,7 @@
               {% endwith %}
             </td>
             <td>{{ screening.get_language_display }}</td>
+            <td>{% if screening.warning %} <em>⚠️</em>{% endif %}</td>
           </tr>
         {% empty %}
           <tr><td colspan="9">No hay funciones cargadas.</td></tr>

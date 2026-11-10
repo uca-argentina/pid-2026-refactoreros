@@ -67,7 +67,7 @@
                       <a class="screening-time-chip" href="{% url 'seat_selection' item.pk %}" title="{{ item.room.name }} - desde ${{ item.current_price_from|default:item.price_from }}{% if item.has_promotion %} - Promoción disponible: {{ item.promotion_summary }}{% endif %}">
                         <span>{{ item.starts_at|date:"H:i" }}</span>
                         <small>
-                          {{ item.room.name }} · ${{ item.current_price_from|default:item.price_from }} · {{ item.get_language_display }}{% if item.has_promotion %} · <em class="screening-promotion-badge" aria-label="Promoción disponible">Promo</em>{% endif %}
+                          {{ item.room.name }} · ${{ item.current_price_from|default:item.price_from }} · {{ item.get_language_display }} · {{ item.warning }}{% if item.has_promotion %} · <em class="screening-promotion-badge" aria-label="Promoción disponible">Promo</em>{% endif %}
                         </small>
                       </a>
                     {% else %}
