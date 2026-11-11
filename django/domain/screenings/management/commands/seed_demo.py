@@ -18,7 +18,7 @@ from decimal import Decimal
 from io import BytesIO
 
 from django.core.files.base import ContentFile
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 from PIL import Image, ImageDraw
@@ -117,6 +117,7 @@ class Command(BaseCommand):
     help = "Carga salas, películas reales y funciones publicadas de demo para desarrollo local."
 
     def add_arguments(self, parser):
+        parser.add_argument("--offline", action="store_true", help="Genera pósters locales sin acceder a internet.")
         parser.add_argument("--days", type=int, default=7, help="Cantidad de días con funciones (default 7).")
         parser.add_argument(
             "--refresh-posters",
@@ -124,7 +125,10 @@ class Command(BaseCommand):
             help="Reintenta descargar los pósters de las películas que quedaron con póster generado.",
         )
 
-    def handle(self, *args, days, refresh_posters, **options):
+    def handle(self, *args, days, refresh_posters, offline=False, **options):
+        if not 1 <= days <= 30:
+            raise CommandError("--days debe estar entre 1 y 30.")
+        self.offline = offline
         rooms = self.seed_rooms()
         movies = self.seed_movies(refresh_posters)
         with transaction.atomic():
@@ -173,7 +177,7 @@ class Command(BaseCommand):
                 if is_new:
                     movie = Movie(title=title, synopsis=synopsis, genre=genre, rating=rating, duration_minutes=duration)
                 slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
-                poster = fetch_wikipedia_poster(article)
+                poster = None if self.offline else fetch_wikipedia_poster(article)
                 filename = f"{slug}.jpg"
                 if poster is None:
                     if not is_new:
@@ -189,7 +193,8 @@ class Command(BaseCommand):
                     movie.image.delete(save=False)
                 movie.image.save(filename, poster, save=False)
                 movie.save()
-                time_module.sleep(2)
+                if not self.offline:
+                    time_module.sleep(2)
             movies.append(movie)
         self.stdout.write(f"Películas: {len(movies)}")
         return movies

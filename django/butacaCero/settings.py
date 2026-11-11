@@ -18,7 +18,6 @@ env = environ.Env(
     DJANGO_DEBUG=(bool, False),
     DJANGO_ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
     DJANGO_CSRF_TRUSTED_ORIGINS=(list, []),
-    DJANGO_EMAIL_BACKEND=(str,"django.core.mail.backends.smtp.EmailBackend"),
     DJANGO_EMAIL_HOST=(str, "localhost"),
     DJANGO_EMAIL_PORT=(int, 25),
     DJANGO_EMAIL_HOST_USER=(str, ""),
@@ -213,7 +212,10 @@ LOGOUT_REDIRECT_URL = "login"
 
 
 DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL")
-EMAIL_BACKEND = env("DJANGO_EMAIL_BACKEND")
+EMAIL_BACKEND = env("DJANGO_EMAIL_BACKEND", default=(
+    "django.core.mail.backends.console.EmailBackend" if DEBUG
+    else "django.core.mail.backends.smtp.EmailBackend"
+))
 EMAIL_HOST = env("DJANGO_EMAIL_HOST")
 EMAIL_PORT = env.int("DJANGO_EMAIL_PORT")
 EMAIL_HOST_USER = env("DJANGO_EMAIL_HOST_USER")

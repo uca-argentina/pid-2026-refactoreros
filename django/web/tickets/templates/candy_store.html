@@ -1,8 +1,10 @@
+{% extends "client_base.html" %}
 {% load static %}
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Candy | {{ cinema.name }}</title>
-<link rel="icon" href="{% static 'favicon.ico' %}"><link rel="stylesheet" href="{% static 'catalog.css' %}"><link rel="stylesheet" href="{% static 'admission_tickets.css' %}"><link rel="stylesheet" href="{% static 'games/games.css' %}"><link rel="stylesheet" href="{% static 'candy_store.css' %}">
-<script src="{% static 'candy_picker.js' %}" defer></script><script src="{% static 'candy_store.js' %}" defer></script></head>
-<body class="client-page">{% include "_client_header.html" %}
+{% block title %}Candy | {{ cinema.name }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'admission_tickets.css' %}"><link rel="stylesheet" href="{% static 'games/games.css' %}"><link rel="stylesheet" href="{% static 'candy_store.css' %}">
+<script src="{% static 'candy_picker.js' %}" defer></script><script type="module" src="{% static 'candy_store.js' %}"></script>{% endblock %}
+{% block body_class %}client-page{% endblock %}
+{% block content %}
 <main class="client-main candy-store-main">
   <header class="candy-store-heading"><h1>Candy bar</h1>{% if orders %}<a class="prizes-play-chip" href="#mis-retiros"><i data-lucide="shopping-bag" aria-hidden="true"></i>Mis retiros ({{ orders.paginator.count }})</a>{% endif %}</header>
   {% for message in messages %}<p class="candy-payment-notice" role="status">{{ message }}</p>{% endfor %}
@@ -19,4 +21,8 @@
   {% else %}<div class="prizes-empty"><i data-lucide="popcorn" aria-hidden="true"></i><h2>Estamos preparando el Candy</h2><p>Volvé pronto para ver los productos disponibles.</p></div>{% endif %}
   {% include "_candy_order_list.html" with order_detail_url="candy_order_detail" %}
   {% if orders.has_other_pages %}<nav class="pagination" aria-label="Pedidos de Candy">{% if orders.has_previous %}<a href="?page={{ orders.previous_page_number }}#mis-retiros">Anterior</a>{% endif %}<span>{{ orders.number }} / {{ orders.paginator.num_pages }}</span>{% if orders.has_next %}<a href="?page={{ orders.next_page_number }}#mis-retiros">Siguiente</a>{% endif %}</nav>{% endif %}
-</main><script src="https://unpkg.com/lucide@latest"></script><script>if(window.lucide)lucide.createIcons();</script></body></html>
+</main>
+{% endblock %}
+{% block extra_scripts %}
+<script>if(window.lucide)lucide.createIcons();</script>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% load l10n %}
+      {% if screening.seat_map %}
+        <div class="seat-reference-line" aria-label="Referencias de asientos">
+          {% for tier in screening.seat_map.legend %}
+            <span>
+              {% if tier.icon_url %}
+                <img class="seat-reference-icon" src="{{ tier.icon_url }}" alt="">
+              {% else %}
+                <i style="--seat-color: {{ tier.color }};"></i>
+              {% endif %}
+              {{ tier.type }}
+              {% if tier.promotion %}
+                <del>${{ tier.base_price }}</del> <strong>${{ tier.price }}</strong> <small>{{ tier.promotion }}</small>
+              {% else %}
+                ${{ tier.price }}
+              {% endif %}
+            </span>
+            {% if not forloop.last %}<b>|</b>{% endif %}
+          {% endfor %}
+          <b>|</b>
+          <span><i class="legend-selected"></i>Seleccionado</span>
+          <b>|</b>
+          <span><i class="legend-unavailable"></i>No disponible</span>
+        </div>
+      {% endif %}

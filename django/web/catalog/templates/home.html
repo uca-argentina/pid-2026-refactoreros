@@ -1,18 +1,10 @@
+{% extends "client_base.html" %}
 {% load static %}
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ cinema.name|default:"Butaca Cero" }} | Cartelera</title>
-  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
-  <link rel="icon" href="{% static 'favicon-96x96.png' %}" type="image/png">
-  <link rel="stylesheet" href="{% static 'catalog.css' %}">
-</head>
-<body class="client-page">
-  {% include "_client_header.html" %}
-
-  <main class="client-main">
+{% block title %}{{ cinema.name|default:"Butaca Cero" }} | Cartelera{% endblock %}
+{% block extra_head %}{% endblock %}
+{% block body_class %}client-page{% endblock %}
+{% block content %}
+<main class="client-main">
     {% if movies %}
       {% if promotions %}
         <section class="promo-showcase" aria-labelledby="promo-showcase-title" data-promo-carousel>
@@ -78,12 +70,7 @@
     {% endif %}
   </main>
   {% include "games/modal.html" %}
-  <script src="{% static 'promo_carousel.js' %}" defer></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script>
-    if (window.lucide) {
-      lucide.createIcons();
-    }
-  </script>
-</body>
-</html>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'promo_carousel.js' %}" defer></script>
+{% endblock %}

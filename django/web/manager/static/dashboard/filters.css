@@ -1,0 +1,345 @@
+:root {
+  --viz-1: #2fa89b;
+  --viz-1-soft: color-mix(in oklab, var(--viz-1) 26%, var(--surface));
+  --viz-empty: var(--surface-soft);
+  --viz-grid: var(--line);
+  --viz-baseline: var(--border);
+}
+
+:root[data-theme="light"] {
+  --viz-1: #2d7fbf;
+}
+
+
+#dashboard-content {
+  position: relative;
+  transition: opacity .18s ease;
+}
+
+#dashboard-content.is-updating {
+  opacity: .65;
+  pointer-events: none;
+}
+
+.dashboard-heading p {
+  margin: 8px 0 0;
+  font-weight: 400;
+  font-size: 14px;
+}
+
+.dashboard-explorer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: linear-gradient(110deg, var(--accent-soft), var(--surface) 75%);
+}
+
+.dashboard-explorer.has-filters {
+  border-color: color-mix(in oklab, var(--accent) 55%, var(--border));
+}
+
+.explorer-heading {
+  display: flex;
+  flex: 1 1 280px;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.explorer-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, var(--border));
+  border-radius: 10px;
+  color: var(--accent);
+  background: var(--surface);
+}
+
+.explorer-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.explorer-heading strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.explorer-heading p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.filter-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 5px;
+  border-radius: 6px;
+  color: var(--brand-ink);
+  background: var(--brand);
+  font-size: 11px;
+}
+
+.dashboard-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid var(--brand);
+  border-radius: 8px;
+  color: var(--brand-ink);
+  background: var(--brand);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background .15s ease, transform .15s ease;
+}
+
+.dashboard-clear:hover {
+  background: var(--brand-strong);
+  transform: translateY(-1px);
+}
+
+.dashboard-clear svg,
+.dashboard-filter-chip svg {
+  width: 15px;
+  height: 15px;
+}
+
+.dashboard-filter-chips {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in oklab, var(--accent) 20%, var(--line));
+}
+
+.dashboard-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--border));
+  border-radius: 7px;
+  color: var(--ink);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.dashboard-filter-chip > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-filter-chip:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dashboard-filter-chip > svg:first-child {
+  color: var(--accent);
+}
+
+.filter-chip-label,
+.filter-chip-remove,
+.filter-scope-note {
+  color: var(--muted);
+}
+
+.filter-scope-note {
+  margin-left: auto;
+  font-size: 11px;
+}
+
+.dashboard-no-results {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 16px 20px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  font-size: 14px;
+}
+
+.dashboard-no-results > svg {
+  width: 22px;
+  color: var(--muted);
+}
+
+.dashboard-no-results p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.viz-interaction-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 7px;
+  border-radius: 5px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.viz-interaction-hint svg {
+  width: 12px;
+  height: 12px;
+}
+
+.dashboard-clear:focus-visible,
+.dashboard-filter-chip:focus-visible,
+.bar-select:focus-visible,
+.period-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+
+.period-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 18px;
+  margin-bottom: 18px;
+}
+
+.period-options {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--surface);
+}
+
+.period-option {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 2px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.period-option:hover {
+  color: var(--ink);
+  background: var(--row-hover);
+}
+
+.period-option.is-active {
+  color: var(--brand-ink);
+  background: var(--brand);
+}
+
+.period-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.period-range svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dashboard-date-filter {
+  display: inline-flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dashboard-date-filter label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dashboard-date-filter input {
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dashboard-date-filter button,
+.dashboard-date-filter a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.dashboard-date-filter button {
+  border-color: var(--brand);
+  color: var(--brand-ink);
+  background: var(--brand);
+  cursor: pointer;
+}
+
+.dashboard-date-filter a:hover {
+  background: var(--row-hover);
+}
+
+.dashboard-date-filter-error {
+  width: 100%;
+  margin: -4px 0 0;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+

@@ -776,7 +776,7 @@ class ManagerFuncionesTests(TestCase):
         screening.refresh_from_db()
         self.assertEqual(screening.status, Screening.Status.CANCELED)
 
-    @patch("domain.tickets.services.Thread")
+    @patch("domain.tickets.services.refunds.Thread")
     def test_cancelacion_encola_correos_fuera_del_request(self, thread):
         screening = self.crear_funcion(Screening.Status.PUBLISHED)
         self.vender_entradas(screening)

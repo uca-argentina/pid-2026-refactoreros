@@ -1,17 +1,13 @@
+{% extends "client_base.html" %}
 {% load static %}
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ cinema.name|default:"Butaca Cero" }} | Acceso</title>
-  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
-  <link rel="icon" href="{% static 'favicon-96x96.png' %}" type="image/png">
-  <link rel="stylesheet" href="{% static 'auth.css' %}">
-  <script src="{% static 'auth.js' %}" defer></script>
-</head>
-<body>
-  <main class="auth-page">
+{% block title %}{{ cinema.name|default:"Butaca Cero" }} | Acceso{% endblock %}
+{% block styles %}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'auth.css' %}">
+  <script src="{% static 'auth.js' %}" defer></script>{% endblock %}
+{% block body_class %}{% endblock %}
+{% block header %}{% endblock %}
+{% block content %}
+<main class="auth-page">
     <section class="auth-shell">
       <aside class="brand-panel"{% if cinema.login_image %} style="background-image: linear-gradient(180deg, rgba(8, 12, 18, .18), rgba(8, 12, 18, .86)), url('{{ cinema.login_image.url }}');"{% endif %}>
         <div class="brand-lockup brand-lockup-light">
@@ -125,6 +121,4 @@
       </section>
     </section>
   </main>
-</body>
-</html>
-
+{% endblock %}

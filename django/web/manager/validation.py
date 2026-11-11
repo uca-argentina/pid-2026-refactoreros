@@ -1,9 +1,8 @@
 import re
 from datetime import timedelta
 
-from django import forms
-from django.contrib.auth import get_user_model
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.shortcuts import redirect
@@ -12,10 +11,13 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.views.generic import FormView
-
+from domain.rooms.layout import summarize_seats
 from domain.tickets.models import AdmissionValidation
 from domain.tickets.services import inspect_ticket, undo_ticket_validation, validate_ticket
-from .views import StaffAccessMixin
+
+from django import forms
+
+from .access import StaffAccessMixin
 
 
 def compact_customer_name(customer):
@@ -29,36 +31,23 @@ def compact_customer_name(customer):
 def customer_display_names(user_ids):
     return {
         customer["pk"]: compact_customer_name(customer)
-        for customer in get_user_model().objects.filter(pk__in=user_ids).values(
-            "pk", "first_name", "last_name", "username"
-        )
+        for customer in get_user_model()
+        .objects.filter(pk__in=user_ids)
+        .values("pk", "first_name", "last_name", "username")
     }
 
 
 def confirmation_seats(seat_labels):
-    grouped = {}
-    fallback = []
-    for label in seat_labels:
-        match = re.fullmatch(r"(\d+)([A-Z]+)", label)
-        if not match:
-            fallback.append(label)
-            continue
-        row, column = match.groups()
-        grouped.setdefault(row, []).append(column)
-
-    groups = []
-    for row in sorted(grouped, key=int):
-        columns = sorted(grouped[row])
-        columns_text = columns[0] if len(columns) == 1 else f"{', '.join(columns[:-1])} y {columns[-1]}"
-        seat_word = "asiento" if len(columns) == 1 else "asientos"
-        groups.append(f"fila {row}, {seat_word} {columns_text}")
-    return "; ".join(groups + fallback)
+    return summarize_seats(seat_labels)
 
 
 class TicketValidationForm(forms.Form):
     code = forms.CharField(
-        label="Código de compra", max_length=36,
-        widget=forms.TextInput(attrs={"autocomplete": "off", "autocapitalize": "none", "spellcheck": "false"}),
+        label="Código de compra",
+        max_length=36,
+        widget=forms.TextInput(
+            attrs={"autocomplete": "off", "autocapitalize": "none", "spellcheck": "false"}
+        ),
     )
 
 
@@ -81,10 +70,15 @@ class TicketValidationView(StaffAccessMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["section"] = "Validar entradas"
-        history = AdmissionValidation.objects.filter(
-            operator=self.request.user,
-            created_at__gte=timezone.now() - timedelta(hours=24),
-        ).select_related("purchase__screening__movie").prefetch_related("tickets").order_by("-created_at")
+        history = (
+            AdmissionValidation.objects.filter(
+                operator=self.request.user,
+                created_at__gte=timezone.now() - timedelta(hours=24),
+            )
+            .select_related("purchase__screening__movie")
+            .prefetch_related("tickets")
+            .order_by("-created_at")
+        )
         history_page = Paginator(history, self.history_page_size).get_page(
             self.request.GET.get("page")
         )
@@ -103,7 +97,10 @@ class TicketValidationView(StaffAccessMixin, FormView):
             except ValidationError as error:
                 messages.error(request, error.message)
             else:
-                messages.success(request, f"Se deshizo la validación de {len(tickets)} butaca{'s' if len(tickets) != 1 else ''}.")
+                messages.success(
+                    request,
+                    f"Se deshizo la validación de {len(tickets)} butaca{'s' if len(tickets) != 1 else ''}.",
+                )
             return redirect(reverse("manager:validar_entradas"))
         return super().post(request, *args, **kwargs)
 
@@ -113,9 +110,13 @@ class TicketValidationView(StaffAccessMixin, FormView):
         try:
             if action == "preview":
                 purchase = inspect_ticket(code, self.request.user)
-                customer = get_user_model().objects.filter(pk=purchase.user_id).values(
-                    "first_name", "last_name", "username"
-                ).first() or {}
+                customer = (
+                    get_user_model()
+                    .objects.filter(pk=purchase.user_id)
+                    .values("first_name", "last_name", "username")
+                    .first()
+                    or {}
+                )
                 purchase.customer_display_name = compact_customer_name(customer)
                 if purchase.remaining_quantity == 1:
                     remaining_ticket = next(
@@ -143,12 +144,11 @@ class TicketValidationView(StaffAccessMixin, FormView):
         if remaining:
             remaining_message = (
                 "Te queda 1 butaca para entrar a la sala."
-                if remaining == 1 else f"Te quedan {remaining} butacas para entrar a la sala."
+                if remaining == 1
+                else f"Te quedan {remaining} butacas para entrar a la sala."
             )
-            message = (
-                f"{purchase.screening.room.name}. Tenés {seat_phrase}. {remaining_message} {farewell}"
-            )
+            message = f"{purchase.screening.room.name}. Tenés {seat_phrase}. {remaining_message} {farewell}"
         else:
             message = f"{purchase.screening.room.name}. Tenés {seat_phrase}. {farewell}"
         messages.success(self.request, message)
-        return redirect(reverse('manager:validar_entradas'))
+        return redirect(reverse("manager:validar_entradas"))

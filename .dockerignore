@@ -1,4 +1,7 @@
 .git
+.env
+backups
+artifacts
 
 .env.*
 !.env.example
