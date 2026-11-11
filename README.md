@@ -24,6 +24,153 @@ docker compose exec web python manage.py seed_practice
 Usuarios: `gerente@local.test`, `operador@local.test` y `cliente@local.test`.
 Contraseña inicial: `PracticaLocal2026!`. No reemplaza contraseñas existentes.
 
+## Construcción completa, respaldo y recuperación sin internet
+
+Los siguientes procedimientos se ejecutan en PowerShell y requieren Docker
+Desktop iniciado con contenedores Linux. Se utiliza el nombre de carpeta
+`pid-2026-refactoreros` y un respaldo externo en `../butaca-respaldo`.
+Si el repositorio tiene otro nombre, las rutas deben ajustarse manteniendo ese
+mismo nombre durante la recuperación: Compose lo utiliza para nombrar la imagen.
+No se debe utilizar un nombre de proyecto Compose distinto entre estos pasos.
+
+### 1. Construir desde cero con internet
+
+Desde la raíz del repositorio, crear `.env` solamente si todavía no existe:
+
+```powershell
+if (-not (Test-Path -LiteralPath .env)) {
+    Copy-Item -LiteralPath .env.example -Destination .env
+}
+```
+
+Antes de continuar, configurar los valores `change-me...` de `.env`.
+**El siguiente `down --volumes` elimina la base local existente.** Si contiene
+datos necesarios, se debe generar un respaldo antes de ejecutar ese comando.
+La reconstrucción no elimina `django/media` del disco.
+
+```powershell
+# Eliminar los contenedores y la base local anterior.
+docker compose down --volumes
+
+# Reconstruir sin reutilizar capas de instalación y actualizar las imágenes base.
+docker compose build --no-cache --pull web
+docker compose pull db
+
+# Levantar los servicios y generar datos de práctica.
+docker compose up -d --wait --no-build
+.\scripts\local.ps1 Seed
+```
+
+La aplicación queda disponible en http://localhost:8000, salvo que `DJANGO_PORT`
+indique otro puerto. Las migraciones se aplican automáticamente al iniciar.
+
+### Guardar un punto de recuperación
+
+Una vez comprobado el funcionamiento, guardar las imágenes construidas y una
+copia del proyecto fuera de su carpeta. La carpeta `../butaca-respaldo` debe ser
+nueva para evitar mezclar respaldos de distintos estados.
+
+```powershell
+New-Item -ItemType Directory -Path ..\butaca-respaldo -ErrorAction Stop
+
+# Guardar las imágenes de Django y PostgreSQL con sus nombres actuales.
+$imagenesButaca = docker compose config --images
+docker image save -o ..\butaca-respaldo\imagenes.tar @imagenesButaca
+
+# Detener la aplicación para evitar escrituras durante la copia de datos y media.
+docker compose stop web
+.\scripts\local.ps1 Backup -BackupFile backups/checkpoint.dump
+
+# Copiar código, historial Git, .env, archivos subidos y respaldos de la base.
+robocopy . ..\butaca-respaldo\repo /E /XJ /XD artifacts .venv venv env env_pid __pycache__ staticfiles
+if ($LASTEXITCODE -ge 8) { throw 'No se pudo completar la copia del proyecto.' }
+
+# Volver a iniciar la aplicación después de completar el respaldo.
+docker compose up -d --wait --no-build --pull never
+```
+
+Se debe comprobar que `imagenes.tar`, `repo/.env` y
+`repo/backups/checkpoint.dump` existan en el respaldo. Si hay archivos subidos,
+también debe existir `repo/django/media`. El respaldo debe conservarse intacto:
+contiene secretos y datos privados, por lo que no debe publicarse en GitHub.
+Los códigos de salida de Robocopy entre 0 y 7 no indican un fallo de copia.
+Si falla cualquier paso, se debe resolver el error antes de continuar con el
+borrado o considerar el respaldo completo.
+
+### 2. Eliminar el entorno y recuperar el código respaldado
+
+Desde la raíz del proyecto, el siguiente comando elimina sus contenedores,
+volúmenes e imágenes locales sin etiqueta personalizada. **Se pierde la base
+local actual.** No se eliminan los archivos del repositorio ni el respaldo externo.
+
+```powershell
+docker compose down --volumes --rmi local
+```
+
+Si el código también quedó dañado, se puede apartar la carpeta actual y recuperar
+la copia guardada. `pid-2026-refactoreros-roto` no debe existir previamente.
+Estos comandos conservan la carpeta dañada para permitir rescatar archivos.
+
+```powershell
+cd ..
+
+Rename-Item -LiteralPath pid-2026-refactoreros `
+    -NewName pid-2026-refactoreros-roto -ErrorAction Stop
+
+Copy-Item -LiteralPath .\butaca-respaldo\repo `
+    -Destination .\pid-2026-refactoreros -Recurse -ErrorAction Stop
+
+cd .\pid-2026-refactoreros
+```
+
+Si `docker-compose.yml` o `.env` quedaron dañados, se deben recuperar esos archivos
+desde el respaldo antes de ejecutar `down`, conservando el nombre del proyecto
+Compose original para que se elimine el entorno correcto.
+
+### 3. Recuperar el entorno sin internet
+
+Esta recuperación **carga imágenes ya construidas; no reconstruye el Dockerfile**.
+Una reconstrucción sin caché necesita descargar dependencias de Python y no puede
+completarse sin internet con el Dockerfile actual.
+
+Con Docker Desktop iniciado, desde la raíz del repositorio recuperado:
+
+```powershell
+docker image load -i ..\butaca-respaldo\imagenes.tar
+docker compose up -d --wait --no-build --pull never
+```
+
+Para utilizar una base recién creada con datos de práctica:
+
+```powershell
+.\scripts\local.ps1 Seed
+```
+
+La base será nueva si previamente se ejecutó `down --volumes`; los archivos
+subidos recuperados en `django/media` se conservan. Para restaurar los datos
+originales **en lugar de ejecutar `Seed`**:
+
+```powershell
+.\scripts\local.ps1 Restore -BackupFile backups/checkpoint.dump -DatabaseName butacacero_recuperada
+```
+
+Después, cambiar `POSTGRES_DB` en `.env` a `butacacero_recuperada` y ejecutar:
+
+```powershell
+docker compose up -d --wait --no-build --pull never
+```
+
+`Restore` requiere un nombre de base nuevo y no sobrescribe bases existentes.
+No se debe ejecutar `build` ni `Prepare` durante la recuperación sin conexión.
+Para trasladar el respaldo a otra notebook, se debe copiar toda la carpeta
+`butaca-respaldo`, utilizar el mismo nombre de carpeta del repositorio y contar
+con Docker Desktop previamente instalado y operativo. Ambos equipos deben usar
+una arquitectura compatible, por ejemplo x64.
+La configuración offline debe utilizar archivos locales y correo en consola;
+servicios externos configurados por separado, como Cloudinary o SMTP, requieren
+conexión. La imagen Docker no incluye los datos de PostgreSQL del volumen ni los
+archivos montados desde el repositorio: por eso se respaldan por separado.
+
 ## Comandos básicos
 
 ```powershell
