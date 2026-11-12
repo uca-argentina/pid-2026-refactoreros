@@ -108,3 +108,4 @@ def screening_reprogram_view(request, purchase_pk, screening_pk):
         message += f" La nueva función cuesta ${-diff:.2f} menos."
     messages.success(request, message)
     return redirect("my_tickets")
+

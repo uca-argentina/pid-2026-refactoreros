@@ -1,0 +1,24 @@
+{% extends "client_base.html" %}
+{% load static %}
+{% block title %}Entrada | {{ cinema.name|default:"Butaca Cero" }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'admission_tickets.css' %}">{% endblock %}
+{% block body_class %}client-page{% endblock %}
+{% block content %}
+<main class="client-main">
+  <form method="post" action="{% url 'ticket_transfer_confirm' purchase.pk%}">
+    {% csrf_token %}
+    <label>
+      <span>Email de usuario a transferir</span>
+      <input name="email_transferee">
+    </label>
+
+    <button type="submit">Enviar</button>
+
+  </form>    
+  </main>
+
+
+
+{% endblock %}
+{% block extra_scripts %}
+{% endblock %}

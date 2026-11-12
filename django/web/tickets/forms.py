@@ -1,6 +1,7 @@
 import json
 
 from django import forms
+from domain.users.models import Customer
 
 
 class CandyPurchaseForm(forms.Form):
@@ -39,3 +40,16 @@ class TicketReprogramForm(TicketPurchaseForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields.pop("candy_items", None)
+
+
+class TicketTransferForm(forms.Form):
+    selected_user = forms.CharField(required=False)
+
+    def clean_transferee_user(self):
+            transferee_user = self.cleaned_data.get("email_transferee")
+            user = Customer.objects.filter(email=transferee_user)
+            if user != transferee_user.email:
+                pass
+
+
+

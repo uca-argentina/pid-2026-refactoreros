@@ -25,3 +25,5 @@ from web.tickets.views.reservations import (
     seat_reservation_status_view as seat_reservation_status_view,
 )
 from web.tickets.views.reservations import seat_reservation_view as seat_reservation_view
+from web.tickets.views.transfer import ticket_transfer_view as ticket_transfer_view
+from web.tickets.views.transfer import ticket_transfer_view_confirm as ticket_transfer_view_confirm
