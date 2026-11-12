@@ -32,7 +32,12 @@
         <p class="ticket-code"><span>Código de reserva</span><strong>{{ purchase.validation_code }}</strong></p>
       {% endif %}
       {% if available %}
-        <p class="ticket-sharing-notice"><strong>¿Necesitás compartir tu entrada?</strong> Podés compartir el QR o el código de reserva, pero tené en cuenta que, al hacerlo, otra persona podría usarla antes que vos.</p>
+        <form method="post" class="admission-selection">
+          {% csrf_token %}
+          <input type="hidden" name="code" value="{{ order.pickup_code }}">
+          <input type="hidden" name="action" value="deliver">
+          <div class="form-actions"><button type="button">Entregar candy · {{ order.item_count }} producto{{ order.item_count|pluralize }}</button></div>
+        </form>
       {% elif purchase.refund %}
         <p>{{ purchase.refund.notice }}</p>
       {% elif is_expired %}

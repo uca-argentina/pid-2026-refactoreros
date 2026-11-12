@@ -32,6 +32,7 @@ class Movie(models.Model):
         db_column="duracion_minutos",
     )
     image = models.ImageField(upload_to="peliculas/", verbose_name="Imagen del cartel", db_column="imagen")
+    trailer_url = models.URLField(blank=True, verbose_name="Trailer URL", db_column="trailer")
 
     class Meta:
         verbose_name = "Película"
