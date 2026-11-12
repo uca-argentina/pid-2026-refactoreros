@@ -68,6 +68,12 @@
         <p>Disponible hasta {{ reprogram_deadline|date:"d/m/Y H:i" }}.</p>
         <a class="ticket-reprogram-screening" href="{% url 'screening_reprogram' purchase.pk %}"><span>Cambiar función</span></a>
       {% endif %}
+      <p>¿Querés transferir tu entrada a otro usuario?</p>
+        <form method="post" action="">
+          {% csrf_token %}
+          <textarea name="new_email" style="width:100%" maxlength=50>{{ current_reservation_email }}</textarea>
+          <button type="submit">Transferir entrada</button>
+        </form>
     </article>
   </main>
 

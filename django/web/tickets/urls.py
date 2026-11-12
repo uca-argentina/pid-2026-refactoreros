@@ -20,4 +20,6 @@ urlpatterns = [
     path("funciones/<int:pk>/asientos/estado/", views.seat_reservation_status_view, name="seat_reservation_status"),
     path("funciones/<int:pk>/comprar/", views.ticket_purchase_view, name="ticket_purchase"),
     path("mis-entradas/", views.my_tickets_view, name="my_tickets"),
+    
+    path("transferencia/<int:purchase_pk>/", views.movie_ticket_transfer, name="ticket_transfer"),
 ]

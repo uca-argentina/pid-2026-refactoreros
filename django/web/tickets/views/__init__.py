@@ -12,6 +12,7 @@ from web.tickets.views.purchases import my_tickets_view as my_tickets_view
 from web.tickets.views.purchases import notifications_view as notifications_view
 from web.tickets.views.purchases import ticket_admission_status_view as ticket_admission_status_view
 from web.tickets.views.purchases import ticket_detail_view as ticket_detail_view
+from web.tickets.views.purchases import movie_ticket_transfer as movie_ticket_transfer
 from web.tickets.views.reprogramming import screening_reprogram_view as screening_reprogram_view
 from web.tickets.views.reprogramming import (
     seat_reprogram_selection_view as seat_reprogram_selection_view,

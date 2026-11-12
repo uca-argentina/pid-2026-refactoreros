@@ -7,13 +7,15 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 from domain.cinema.models import CinemaSettings
 from domain.rooms.layout import summarize_seats
 from domain.screenings.models import Screening
-from domain.tickets.models import PurchaseRefund, TicketPurchase
+from domain.tickets.models import PurchaseRefund, TicketPurchase, SeatReservation
 from domain.tickets.services import reprogramming_deadline, reprogramming_window_is_open
 from domain.users.roles import staff_role as manager_role
+from django.shortcuts import redirect
+from django.contrib import messages
 
 
 def admission_seat_summary(tickets):
@@ -140,6 +142,7 @@ def ticket_detail_view(request, pk):
             "manager_role": manager_role(request.user),
             "reprogram_opition_avialable": reprogram_opition_avialable,
             "reprogram_deadline": reprogramming_deadline(screening, cinema=cinema),
+            "current_reservation_email": purchase.user.email,
         },
     )
 
@@ -163,3 +166,14 @@ def ticket_admission_status_view(request, pk):
             "used_seat_summary": admission_seat_summary(used_tickets),
         }
     )
+
+@login_required
+@never_cache
+@require_POST
+def movie_ticket_transfer(request, pk):
+    new_email = request.POST.get("new_email")
+    SeatReservation.objects.filter().update(
+                
+            )
+    messages.success(request, f"Tu entrada se transfirió a {new_email} exitosamente.")
+    return redirect("ticket_detail_view", pk)
