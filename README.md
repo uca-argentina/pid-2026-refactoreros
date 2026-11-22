@@ -2,6 +2,20 @@
 
 Aplicación de cine desarrollada con Django y PostgreSQL.
 
+## Contenido
+
+- [Inicio local](#inicio-local)
+- [Respaldo y recuperación sin internet](#construcción-completa-respaldo-y-recuperación-sin-internet)
+- [Comandos básicos](#comandos-básicos)
+- [Pruebas](#pruebas)
+- [Mapa del código y de los datos](#mapa-del-código-y-de-los-datos)
+- [ORM para consultar y modificar](#orm-para-consultar-y-modificar)
+- [Listas, diccionarios y JSON](#listas-diccionarios-y-json)
+- [Compras, butacas y reprogramación](#compras-butacas-y-reprogramación)
+- [Rutas, controladores y formularios](#rutas-controladores-y-formularios)
+- [Desarrollo con Django](#desarrollo-con-django)
+- [Utilidades de consulta y edición](#utilidades-de-consulta-y-edición)
+
 ## Inicio local
 
 Requiere Docker Desktop iniciado. Desde la raíz del proyecto, en PowerShell:
@@ -223,6 +237,422 @@ activa correo en memoria, almacenamiento local sin servicios externos, una carpe
 temporal para imágenes y un hash de contraseñas más rápido. Sin esa opción, Django
 usa la configuración habitual del proyecto. Django crea una base de pruebas
 separada en ambos casos; esa separación no depende de `--settings`.
+
+## Utilidades de consulta y edición
+
+`django/toolbox/` contiene funciones opcionales para usar desde una vista o desde
+`manage.py shell`. No agrega rutas ni modifica los flujos existentes.
+
+### Buscar y editar
+
+```python
+from toolbox.orm import (
+    buscar_usuario_por_email, compras_de, filtrar, ordenar, buscar_texto,
+    buscar_uno, editar_campos, describir_campos,
+)
+from domain.movies.models import Movie
+
+usuario = buscar_usuario_por_email("cliente@local.test")
+compras = ordenar(compras_de(usuario), "created_at", descendente=True)
+peliculas = buscar_texto(Movie, "aventura", "title", "synopsis")
+peliculas = filtrar(peliculas, "rating", "ATP")
+pelicula = buscar_uno(peliculas, pk=1)
+if pelicula is not None:
+    pelicula = editar_campos(pelicula, title="Nuevo título")
+campos = describir_campos(Movie)
+```
+
+- `filtrar`: `igual`, `igual_sin_mayusculas`, `contiene`, `empieza_con`, `mayor`,
+  `mayor_o_igual`, `menor`, `menor_o_igual`, `en` y `es_nulo`. Admite relaciones
+  como `screening__movie__title`. Conserva los filtros del queryset recibido.
+- `buscar_uno` devuelve objeto o `None`; `exigir_uno` rechaza también la ausencia.
+  Ambos rechazan resultados ambiguos. `buscar_usuario_por_email` exige un usuario activo.
+- `a_diccionarios(origen, *campos)` y `valores(origen, campo)` devuelven listas.
+  `describir_campos` muestra nombres, tipos y opciones sin consultar filas.
+- `entrada_de(usuario, compra_id, entrada_id)` busca una entrada propia;
+  `entradas_sin_usar(compra)` filtra uso, no estado de función ni devoluciones.
+- `editar_campos` valida y devuelve una instancia nueva. Los campos admitidos están
+  en `toolbox.orm.CAMPOS_EDITABLES`; los permisos los comprueba el controlador.
+  Para compras, estados, stock, credenciales y permisos se utilizan los servicios.
+- `separar_butaca(lista, etiqueta)` y `total_butacas(lista)` trabajan sobre datos
+  Python: no guardan ni sincronizan entradas u ocupación.
+
+### Candy y juegos
+
+```python
+from toolbox.candy import seleccion_candy, pedidos_de, pedido_de, editar_componentes_combo
+from toolbox.juegos import cupones_de, partida_publica_de, historial_juegos_de, editar_pregunta
+
+seleccion = seleccion_candy(productos={producto_id: 2}, combos={combo_id: 1})
+pedidos = pedidos_de(usuario)
+pedido = pedido_de(usuario, pedido_id)
+combo = editar_componentes_combo(gerente, combo_id, {producto_id: 2})
+cupones = cupones_de(usuario, estado="available")
+partida = partida_publica_de(usuario, partida_id)
+eventos = historial_juegos_de(usuario)
+pregunta = editar_pregunta(gerente, pregunta_id, options=["A", "B", "C"], correct=1)
+```
+
+Los identificadores del ejemplo se obtienen de registros existentes o formularios
+validados. Las consultas respetan al dueño. Las dos ediciones exigen gerente y
+reutilizan formularios existentes. Un combo requiere al menos dos unidades totales;
+una pregunta, tres respuestas distintas. Las ediciones conservan los snapshots anteriores.
+
+Reglas a tener en cuenta:
+
+- Candy tiene pedidos ligados a entradas, independientes y de premios. Usar
+  `pedidos_de`, que incluye los tres; `order.user_id` es una propiedad, no un filtro SQL.
+- Los combos consumen stock de sus productos. Editar su composición no cambia
+  pedidos anteriores ni stock. Desactivar un producto no desactiva sus combos.
+- Comprar Candy: `domain.candy.services.buy_candy_only(usuario, seleccion, clave)`.
+  Precios y stock se validan en servidor. `clave` es un UUID: conservarlo al reintentar
+  la misma operación; usar uno nuevo para una compra distinta.
+- Entregar o deshacer Candy: `deliver_candy_order(codigo, operador)` y
+  `undo_candy_pickup(entrega_id, operador)`, en el mismo módulo. El QR Candy es `BCC:`;
+  el de entradas es `BC2:`. La reversión exige el mismo operador y tiene un plazo.
+- Juegos: usar `domain.games.services.start`, `answer`, `spin`, `grant` y
+  `request_pickup`. Cada operación recibe un UUID para reintentos. `grant` exige
+  gerente y motivo; no modificar tiradas o intentos directamente.
+- `state(usuario)` puede crear cuenta, vencer partidas y registrar eventos.
+  `partida_publica_de` solo consulta y oculta respuestas correctas; no actualiza plazos.
+- El premio reserva stock al ganar: solicitar su retiro no lo descuenta otra vez.
+  Los cupones pasan de `available` a `requested` y después a `redeemed` al entregar.
+- Publicar/cancelar funciones: `Screening.change_status`, que conserva transiciones,
+  snapshots y devoluciones. Promociones: se aplica el menor precio, no se acumulan.
+  Editar email: la gestión también sincroniza `username`; usar su formulario y vista.
+
+Para verificar las utilidades o generar la referencia del modelo:
+
+```powershell
+.\scripts\local.ps1 Test -TestLabels toolbox
+python -m pip install -r scripts/requirements-docs.txt
+python scripts/export_model_reference.py
+```
+
+El PDF queda en `artifacts/modelo-butaca-cero.pdf`; describe el modelo declarado,
+sin consultar datos ni aplicar migraciones. La dependencia de exportación es opcional.
+
+## Mapa del código y de los datos
+
+| Componente | Archivo o carpeta |
+|---|---|
+| Modelos de compra, entrada y ocupación | `django/domain/tickets/models.py` |
+| Consultas de disponibilidad existentes | `django/domain/tickets/selectors.py` |
+| Compra y reprogramación existentes | `django/domain/tickets/services/checkout.py`, `reprogramming.py` |
+| Validación del operador y credenciales | `django/domain/tickets/services/admission.py`, `credentials.py` |
+| Perfiles de usuario | `django/domain/users/models.py` |
+| Controladores del cliente | `django/web/tickets/views/` |
+| Exportaciones usadas por las rutas | `django/web/tickets/views/__init__.py` |
+| Rutas y formularios | `django/web/tickets/urls.py`, `forms.py` |
+| Pantalla de una compra | `django/web/tickets/templates/ticket_detail.html` |
+| Rutas principales | `django/butacaCero/urls.py` |
+
+El modelo distingue compras, entradas individuales, butacas vendidas y reservas temporales:
+
+```text
+User ── ticket_purchases ──> TicketPurchase (user, screening, quantity, total)
+                              ├── tickets ──> AdmissionTicket
+                              │                (number, seat_label, code, used_at)
+                              ├── sold_seats ──> SeatPurchase
+                              │                   (screening, label, used_at)
+                              └── selected_seats: lista JSON de diccionarios
+User ── customer_profile ──> Customer (perfil; no contiene email)
+SeatReservation: bloqueo temporal de una butaca, no una entrada comprada
+```
+
+`AdmissionTicket` obtiene su dueño a través de `ticket.purchase.user`.
+`SeatPurchase` impide vender dos veces la misma combinación función/butaca.
+`selected_seats` conserva datos de precio de la compra. Cambiar solo una de estas
+representaciones deja inconsistencias.
+
+**Efecto especial de `TicketPurchase.save()`:** al crear una compra genera
+automáticamente `quantity` objetos `AdmissionTicket`. No genera los `SeatPurchase`;
+eso lo hace el servicio de compra. Al editar una compra existente, `save()` no
+sincroniza automáticamente sus entradas ni sus butacas vendidas.
+
+**Códigos actuales:** el operador busca `TicketPurchase.validation_token` o
+`validation_code_digest`; el QR de compra lleva `BC2:`. Aunque `AdmissionTicket`
+tiene `code` y un payload `BC1:`, el servicio actual del operador no busca ese
+código individual. La credencial utilizada para el ingreso corresponde a la compra.
+
+## ORM para consultar y modificar
+
+Abrir una consola con los modelos y la configuración cargados:
+
+```powershell
+docker compose exec web python manage.py shell
+```
+
+```python
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from domain.tickets.models import AdmissionTicket, SeatPurchase, TicketPurchase
+
+User = get_user_model()
+user = User.objects.filter(email__iexact="cliente@local.test").first()
+if user is None:
+    raise ValidationError("No existe el usuario de práctica.")
+purchases = TicketPurchase.objects.filter(user=user)  # QuerySet, puede estar vacío.
+purchase = purchases.first()                         # Objeto o None.
+```
+
+Los siguientes ejemplos requieren una `purchase` existente. En una vista,
+reemplazar el usuario del ejemplo por `request.user` y los IDs por parámetros de
+ruta validados. En el shell no existe `request`.
+
+| Necesidad | Ejemplo | Resultado |
+|---|---|---|
+| Un objeto obligatorio en una vista | `get_object_or_404(TicketPurchase, pk=pk, user=request.user)` | Objeto o respuesta 404; verifica propiedad. |
+| Un objeto obligatorio en un servicio | `TicketPurchase.objects.get(pk=purchase_pk, user=user)` | Objeto; capturar `TicketPurchase.DoesNotExist` si falta. |
+| Muchos o ninguno | `purchase.tickets.filter(used_at__isnull=True)` | QuerySet; no es una entrada individual. |
+| Comprobar existencia | `purchase.tickets.filter(used_at__isnull=False).exists()` | `True` o `False`. |
+| Contar | `purchase.tickets.count()` | Entero. |
+| Recorrer relaciones | `AdmissionTicket.objects.filter(purchase__user=user)` | Entradas del usuario. |
+| Lista de valores simples | `list(purchase.tickets.values_list("seat_label", flat=True))` | Por ejemplo `['A1', 'A2']`. |
+| Lista de diccionarios | `list(purchase.tickets.values("id", "seat_label"))` | Por ejemplo `[{'id': 1, 'seat_label': 'A1'}]`. |
+| Ordenar | `purchase.tickets.order_by("number")` | QuerySet ordenado. |
+| Excluir | `purchase.tickets.exclude(used_at=None)` | Entradas utilizadas. |
+
+`get()` también puede lanzar `MultipleObjectsReturned` si el filtro no identifica
+una sola fila. Un queryset se ejecuta al consumirlo; `list(...)` materializa los
+resultados, pero no transforma sus modelos en diccionarios. Para eso usar `values`.
+En un modelo se lee `ticket.seat_label`; en un diccionario, `seat["label"]`.
+
+### Filtros habituales
+
+| Filtro | Significado |
+|---|---|
+| `email=texto` | Igualdad exacta según la comparación de la base. |
+| `email__iexact=texto.strip()` | Igualdad sin distinguir mayúsculas. |
+| `purchase__user=user` | Seguir una relación y comparar el usuario. |
+| `pk__in=[1, 2]` | Uno de esos IDs. |
+| `used_at__isnull=True` | Todavía no utilizada. |
+| `starts_at__gt=timezone.now()` | Fecha posterior a ahora. |
+| `starts_at__lte=timezone.now()` | Fecha anterior o igual a ahora. |
+| `email__icontains=texto` | Contiene texto; sirve para buscar, no para identificar destinatario. |
+
+Dentro de un mismo `filter`, las condiciones se unen con AND. `__` puede recorrer
+relaciones o indicar un lookup. `customer.user.email` es acceso en Python;
+`Customer.objects.filter(user__email__iexact=correo)` es consulta ORM.
+
+### Crear, editar, relacionar y borrar
+
+```python
+# Crear una cuenta de prueba: create_user cifra la contraseña.
+recipient = User.objects.create_user(
+    username="destino-practica", email="destino@local.test",
+    password="PracticaLocal2026!",
+)
+from domain.users.models import Customer
+Customer.objects.create(user=recipient)  # Si el recorrido necesita perfil cliente.
+
+# Editar una instancia: asignar en Python no alcanza, hay que guardar.
+recipient.first_name = "Destinatario"
+recipient.save(update_fields=["first_name"])
+recipient.refresh_from_db()
+
+# Una ForeignKey recibe el objeto o su ID, no una lista de usuarios.
+# purchase.user = recipient       # En memoria; guardar cambia TODA la compra.
+# purchase.user_id = recipient.pk # Alternativa equivalente.
+
+# Una relación inversa se consulta con su manager.
+tickets = list(purchase.tickets.all())
+labels = list(purchase.sold_seats.values_list("label", flat=True))
+```
+
+Usar otro username si ya existe la cuenta. Cambiar `purchase.user` modifica el
+usuario asociado a toda la compra, incluidas sus entradas y el acceso a los datos
+relacionados; no modifica únicamente una entrada individual.
+
+`QuerySet.update(campo=valor)` escribe directamente en SQL y devuelve cuántas filas
+afectó: no llama a `save()`, `full_clean()` ni señales de guardado. `bulk_create` y
+`bulk_update` también omiten el `save()` de cada instancia. Por eso no usar
+`TicketPurchase.objects.bulk_create(...)` esperando entradas/códigos automáticos.
+`delete()` borra y puede arrastrar relaciones con `CASCADE`: no usarlo para mover
+una compra. En cualquier edición, comprobar las reglas del dominio antes de guardar.
+
+## Listas, diccionarios y JSON
+
+Los siguientes ejemplos de manipulación de datos no requieren Django.
+
+```python
+from decimal import Decimal
+
+seats = [
+    {"label": "A1", "price": "1000.00", "promotion": ""},
+    {"label": "A2", "price": "800.00", "promotion": "Promo"},
+]
+label = "A1"
+
+# Leer y encontrar.
+first = seats[0]  # Solo si la lista no está vacía.
+price = first["price"]  # Clave obligatoria; KeyError si falta.
+promotion = first.get("promotion", "")  # Valor por defecto si la clave no existe.
+labels = [seat["label"] for seat in seats]
+chosen = next((seat for seat in seats if seat["label"] == label), None)
+remaining = [dict(seat) for seat in seats if seat["label"] != label]
+if chosen is None:
+    raise ValueError("La butaca no pertenece a la compra.")
+chosen_copy = dict(chosen)
+
+# Agregar, cambiar y quitar en una copia.
+copy = [dict(seat) for seat in seats]
+copy.append({"label": "A3", "price": "1000.00", "promotion": ""})
+copy[0]["price"] = "900.00"
+removed = copy.pop()  # Quita y devuelve el último elemento.
+copy[0].pop("promotion", None)  # Quita una clave sin fallar si no existe.
+
+# Índice por etiqueta: útil si voy a buscar muchas veces.
+by_label = {seat["label"]: seat for seat in seats}
+seat = by_label.get("A2")
+for seat_label, seat_data in by_label.items():
+    print(seat_label, seat_data["price"])
+
+# Cantidad, total y pertenencia.
+quantity = len(remaining)
+total = sum((Decimal(seat["price"]) for seat in remaining), Decimal("0"))
+occupied = {"A1", "B1"}
+requested = {"A1", "A2"}
+conflicts = requested & occupied  # Intersección: {'A1'}.
+has_duplicates = len(labels) != len(set(labels))
+```
+
+`copy = seats` comparte la misma lista. `seats.copy()` copia la lista, pero comparte
+sus diccionarios. `[dict(seat) for seat in seats]` copia también cada diccionario;
+si hay estructuras anidadas que se van a modificar, usar `copy.deepcopy`.
+No quitar elementos de una lista mientras se la recorre: construir `remaining`.
+El índice `by_label` pisa duplicados; validar antes que no se repitan etiquetas.
+`.get("price", "0")` no reemplaza un `None` explícito; no ocultar precios faltantes
+tratándolos como cero en una operación real.
+
+### Del formulario al JSONField y viceversa
+
+```python
+import json
+
+text = '[{"label": "A1", "price": "1000.00"}]'
+payload = json.loads(text)  # Texto JSON -> lista/diccionario de Python.
+if not isinstance(payload, list):
+    raise ValueError("Se esperaba una lista.")
+encoded = json.dumps(payload)  # Python -> texto JSON, por ejemplo para un POST.
+
+# selected_seats es JSONField: Django ya entrega una lista de Python.
+# purchase.selected_seats = payload
+# purchase.save(update_fields=["selected_seats"])
+```
+
+No hacer `json.loads(purchase.selected_seats)` ni guardar `json.dumps(payload)`
+en ese JSONField: se espera una estructura Python. Los precios del snapshot se
+guardan como texto y se calculan con `Decimal`, no con `float`.
+
+`request.POST` es un `QueryDict`: `.get("email", "")` devuelve un valor y
+`.getlist("ticket_ids")` devuelve los valores de varios inputs con el mismo nombre.
+Los IDs recibidos son texto; un `forms.IntegerField` los convierte y valida.
+`TicketPurchaseForm.clean_selected_seats()` ya convierte el texto JSON del POST.
+No confiar en precios ni pertenencia recibidos del navegador.
+
+## Compras, butacas y reprogramación
+
+### Creación y relaciones
+
+`TicketPurchase.buy(...)` delega en el servicio `buy_tickets` de
+`domain/tickets/services/checkout.py`. Este servicio valida disponibilidad,
+calcula precios y guarda compra, entradas y ocupación en una transacción.
+
+Al crear una compra directamente con `TicketPurchase.objects.create(...)` o
+`save()`, se generan sus entradas individuales, pero no las filas `SeatPurchase`.
+Para el flujo de venta se utiliza el servicio, que mantiene las relaciones y
+comprueba las reglas del dominio.
+
+Copiar una instancia asignándole `pk = None` no copia sus relaciones y puede
+conservar campos únicos, como las credenciales. Para crear un registro independiente
+se especifican sus campos y se revisan las relaciones que deban conservarse.
+
+### Actualización de butacas
+
+Una modificación de butacas involucra estos datos:
+
+| Dato | Ubicación |
+|---|---|
+| Función, cantidad, total y detalle de precios | `TicketPurchase` y su JSON `selected_seats` |
+| Etiqueta y uso de cada entrada | `AdmissionTicket.seat_label` y `used_at` |
+| Ocupación de la butaca para una función | `SeatPurchase.screening` y `label` |
+| Bloqueo temporal durante la selección | `SeatReservation` |
+
+Guardar únicamente `selected_seats` cambia el JSON, pero no actualiza entradas ni
+ocupación. Las escrituras relacionadas se agrupan con `transaction.atomic()`.
+Los servicios existentes utilizan además `select_for_update()` para coordinar
+modificaciones concurrentes; la transacción por sí sola no bloquea esas filas.
+
+### Servicio de reprogramación
+
+`reprogram_purchase` está en `domain/tickets/services/reprogramming.py` y recibe
+estos argumentos por nombre:
+
+| Argumento | Contenido |
+|---|---|
+| `user` | Usuario dueño de la compra. |
+| `purchase_pk` | Identificador de la compra. |
+| `new_screening_pk` | Identificador de otra función de la misma película. |
+| `selected_seats` | Selección de butacas de la función de destino. |
+
+El servicio verifica propiedad, plazo de reprogramación, ausencia de devolución y
+de entradas utilizadas, función de destino publicada con inicio futuro, cantidad,
+disponibilidad y reservas del usuario. Luego actualiza la compra, reemplaza la
+ocupación, ajusta las etiquetas de las entradas y libera las reservas utilizadas.
+Devuelve `(purchase, previous_total)` y utiliza `ValidationError` para los rechazos
+de negocio. No admite reprogramar hacia la misma función.
+
+## Rutas, controladores y formularios
+
+Las rutas del cliente se declaran en `django/web/tickets/urls.py`. Este módulo usa
+`from . import views`, por lo que los controladores que referencia se exportan desde
+`django/web/tickets/views/__init__.py`.
+
+| Nombre de ruta | Controlador | Uso |
+|---|---|---|
+| `my_tickets` | `my_tickets_view` | Listado de compras del usuario. |
+| `ticket_detail` | `ticket_detail_view` | Detalle de una compra propia. |
+| `seat_reprogram_selection` | `seat_reprogram_selection_view` | Selección de butacas para otra función. |
+| `screening_reprogram_confirm` | `screening_reprogram_view` | Confirmación de reprogramación mediante POST. |
+
+Los enlaces y redirecciones usan el `name` de la ruta, no su texto URL. Las rutas
+de tickets no tienen namespace. Ejemplos para una vista y su template:
+
+```python
+from django.shortcuts import redirect
+
+# Dentro de una vista, luego de completar una operación:
+# return redirect("ticket_detail", pk=purchase.pk)
+```
+
+```django
+<a href="{% url 'ticket_detail' purchase.pk %}">Ver compra</a>
+```
+
+### Validación y respuestas
+
+- Los GET consultan y muestran pantallas; las operaciones de escritura usan POST.
+- `@login_required` exige sesión, pero la propiedad de la compra también se valida
+  mediante `user=request.user` o `request.user.ticket_purchases`.
+- Los formularios POST incluyen `{% csrf_token %}`. Los campos HTML deben tener el
+  mismo nombre que los campos del formulario.
+- Se ejecuta `form.is_valid()` antes de consultar `form.cleaned_data`.
+- `clean_email()` valida un campo llamado `email`; el nombre debe coincidir.
+- Las reglas del negocio se validan también en el servicio que modifica los datos.
+- Toda vista retorna una respuesta: `return render(...)`, `return redirect(...)`
+  o una respuesta HTTP equivalente.
+- `form.as_p` incluye los errores del formulario. Si el HTML escribe los campos
+  individualmente, también debe mostrar sus errores y `form.non_field_errors`.
+
+El flujo existente de reprogramación muestra la separación entre formulario,
+controlador y servicio: `TicketReprogramForm` convierte el JSON de selección,
+`screening_reprogram_view` coordina la petición y `reprogram_purchase` valida y
+persiste. `purchase_error_message` convierte los errores en un mensaje para la
+pantalla; el controlador guarda ese mensaje en la sesión y redirige a la selección
+cuando la operación se rechaza.
 
 ## Desarrollo con Django
 
