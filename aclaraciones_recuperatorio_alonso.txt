@@ -1,1 +1,4 @@
 Del primer punto, "Sólo puede configurarse en funciones que todavía no tienen ventas registradas", no se agregan validaciones adicionales al formulario de creación/edición ya que no se puede acceder a la edición de la función una vez que se hay ventas de esa función (lanza error 403)
+Llegué a dar la capacidad en el panel de gestión a configurar los descuentos por mínima cantidad de entradas.
+Desde el lado del cliente, en el selector de butacas, se muestra los detalles de la promoción, si está activa. (mínimo de tickets y porcentaje de descuento)
+Llegué a comunicar el estado (True/False) de la promoción, mínimo de entradas y porcentaje de descuento al script del selector de butacas, pero falta 

@@ -19,6 +19,10 @@ const purchasePromotionsList = document.querySelector("[data-purchase-promotions
 const cartCandyRow = document.querySelector("[data-cart-candy-row]");
 const cartCandyLines = document.querySelector("[data-cart-candy-lines]");
 const seatMaps = document.querySelectorAll(".client-seat-map");
+const bulkDiscountActive = purchaseForm?.querySelector('input[name="bulk_discount_active"]');
+const bulkDiscountMinTickets = purchaseForm?.querySelector('input[name="bulk_discount_min_tickets"]');
+const bulkDiscountValue = purchaseForm?.querySelector('input[name="bulk_discount_value"]');
+
 let reservationExpiresAt = null;
 let reservationTimer = null;
 let submitAfterReservationFlush = false;

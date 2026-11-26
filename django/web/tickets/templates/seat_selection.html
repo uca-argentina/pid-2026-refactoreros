@@ -24,6 +24,9 @@
     <form class="purchase-form seat-selection-form" method="post" action="{% url 'ticket_purchase' screening.pk %}">
       {% csrf_token %}
       <input type="hidden" name="selected_seats" value="">
+      <input type="hidden" name="bulk_discount_active" value="{{ screening.is_active_discount_for_multiple_tickets }}">
+      <input type="hidden" name="bulk_discount_value" value="{{ screening.discount_for_multiple_tickets }}">
+      <input type="hidden" name="bulk_discount_min_tickets" value="{{ screening.min_tickets_for_discount }}">
 
       {% include "_seat_legend.html" %}
 
