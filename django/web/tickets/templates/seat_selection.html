@@ -8,6 +8,11 @@
     <section class="seat-selection-header">
       <a class="back-to-functions" href="{% url 'movie_detail' screening.movie.pk %}"><span aria-hidden="true">&larr;</span> Volver a funciones</a>
       <h1>{{ screening.movie.title }}</h1>
+
+      {% if screening.discounted_screening %}
+        <h3> {{ screening.discount_message }} </h3>
+      {% endif %}
+      
       <p>
         {{ screening.starts_at|date:"l d/m H:i"|capfirst }}
         |

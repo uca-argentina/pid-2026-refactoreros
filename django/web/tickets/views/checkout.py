@@ -73,7 +73,7 @@ def ticket_purchase_view(request, pk):
                     message = (
                         "Pago aprobado. "
                         f"Compraste {purchase.quantity} {ticket_label} "
-                        f"para {screening.movie.title}. ¡Te esperamos!"
+                        f"para {screening.movie.title} {screening.discount_purchase_message}. ¡Te esperamos!"
                     )
                 messages.success(request, message)
                 return redirect("my_tickets")

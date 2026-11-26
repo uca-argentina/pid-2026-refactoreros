@@ -21,11 +21,13 @@ class ScreeningForm(forms.ModelForm):
 
     class Meta:
         model = Screening
-        fields = ("movie", "room", "starts_at")
+        fields = ("movie", "room", "starts_at", "discount_percentage", "min_tickets_for_discount")
         labels = {
             "movie": "Película",
             "room": "Sala",
             "starts_at": "Fecha y horario",
+            "discount_percentage": "Descuento en porcentaje",
+            "min_tickets_for_discount": "Cantidad minima de entradas para obtener el descuento"
         }
 
     def __init__(self, *args, **kwargs):

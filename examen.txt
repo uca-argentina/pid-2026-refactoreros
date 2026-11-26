@@ -1,0 +1,5 @@
+- se que el mensaje Pago aprobado. Compraste 1 entrada para Oppenheimer (y con un descuento del 10% en tus entradas!). ¡Te esperamo! al comprar
+entradas aparece incluso al comprar menos entradas que las requeridas para aplicar el descuento, no llegue con el tiempo para
+validar que la cantidad de tickets comprados en purchase sea mayor al minimo de entradas para obtener el descuento
+
+- para hacer el punto "Si no se alcanza el minimo, indica cuantas entradas quedan para activarlo" me hacen tocar 

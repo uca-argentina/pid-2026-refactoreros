@@ -87,6 +87,8 @@
           <th>Desde</th>
           <th>Vendidas</th>
           <th>Disponibles</th>
+          <th>Descuento Porc.</th>
+          <th>Cant. Minima Entradas</th>
           <th>Acciones</th>
         </tr>
       </thead>
@@ -102,6 +104,11 @@
             <td data-label="Desde">${{ screening.price_from }}</td>
             <td data-label="Vendidas">{{ screening.tickets_sold }}</td>
             <td data-label="Disponibles">{{ screening.tickets_available }}</td>
+
+            <td data-label="Descuento Porc.">{{ screening.discount_label }}</td>
+            <td data-label="Cant. Minima Entradas">{{ screening.min_tickets_for_discount }}</td>
+
+
             <td class="table-actions" data-label="Acciones">
               {% with transitions=screening.available_transitions %}
                 <div class="row-actions">
@@ -194,7 +201,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="8">No hay funciones cargadas.</td></tr>
+          <tr><td colspan="10">No hay funciones cargadas.</td></tr>
         {% endfor %}
       </tbody>
     </table>

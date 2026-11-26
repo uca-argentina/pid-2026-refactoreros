@@ -41,6 +41,8 @@ class Screening(models.Model):
     prices_by_type = models.JSONField(default=dict, blank=True, db_column="precios_por_tipo")
     room_layout_snapshot = models.JSONField(default=list, blank=True, db_column="sala_configuracion_snapshot")
     capacity_snapshot = models.PositiveIntegerField(default=0, db_column="capacidad_snapshot")
+    discount_percentage = models.PositiveIntegerField(default=0, db_column="discount_percentage", blank=True, null=True)
+    min_tickets_for_discount = models.PositiveIntegerField(default=4, db_column="min_tickets_for_discount", blank=True, null=True)
 
     class Meta:
         verbose_name = "función"
@@ -51,6 +53,36 @@ class Screening(models.Model):
     def __str__(self):
         return f"{self.movie.title} - {self.room.name} - {self.starts_at:%d/%m/%Y %H:%M}"
 
+    @property
+    def discount_message(self):
+        mensaje = ""
+
+        if self.discount_percentage > 0:
+            mensaje = f"Existe un descuento del {self.discount_percentage}% en esta funcion al comprar (al menos) {self.min_tickets_for_discount} entradas!"
+
+        return mensaje
+
+    @property
+    def discount_purchase_message(self):
+            mensaje = ""
+    
+            if self.discount_percentage > 0:
+                mensaje = f"(y con un descuento del {self.discount_percentage}% en tus entradas!)"
+    
+            return mensaje
+
+    @property
+    def discount_label(self):
+        if self.discount_percentage > 0:
+            return self.discount_percentage
+
+        return "No tiene"
+
+    @property
+    def discounted_screening(self):
+        return self.discount_percentage > 0
+    
+    
     @property
     def ends_at(self):
         return self.starts_at + timedelta(minutes=self.movie.duration_minutes)
