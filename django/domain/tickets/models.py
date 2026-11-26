@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
 from django.utils import timezone
+from decimal import Decimal
 
 from domain.cinema.models import CinemaSettings
 from domain.promotions.pricing import PromotionPriceCalculator
@@ -69,6 +70,16 @@ class TicketPurchase(models.Model):
     def seat_labels(self):
         labels = self._labels_from_selected_seats(self.selected_seats)
         return ", ".join(labels)
+
+    @property
+    def discounted_price(self):
+        descuento = self.screening.discount_percentage
+        descuento = descuento / 100
+
+        precio_a_descontar = self.total * Decimal(descuento)
+
+        return self.total - precio_a_descontar
+        
 
     @property
     def seat_pricing_snapshot(self):

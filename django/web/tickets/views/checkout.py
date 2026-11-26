@@ -69,11 +69,17 @@ def ticket_purchase_view(request, pk):
                         f"para {screening.movie.title}. Retirá el candy con su código antes o "
                         "durante la función. ¡Te esperamos!"
                     )
+                elif purchase.quantity >= screening.min_tickets_for_discount and screening.discounted_screening:
+                    message = (
+                        "Pago aprobado. "
+                        f"Compraste {purchase.quantity} {ticket_label} "
+                        f"para {screening.movie.title} {screening.discount_purchase_message}. Pagaste: {purchase.discounted_price}$. ¡Te esperamos!"
+                    )
                 else:
                     message = (
                         "Pago aprobado. "
                         f"Compraste {purchase.quantity} {ticket_label} "
-                        f"para {screening.movie.title} {screening.discount_purchase_message}. ¡Te esperamos!"
+                        f"para {screening.movie.title}. Pagaste: {purchase.total}$. ¡Te esperamos!"
                     )
                 messages.success(request, message)
                 return redirect("my_tickets")
