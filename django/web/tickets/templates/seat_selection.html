@@ -14,6 +14,10 @@
         {{ screening.room.name }}
         |
         desde ${{ screening.current_price_from|default:screening.price_from }}
+
+        {% if screening.is_active_discount_for_multiple_tickets == True %}
+        | Descuento del {{ screening.discount_for_multiple_tickets }} % comprando al menos {{ screening.min_tickets_for_discount }} entradas  
+        {% endif %}
       </p>
     </section>
 
@@ -61,6 +65,10 @@
                 <span data-cart-total>$0,00</span>
               </dd>
             </div>
+            {% if screening.is_active_discount_for_multiple_tickets == True %}
+            Descuento del {{ screening.discount_for_multiple_tickets }} % OFF comprando al menos
+            {{ screening.min_tickets_for_discount }} entradas
+            {% endif %}
           </dl>
           <p class="purchase-savings" data-purchase-savings hidden>Ahorrás <strong data-purchase-savings-amount>$0,00</strong></p>
           <p class="purchase-promotions" data-purchase-promotions hidden>Promociones aplicadas: <strong data-purchase-promotions-list></strong></p>

@@ -4,6 +4,7 @@ from decimal import Decimal, InvalidOperation
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 from domain.movies.models import Movie
 from domain.rooms.models import Room
@@ -41,7 +42,13 @@ class Screening(models.Model):
     prices_by_type = models.JSONField(default=dict, blank=True, db_column="precios_por_tipo")
     room_layout_snapshot = models.JSONField(default=list, blank=True, db_column="sala_configuracion_snapshot")
     capacity_snapshot = models.PositiveIntegerField(default=0, db_column="capacidad_snapshot")
-
+    
+    is_active_discount_for_multiple_tickets = models.BooleanField(default=False, db_column="descuento_por_cantidad_entradas_activo")
+    min_tickets_for_discount = models.PositiveIntegerField(default=0, db_column="cant_minima_para_descuento")
+    discount_for_multiple_tickets = models.PositiveIntegerField(default=0, 
+                                                                validators=[MinValueValidator(0), MaxValueValidator(100)],
+                                                                db_column="descuento_por_cantidad_entradas" )
+    
     class Meta:
         verbose_name = "función"
         verbose_name_plural = "funciones"

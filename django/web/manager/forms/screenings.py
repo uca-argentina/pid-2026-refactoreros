@@ -21,11 +21,16 @@ class ScreeningForm(forms.ModelForm):
 
     class Meta:
         model = Screening
-        fields = ("movie", "room", "starts_at")
+        fields = ("movie", "room", "starts_at", 
+                  "is_active_discount_for_multiple_tickets", 
+                  "min_tickets_for_discount", "discount_for_multiple_tickets")
         labels = {
             "movie": "Película",
             "room": "Sala",
             "starts_at": "Fecha y horario",
+            "is_active_discount_for_multiple_tickets": "Activar descuento por mínimo de entradas",
+            "min_tickets_for_discount" : "Cantidad mínima de entradas para aplicar descuento",
+            "discount_for_multiple_tickets": "Descuento a aplicar (En porcentaje, e.g.: 50 para 50% OFF)"
         }
 
     def __init__(self, *args, **kwargs):
@@ -43,6 +48,7 @@ class ScreeningForm(forms.ModelForm):
                     "data-locked": "true",
                 }
             )
+
 
     def clean_starts_at(self):
         starts_at = self.cleaned_data["starts_at"]
