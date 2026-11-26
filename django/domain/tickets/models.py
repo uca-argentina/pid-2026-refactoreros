@@ -2,7 +2,7 @@ import hashlib
 import secrets
 import uuid
 from datetime import timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -78,7 +78,10 @@ class TicketPurchase(models.Model):
 
         precio_a_descontar = self.total * Decimal(descuento)
 
-        return self.total - precio_a_descontar
+        return (self.total - precio_a_descontar).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+
         
 
     @property
